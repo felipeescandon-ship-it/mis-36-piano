@@ -147,7 +147,7 @@ button.song-line-end{padding:3px 8px}
  .transport{grid-column:1/-1}.transport button{flex:1 1 auto}
  #settingsToggle{grid-column:1/-1}
  .settings-grid{grid-template-columns:1fr}
- .show-full.song-editing{padding-bottom:290px}
+ .show-full.song-editing{padding-bottom:310px}
  .show-full.song-editing .sync-editor{gap:8px;padding:10px;align-items:end}
  .show-full.song-editing .sync-editor>div:first-child{flex:1 1 100%}
  .show-full.song-editing .sync-duration{flex:1 1 120px}
@@ -265,6 +265,10 @@ button.song-line-end{padding:3px 8px}
     <select id="syncChord" disabled aria-label="Cambiar acorde"></select>
   </label>
   <label class="sync-duration">
+    <span>Inversión MD</span>
+    <select id="syncInversion" disabled aria-label="Inversión de la mano derecha"></select>
+  </label>
+  <label class="sync-duration">
     <span>Duración del acorde</span>
     <select id="syncBeats" disabled>
       <option value="0.5">½ tiempo</option>
@@ -358,6 +362,7 @@ const syncSaveStatus=document.getElementById("syncSaveStatus");
 const syncAddChord=document.getElementById("syncAddChord");
 const syncAdd=document.getElementById("syncAdd");
 const syncChord=document.getElementById("syncChord");
+const syncInversion=document.getElementById("syncInversion");
 const syncBeats=document.getElementById("syncBeats");
 const syncDelete=document.getElementById("syncDelete");
 const bpmOut=document.getElementById("bpmOut");
@@ -404,19 +409,70 @@ const voicings={
 "A":{l:"A2",r:[["C#4",1],["E4",2],["A4",5]],inv:"1ª inversión"},
 "Am":{l:"A2",r:[["C4",1],["E4",2],["A4",5]],inv:"1ª inversión"},
 "C#m":{l:"C#2",r:[["G#3",1],["C#4",3],["E4",5]],inv:"2ª inversión"},
-"C#":{l:"C#2",r:[["G#3",1],["C#4",2],["F4",5]],spell:{"F4":"E#"},inv:"2ª inversión"},
+"C#":{l:"C#2",r:[["G#3",1],["C#4",2],["F4",5]],spell:{"F":"E#"},inv:"2ª inversión"},
 "G#m":{l:"G#2",r:[["B3",1],["D#4",2],["G#4",5]],inv:"1ª inversión"},
-"G#":{l:"G#2",r:[["C4",1],["D#4",2],["G#4",5]],spell:{"C4":"B#"},inv:"1ª inversión"},
+"G#":{l:"G#2",r:[["C4",1],["D#4",2],["G#4",5]],spell:{"C":"B#"},inv:"1ª inversión"},
 "D":{l:"D2",r:[["A3",1],["D4",2],["F#4",5]],inv:"2ª inversión"},
 "B":{l:"B1",r:[["B3",1],["D#4",3],["F#4",5]],inv:"fundamental"},
 "B/D#":{l:"D#2",r:[["B3",1],["D#4",3],["F#4",5]],inv:"acorde de Si con Re# en el bajo"}
 };
 
+const defaultInversions={
+ "E":"root","F#":"first","F#m":"first","A":"first","Am":"first","C#m":"second",
+ "C#":"second","G#m":"first","G#":"first","D":"second","B":"root","B/D#":"root"
+};
+const voicingVariants={
+ "E":{
+   root:[["E4",1],["G#4",3],["B4",5]],first:[["G#3",1],["B3",2],["E4",5]],second:[["B3",1],["E4",2],["G#4",5]]
+ },
+ "F#":{
+   root:[["F#3",1],["A#3",3],["C#4",5]],first:[["A#3",1],["C#4",2],["F#4",5]],second:[["C#4",1],["F#4",2],["A#4",5]]
+ },
+ "F#m":{
+   root:[["F#3",1],["A3",3],["C#4",5]],first:[["A3",1],["C#4",2],["F#4",5]],second:[["C#4",1],["F#4",2],["A4",5]]
+ },
+ "A":{
+   root:[["A3",1],["C#4",3],["E4",5]],first:[["C#4",1],["E4",2],["A4",5]],second:[["E3",1],["A3",2],["C#4",5]]
+ },
+ "Am":{
+   root:[["A3",1],["C4",3],["E4",5]],first:[["C4",1],["E4",2],["A4",5]],second:[["E3",1],["A3",2],["C4",5]]
+ },
+ "C#m":{
+   root:[["C#4",1],["E4",3],["G#4",5]],first:[["E3",1],["G#3",2],["C#4",5]],second:[["G#3",1],["C#4",3],["E4",5]]
+ },
+ "C#":{
+   root:[["C#4",1],["F4",3],["G#4",5]],first:[["F3",1],["G#3",2],["C#4",5]],second:[["G#3",1],["C#4",2],["F4",5]]
+ },
+ "G#m":{
+   root:[["G#3",1],["B3",3],["D#4",5]],first:[["B3",1],["D#4",2],["G#4",5]],second:[["D#4",1],["G#4",2],["B4",5]]
+ },
+ "G#":{
+   root:[["G#3",1],["C4",3],["D#4",5]],first:[["C4",1],["D#4",2],["G#4",5]],second:[["D#3",1],["G#3",2],["C4",5]]
+ },
+ "D":{
+   root:[["D4",1],["F#4",3],["A4",5]],first:[["F#3",1],["A3",2],["D4",5]],second:[["A3",1],["D4",2],["F#4",5]]
+ },
+ "B":{
+   root:[["B3",1],["D#4",3],["F#4",5]],first:[["D#4",1],["F#4",2],["B4",5]],second:[["F#3",1],["B3",2],["D#4",5]]
+ },
+ "B/D#":{
+   root:[["B3",1],["D#4",3],["F#4",5]],first:[["D#4",1],["F#4",2],["B4",5]],second:[["F#3",1],["B3",2],["D#4",5]]
+ }
+};
+function inversionText(id){
+ if(notationMode==="en")return {root:"Root position",first:"1st inversion",second:"2nd inversion"}[id];
+ return {root:"Fundamental",first:"1.ª inversión",second:"2.ª inversión"}[id];
+}
+function resolveVoicing(chord,inversion){
+ const id=voicingVariants[chord]?.[inversion]?inversion:defaultInversions[chord];
+ return {...voicings[chord],r:voicingVariants[chord][id],inv:inversionText(id),inversion:id};
+}
+
 const makeSection=(name,rows)=>({
  name,
  lines:rows.map(([lyric])=>lyric),
  events:rows.flatMap(([lyric,...chords],line)=>chords.map((chord,chordIndex)=>({
-   uid:`${line}:${chordIndex}`,chord,lyric,line,beats:4
+   uid:`${line}:${chordIndex}`,chord,lyric,line,beats:4,inversion:defaultInversions[chord]
  })))
 });
 const sections=[
@@ -518,7 +574,8 @@ function initializeSongSync(){
          section.events.push({
            uid:value.uid,chord:value.chord,line,lyric:section.lines[line],
            anchor:Number.isInteger(value.anchor)?value.anchor:0,
-           beats:Number.isFinite(+value.beats)&&+value.beats>0?+value.beats:4
+           beats:Number.isFinite(+value.beats)&&+value.beats>0?+value.beats:4,
+           inversion:voicingVariants[value.chord]?.[value.inversion]?value.inversion:defaultInversions[value.chord]
          });
        });
      }
@@ -527,6 +584,7 @@ function initializeSongSync(){
        section.events.forEach((event,defaultPosition)=>{
          const value=overrides[syncEventKey(si,event)];
          if(value&&voicings[value.chord])event.chord=value.chord;
+         event.inversion=value&&voicingVariants[event.chord]?.[value.inversion]?value.inversion:(event.inversion||defaultInversions[event.chord]);
          if(value&&Number.isInteger(value.line))event.line=Math.min(Math.max(value.line,0),section.lines.length-1);
          event.lyric=section.lines[event.line];
          const maxAnchor=lyricWords(event.lyric).length;
@@ -553,15 +611,15 @@ function initializeSongSync(){
  }catch{}
 }
 function saveSongSync(){
- const saved={version:3,events:{},deleted:[...deletedSongEvents],added:[]};
+ const saved={version:4,events:{},deleted:[...deletedSongEvents],added:[]};
  sections.forEach((section,si)=>section.events.forEach((event,position)=>{
    saved.events[syncEventKey(si,event)]={
-     chord:event.chord,line:event.line,anchor:event.anchor,beats:event.beats,position
+     chord:event.chord,inversion:event.inversion,line:event.line,anchor:event.anchor,beats:event.beats,position
    };
    if(event.uid.startsWith("custom:")){
      saved.added.push({
        section:si,uid:event.uid,chord:event.chord,line:event.line,
-       anchor:event.anchor,beats:event.beats
+       anchor:event.anchor,beats:event.beats,inversion:event.inversion
      });
    }
  }));
@@ -586,6 +644,7 @@ function updateSyncEditor(){
  if(songEditMode&&addingSyncChord){
    syncInstruction.textContent=`Agregar ${chordText(addingSyncChord)}: toca la palabra o “Fin de línea” donde debe comenzar.`;
    syncChord.disabled=true;
+   syncInversion.disabled=true;
    syncBeats.disabled=true;
    syncDelete.disabled=true;
    return;
@@ -593,6 +652,7 @@ function updateSyncEditor(){
  if(!songEditMode||!selected){
    syncInstruction.textContent="Selecciona un acorde para moverlo o usa “Agregar acorde” para crear uno nuevo.";
    syncChord.disabled=true;
+   syncInversion.disabled=true;
    syncBeats.disabled=true;
    syncDelete.disabled=true;
    return;
@@ -600,6 +660,8 @@ function updateSyncEditor(){
  syncInstruction.textContent=`Acorde ${chordText(selected.event.chord)} seleccionado y sonando. Toca una palabra o “Fin de línea” para moverlo.`;
  syncChord.disabled=false;
  syncChord.value=selected.event.chord;
+ renderSyncInversionOptions(selected.event.chord,selected.event.inversion);
+ syncInversion.disabled=false;
  syncBeats.disabled=false;
  syncBeats.value=String(selected.event.beats);
  syncDelete.disabled=false;
@@ -624,7 +686,8 @@ function addSyncEvent(section,line,wordIndex){
  if(!addingSyncChord||!targetSection||!targetSection.lines[line]||!voicings[addingSyncChord])return;
  const event={
    uid:`custom:${Date.now().toString(36)}:${Math.random().toString(36).slice(2,8)}`,
-   chord:addingSyncChord,line,lyric:targetSection.lines[line],anchor:wordIndex,beats:4
+   chord:addingSyncChord,line,lyric:targetSection.lines[line],anchor:wordIndex,beats:4,
+   inversion:defaultInversions[addingSyncChord]
  };
  const insertAt=targetSection.events.findIndex(existing=>
    existing.line>line||(existing.line===line&&existing.anchor>wordIndex)
@@ -640,7 +703,7 @@ function addSyncEvent(section,line,wordIndex){
  }
  render();
  renderFullSong();
- playChord(event.chord);
+ playChord(event.chord,event.inversion);
 }
 
 const whiteNames=["C","D","E","F","G","A","B"],whites=["B1"];
@@ -650,8 +713,8 @@ const blacks=[];
 whites.forEach((w,i)=>{const n=w.slice(0,-1),o=w.slice(-1);if(blackAfter[n])blacks.push({note:blackAfter[n]+o,position:i+1})});
 
 function baseNote(note){return note.match(/^([A-G]#?)/)[1]}
-function noteText(note,chord=null){const physical=baseNote(note),n=chord&&voicings[chord]?.spell?.[note]||physical;return notationMode==="es"?NOTE_ES[n]:n}
-function keyHint(note,chord){const physical=baseNote(note),written=chord&&voicings[chord]?.spell?.[note];if(!written)return "";return notationMode==="es"?` (tecla ${NOTE_ES[physical]})`:` (${physical} key)`}
+function noteText(note,chord=null){const physical=baseNote(note),spell=chord&&voicings[chord]?.spell,n=spell?.[note]||spell?.[physical]||physical;return notationMode==="es"?NOTE_ES[n]:n}
+function keyHint(note,chord){const physical=baseNote(note),spell=chord&&voicings[chord]?.spell,written=spell?.[note]||spell?.[physical];if(!written)return "";return notationMode==="es"?` (tecla ${NOTE_ES[physical]})`:` (${physical} key)`}
 function chordText(chord){return notationMode==="es"?CHORD_ES[chord]:chord}
 function renderSyncChordOptions(){
  const selectedValue=syncChord.value;
@@ -669,11 +732,21 @@ function renderSyncChordOptions(){
  if(voicings[selectedValue])syncChord.value=selectedValue;
  if(voicings[addValue])syncAddChord.value=addValue;
 }
+function renderSyncInversionOptions(chord,selectedId=defaultInversions[chord]){
+ syncInversion.innerHTML="";
+ ["root","first","second"].forEach(id=>{
+   const option=document.createElement("option");
+   option.value=id;
+   option.textContent=inversionText(id);
+   syncInversion.appendChild(option);
+ });
+ syncInversion.value=voicingVariants[chord]?.[selectedId]?selectedId:defaultInversions[chord];
+}
 function midi(note){const m=note.match(/^([A-G]#?)(\d)$/),s={C:0,"C#":1,D:2,"D#":3,E:4,F:5,"F#":6,G:7,"G#":8,A:9,"A#":10,B:11};return(+m[2]+1)*12+s[m[1]]}
 function frequency(note){return 440*Math.pow(2,(midi(note)-69)/12)}
 
-function keyboard(el,chord,preview,nextChord=null){
- const v=voicings[chord],left=[v.l],right=v.r.map(x=>x[0]),fingers=Object.fromEntries(v.r);
+function keyboard(el,chord,preview,nextChord=null,inversion=null,nextInversion=null){
+ const v=resolveVoicing(chord,inversion),left=[v.l],right=v.r.map(x=>x[0]),fingers=Object.fromEntries(v.r);
  el.innerHTML="";
  whites.forEach(note=>{
    const k=document.createElement("div");k.className="white";k.dataset.note=note;
@@ -691,10 +764,10 @@ function keyboard(el,chord,preview,nextChord=null){
    if(right.includes(x.note))marker(k,x.note,fingers[x.note],preview?"preview":"right",true,chord);
    el.appendChild(k);
  });
- if(nextChord&&!preview&&keyboardViewMode!=="current")renderUpcoming(el,chord,nextChord);
+ if(nextChord&&!preview&&keyboardViewMode!=="current")renderUpcoming(el,chord,nextChord,inversion,nextInversion);
 }
-function renderUpcoming(el,currentChord,nextChord){
- const current=voicings[currentChord],upcoming=voicings[nextChord];
+function renderUpcoming(el,currentChord,nextChord,currentInversion,nextInversion){
+ const current=resolveVoicing(currentChord,currentInversion),upcoming=resolveVoicing(nextChord,nextInversion);
  const currentNotes=new Set([current.l,...current.r.map(x=>x[0])]);
  const upcomingNotes=[upcoming.l,...upcoming.r.map(x=>x[0])];
  upcomingNotes.forEach(note=>{
@@ -707,8 +780,8 @@ function marker(k,note,finger,type,isBlack,chord){
  const l=document.createElement("div");l.className="label"+(isBlack?" black-label":"")+(type==="preview"?" preview-label":"");l.textContent=noteText(note,chord);l.title=noteText(note,chord)+keyHint(note,chord);k.appendChild(l);
  const f=document.createElement("div");f.className="finger "+(type==="left"?"left-f":type==="preview"?"preview-f":"right-f")+(isBlack?" black-f":"");f.textContent=finger;k.appendChild(f);
 }
-function movement(a,b){
- const va=voicings[a],vb=voicings[b];
+function movement(a,b,aInversion,bInversion){
+ const va=resolveVoicing(a,aInversion),vb=resolveVoicing(b,bInversion);
  const dl=midi(vb.l)-midi(va.l),leftDir=dl>0?"a la derecha":dl<0?"a la izquierda":"sin mover";
  const ar=va.r.map(x=>x[0]),br=vb.r.map(x=>x[0]),common=ar.filter(x=>br.includes(x));
  return `<strong>Prepárate:</strong> bajo ${noteText(va.l,a)} → ${noteText(vb.l,b)} (${Math.abs(dl)} semitonos ${leftDir}). 
@@ -744,12 +817,13 @@ function render(){
  currentChord.textContent=chordText(cur);nextChord.textContent=chordText(next);
  currentBadge.textContent=`${stepIndex+1}/${s.events.length}`;
  nextBadge.textContent=`${nextPos.step+1}/${nextSection.events.length}`;
- const vc=voicings[cur],vn=voicings[next];
+ const vc=resolveVoicing(cur,event.inversion),vn=resolveVoicing(next,nextEvent.inversion);
  currentSub.textContent=`MI: ${noteText(vc.l,cur)} (5) · MD: ${vc.r.map(x=>noteText(x[0],cur)+keyHint(x[0],cur)).join("–")} (${vc.r.map(x=>x[1]).join("–")}) · ${vc.inv}`;
  nextSub.textContent=`MI: ${noteText(vn.l,next)} (5) · MD: ${vn.r.map(x=>noteText(x[0],next)+keyHint(x[0],next)).join("–")} (${vn.r.map(x=>x[1]).join("–")}) · ${vn.inv}`;
- keyboard(currentKeyboard,cur,false,next);keyboard(nextKeyboard,next,true);
+ keyboard(currentKeyboard,cur,false,next,event.inversion,nextEvent.inversion);
+ keyboard(nextKeyboard,next,true,null,nextEvent.inversion);
  document.body.classList.toggle("show-movements",keyboardViewMode==="movement");
- movement.innerHTML=movement(cur,next);
+ movement.innerHTML=movement(cur,next,event.inversion,nextEvent.inversion);
  sectionName.textContent=s.name;sectionCount.textContent=`${s.events.length} cambios de acorde`;
  [...steps.children].forEach((el,i)=>{el.classList.toggle("current-step",i===stepIndex);el.classList.toggle("next-step",nextPos.section===sectionIndex&&i===nextPos.step)});
 }
@@ -779,7 +853,7 @@ function renderFullSong(){
          if(songEditMode&&selectedSyncEvent?.section===si&&selectedSyncEvent?.step===item.step)chordButton.classList.add("selected-edit");
          chordButton.textContent=chordText(item.event.chord);
          chordButton.onclick=()=>{
-           if(songEditMode){selectSyncEvent(si,item.step);playChord(item.event.chord)}
+           if(songEditMode){selectSyncEvent(si,item.step);playChord(item.event.chord,item.event.inversion)}
            else openEventFromSheet(si,item.step);
          };
          slot.appendChild(chordButton);
@@ -920,13 +994,16 @@ function playFallback(notes){
  const master=ctx.createGain();master.gain.setValueAtTime(.0001,now);master.gain.exponentialRampToValueAtTime(.25,now+.03);master.gain.setValueAtTime(.25,now+Math.max(.2,duration-profile.fade));master.gain.exponentialRampToValueAtTime(.0001,now+duration);master.connect(ctx.destination);
  notes.forEach((n,i)=>{const o=ctx.createOscillator(),g=ctx.createGain();o.type=i===0?"sine":"triangle";o.frequency.value=frequency(n);g.gain.value=i===0?.7:.32;o.connect(g);g.connect(master);o.start(now);o.stop(now+duration+.1)});
 }
-async function playChord(chord){
+async function playChord(chord,inversion=null){
  ensureAudio();
- const v=voicings[chord],notes=[v.l,...v.r.map(x=>x[0])];
+ const v=resolveVoicing(chord,inversion),notes=[v.l,...v.r.map(x=>x[0])];
  const ready=await loadPiano();
  if(ready)playSampledChord(notes);else playFallback(notes);
 }
-async function playCurrent(){return playChord(currentSection().events[stepIndex].chord)}
+async function playCurrent(){
+ const event=currentSection().events[stepIndex];
+ return playChord(event.chord,event.inversion);
+}
 function stopAuto(){
  if(timer){clearInterval(timer);timer=null}
  playQueue=[];queueIndex=0;
@@ -1015,14 +1092,14 @@ syncAdd.onclick=()=>{
  }else{
    addingSyncChord=syncAddChord.value;
    selectedSyncEvent=null;
-   playChord(addingSyncChord);
+   playChord(addingSyncChord,defaultInversions[addingSyncChord]);
  }
  renderFullSong();
 };
 syncAddChord.onchange=()=>{
  if(!addingSyncChord)return;
  addingSyncChord=syncAddChord.value;
- playChord(addingSyncChord);
+ playChord(addingSyncChord,defaultInversions[addingSyncChord]);
  updateSyncEditor();
 };
 syncBeats.onchange=()=>{
@@ -1036,11 +1113,21 @@ syncChord.onchange=()=>{
  const selected=selectedSyncData();
  if(!selected||!voicings[syncChord.value])return;
  selected.event.chord=syncChord.value;
+ selected.event.inversion=defaultInversions[selected.event.chord];
  saveSongSync();
  if(selectedSyncEvent.section===sectionIndex)buildSteps();
  render();
  renderFullSong();
- playChord(selected.event.chord);
+ playChord(selected.event.chord,selected.event.inversion);
+};
+syncInversion.onchange=()=>{
+ const selected=selectedSyncData();
+ if(!selected||!voicingVariants[selected.event.chord]?.[syncInversion.value])return;
+ selected.event.inversion=syncInversion.value;
+ saveSongSync();
+ render();
+ renderFullSong();
+ playChord(selected.event.chord,selected.event.inversion);
 };
 syncDelete.onclick=()=>{
  const selected=selectedSyncData();
@@ -1074,7 +1161,7 @@ keyboardMode.value=keyboardViewMode;
 sustainMode.value=sustainViewMode;
 keyboardMode.onchange=e=>{keyboardViewMode=e.target.value;savePreference("mis36-keyboard-mode",keyboardViewMode);updateSettingsSummary();render()};
 sustainMode.onchange=e=>{sustainViewMode=e.target.value;savePreference("mis36-sustain-mode",sustainViewMode);updateSettingsSummary()};
-renderSyncChordOptions();initializeSongSync();updateSettingsSummary();initSections();buildSteps();render();renderFullSong();
+renderSyncChordOptions();renderSyncInversionOptions("E");initializeSongSync();updateSettingsSummary();initSections();buildSteps();render();renderFullSong();
 </script>
 </body>
 </html>
