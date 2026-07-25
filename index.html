@@ -43,7 +43,7 @@ select{background:#f3f6fa;color:#173354;border:1px solid var(--line)}
 background:var(--blue);color:#fff;font-weight:900}
 .next .badge{background:var(--amber)}
 .keyboard-wrap{overflow-x:auto;padding:7px 0}
-.keyboard{--w:29px;position:relative;display:flex;height:155px;min-width:calc(var(--w)*35);user-select:none}
+.keyboard{--w:29px;position:relative;display:flex;height:155px;min-width:calc(var(--w)*22);user-select:none}
 .white{width:var(--w);height:146px;background:#fff;border:1px solid #222;border-left:0;position:relative;flex:0 0 var(--w)}
 .white:first-child{border-left:1px solid #222}
 .black{position:absolute;top:0;width:18px;height:88px;background:#111;border-radius:0 0 4px 4px;
@@ -62,7 +62,7 @@ display:grid;place-items:center;color:#fff;font-weight:900;z-index:7;border:2px 
 .finger.black-f{bottom:8px}
 .next .keyboard-wrap{display:none}
 .move{display:none}.show-movements .move{display:block}
-.white.upcoming{box-shadow:inset 0 0 0 3px #8b96a6}
+.white.upcoming::after{content:"";position:absolute;inset:4px;border:3px dashed #8b96a6;z-index:5;pointer-events:none;border-radius:2px}
 .black.upcoming{outline:3px dashed #cbd2dc;outline-offset:-4px}
 .white.common{box-shadow:inset 0 0 0 4px #8b96a6}
 .black.common{outline:3px solid #d6dbe3;outline-offset:-4px}
@@ -71,7 +71,7 @@ display:grid;place-items:center;color:#fff;font-weight:900;z-index:7;border:2px 
 .finger.preview-f{top:45px;bottom:auto;width:23px;height:23px;background:#f3f5f8;color:#677386;border:2px dashed #788496;font-size:13px}
 .finger.black-f.preview-f{top:48px;bottom:auto}
 .keep-badge{position:absolute;z-index:9;top:8px;left:50%;transform:translateX(-50%);padding:3px 6px;border-radius:7px;background:#f3f5f8;color:#5d6878;border:2px solid #8b96a6;font-size:11px;font-weight:900;white-space:nowrap}
-.black .keep-badge{top:5px;font-size:10px}
+.black .keep-badge{top:31px;font-size:10px}
 .gray{background:#8b96a6}
 .move{margin-top:10px;background:var(--amberSoft);border:1px solid #f0d291;border-radius:13px;padding:11px 13px;line-height:1.45}
 .seq{margin-top:16px}
@@ -348,8 +348,8 @@ makeSection("Coro final",[
 ])
 ];
 
-const whites=[],whiteNames=["C","D","E","F","G","A","B"];
-for(let o=1;o<=5;o++)for(const n of whiteNames)whites.push(n+o);
+const whiteNames=["C","D","E","F","G","A","B"],whites=["B1"];
+for(let o=2;o<=4;o++)for(const n of whiteNames)whites.push(n+o);
 const blackAfter={C:"C#",D:"D#",F:"F#",G:"G#",A:"A#"};
 const blacks=[];
 whites.forEach((w,i)=>{const n=w.slice(0,-1),o=w.slice(-1);if(blackAfter[n])blacks.push({note:blackAfter[n]+o,left:(i+1)*29})});
