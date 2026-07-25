@@ -31,6 +31,10 @@ select{background:#f3f6fa;color:#173354;border:1px solid var(--line)}
 .card{background:#fff;border:1px solid var(--line);border-radius:20px;overflow:hidden;box-shadow:var(--shadow)}
 .card h2{margin:0;padding:14px 18px;border-bottom:1px solid var(--line);font-size:18px}
 .next h2{color:var(--amber)}.current h2{color:var(--blue)}
+.now-heading{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
+.now-label{white-space:nowrap}
+.live-lyric{color:var(--ink);font-size:clamp(16px,2.2vw,22px);font-weight:750;line-height:1.35}
+.live-lyric.instrumental{color:var(--muted);font-style:italic;font-weight:650}
 .content{padding:16px}
 .meta{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:10px}
 .chord{font-size:38px;font-weight:900;line-height:1}
@@ -153,7 +157,7 @@ background:var(--blue);color:#fff;font-weight:900;margin:auto auto 4px}
 </section>
 
 <section class="card current">
-<h2>Lo que está sonando</h2>
+<h2 class="now-heading"><span class="now-label">Ahora suena:</span><span id="liveLyric" class="live-lyric" aria-live="polite"></span></h2>
 <div class="content">
 <div class="meta"><div><div id="currentChord" class="chord"></div><div id="currentSub" class="sub"></div></div><div id="currentBadge" class="badge"></div></div>
 <div class="keyboard-wrap"><div id="currentKeyboard" class="keyboard"></div></div>
@@ -216,6 +220,7 @@ const nextSub=document.getElementById("nextSub");
 const nextBadge=document.getElementById("nextBadge");
 const nextKeyboard=document.getElementById("nextKeyboard");
 const movementEl=document.getElementById("movement");
+const liveLyric=document.getElementById("liveLyric");
 const currentChord=document.getElementById("currentChord");
 const currentSub=document.getElementById("currentSub");
 const currentBadge=document.getElementById("currentBadge");
@@ -254,6 +259,75 @@ const sections=[
 {name:"Pre-coro final",chords:["C#m","G#m","A","E","D","B"]},
 {name:"Coro final",chords:["A","B/D#","G#","C#m","C#","F#m","B","E"]}
 ];
+
+const sectionLyrics={
+ "Introducción":["Introducción instrumental"],
+ "Estrofa 1":[
+  "Esto no es solo un atajo",
+  "Para evitar la guerra que viene después",
+  "Ni es un domingo cualquiera",
+  "Es el previo al adiós más duro de mis 36",
+  "Te tomé la palabra",
+  "Siempre fui de ceñirme al guion",
+  "Y tú, de bailarme el agua",
+  "Con tal de lograr distraer mi atención"
+ ],
+ "Pre-coro 1":[
+  "Y sabes cuáles son todas mis cartas",
+  "Y nunca sentí que peligrara nada",
+  "Me enseñaste tus perfiles",
+  "Pero, de frente, siempre me faltabas"
+ ],
+ "Coro 1":[
+  "Anoche, mientras dormía",
+  "Sentí una culpa que no era mía",
+  "Yo siempre te he sido muy claro",
+  "Cuando quería volar más alto",
+  "No quiero hablar más de tus pactos",
+  "O me quieres como yo lo hago",
+  "O me marcho"
+ ],
+ "Estrofa 2":[
+  "Al final del camino",
+  "Puede que al marcharme haya menos dolor",
+  "Y que, con distancia, el olvido",
+  "Nos deje el recuerdo de lo que hicimos mejor"
+ ],
+ "Pre-coro 2":[
+  "Y sabes cuáles son todas mis cartas",
+  "Y nunca sentí que peligrara nada",
+  "Me enseñaste tus perfiles",
+  "Pero, de frente, siempre me faltabas"
+ ],
+ "Coro 2":[
+  "Anoche, mientras dormía",
+  "Sentí una culpa que no era mía",
+  "Yo siempre te he sido muy claro",
+  "Cuando quería volar más alto",
+  "No quiero hablar más de tus pactos",
+  "O me quieres como yo lo hago",
+  "O me marcho"
+ ],
+ "Puente":[
+  "O me marchooooooooooo",
+  "O me marcho"
+ ],
+ "Pre-coro final":[
+  "Sabes cuáles son todas mis cartas",
+  "Y nunca sentí que peligrara nada",
+  "Me enseñaste tus perfiles",
+  "Pero, de frente, siempre me faltabas"
+ ],
+ "Coro final":[
+  "Anoche, mientras dormía",
+  "Sentí una culpa que no era mía",
+  "Yo siempre te he sido muy claro",
+  "Cuando quería volar más alto",
+  "No quiero hablar más de tus pactos",
+  "O me quieres como yo lo hago",
+  "O me marcho"
+ ]
+};
 
 const fullSong=[
 {name:"Estrofa 1",lines:[
@@ -373,8 +447,16 @@ const PIANO_FILES={
  "C4":"C4.mp3","D#4":"Ds4.mp3","F#4":"Fs4.mp3","A4":"A4.mp3"
 };
 function currentSection(){return sections[sectionIndex]}
+function lyricForStep(sectionName,index,totalSteps){
+ const lines=sectionLyrics[sectionName]||[""];
+ if(lines.length===1)return lines[0];
+ const lineIndex=Math.min(lines.length-1,Math.floor(index*lines.length/totalSteps));
+ return lines[lineIndex];
+}
 function render(){
  const s=currentSection(),cur=s.chords[stepIndex],next=s.chords[(stepIndex+1)%s.chords.length];
+ liveLyric.textContent=lyricForStep(s.name,stepIndex,s.chords.length);
+ liveLyric.classList.toggle("instrumental",s.name==="Introducción");
  currentChord.textContent=chordText(cur); nextChord.textContent=chordText(next);
  currentBadge.textContent=`${stepIndex+1}/${s.chords.length}`;nextBadge.textContent=`${(stepIndex+1)%s.chords.length+1}/${s.chords.length}`;
  const vc=voicings[cur],vn=voicings[next];
