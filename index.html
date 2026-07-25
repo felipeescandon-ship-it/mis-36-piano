@@ -378,8 +378,8 @@ function render(){
  currentChord.textContent=chordText(cur); nextChord.textContent=chordText(next);
  currentBadge.textContent=`${stepIndex+1}/${s.chords.length}`;nextBadge.textContent=`${(stepIndex+1)%s.chords.length+1}/${s.chords.length}`;
  const vc=voicings[cur],vn=voicings[next];
- currentSub.textContent=`MI: ${noteText(vc.l,cur)} (5) · MD: ${vc.r.map(x=>noteText(x[0],cur)+keyHint(x[0],cur)).join("–")} (${vc.r.map(x=>x[1]).join("–")})`;
- nextSub.textContent=`MI: ${noteText(vn.l,next)} (5) · MD: ${vn.r.map(x=>noteText(x[0],next)+keyHint(x[0],next)).join("–")} (${vn.r.map(x=>x[1]).join("–")})`;
+ currentSub.textContent=`MI: ${noteText(vc.l,cur)} (5) · MD: ${vc.r.map(x=>noteText(x[0],cur)+keyHint(x[0],cur)).join("–")} (${vc.r.map(x=>x[1]).join("–")}) · ${vc.inv}`;
+ nextSub.textContent=`MI: ${noteText(vn.l,next)} (5) · MD: ${vn.r.map(x=>noteText(x[0],next)+keyHint(x[0],next)).join("–")} (${vn.r.map(x=>x[1]).join("–")}) · ${vn.inv}`;
  keyboard(currentKeyboard,cur,false);keyboard(nextKeyboard,next,true);
  movementEl.innerHTML=movement(cur,next);
  sectionName.textContent=s.name;sectionCount.textContent=`${s.chords.length} cambios de acorde`;
