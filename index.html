@@ -114,6 +114,8 @@ background:var(--blue);color:#fff;font-weight:900;margin:auto auto 4px}
 button.song-word{background:#f1f5fa;border:1px dashed #9eabc0;cursor:pointer}
 button.song-word:disabled{background:transparent;border-color:transparent;cursor:default;opacity:1}
 .song-word.anchor-target{background:var(--blueSoft);border-color:var(--blue)}
+.song-line-end{color:var(--muted);font-size:13px;font-weight:800}
+button.song-line-end{padding:3px 8px}
 .song-help{margin:0 0 8px;color:var(--muted)}
 .song-editor-actions{display:flex;gap:8px;flex-wrap:wrap}
 .sync-editor{display:flex;gap:12px;align-items:end;flex-wrap:wrap;padding:12px;border:1px solid #bfd3ed;border-radius:13px;background:#f3f8ff;margin-bottom:16px}
@@ -233,7 +235,7 @@ button.song-word:disabled{background:transparent;border-color:transparent;cursor
 </div>
 <div id="syncEditor" class="sync-editor" hidden>
   <div>
-    <div id="syncInstruction" class="sync-instruction"><strong>1.</strong> Selecciona un acorde. <strong>2.</strong> Toca la palabra donde debe entrar.</div>
+    <div id="syncInstruction" class="sync-instruction"><strong>1.</strong> Selecciona un acorde. <strong>2.</strong> Toca una palabra, “Fin de línea” o una palabra de la línea siguiente.</div>
     <div id="syncSaveStatus" class="sync-save-status">Los cambios se guardan en este dispositivo.</div>
   </div>
   <label class="sync-duration">
@@ -379,7 +381,11 @@ const voicings={
 "B/D#":{l:"D#2",r:[["B3",1],["D#4",3],["F#4",5]],inv:"acorde de Si con Re# en el bajo"}
 };
 
-const makeSection=(name,rows)=>({name,events:rows.flatMap(([lyric,...chords])=>chords.map(chord=>({chord,lyric,beats:4})))});
+const makeSection=(name,rows)=>({
+ name,
+ lines:rows.map(([lyric])=>lyric),
+ events:rows.flatMap(([lyric,...chords],line)=>chords.map(chord=>({chord,lyric,line,beats:4})))
+});
 const sections=[
 makeSection("Introducción",[
  ["Introducción instrumental","E","F#","A","E","C#m","F#","Am"],
@@ -455,26 +461,24 @@ const SONG_SYNC_KEY="mis36-song-sync-v1";
 function lyricWords(text){return text.trim().split(/\s+/).filter(Boolean)}
 function initializeSongSync(){
  sections.forEach(section=>{
-   let start=0;
-   while(start<section.events.length){
-     let end=start+1;
-     while(end<section.events.length&&section.events[end].lyric===section.events[start].lyric)end++;
-     const words=lyricWords(section.events[start].lyric),count=end-start;
-     for(let offset=0;offset<count;offset++){
-       const event=section.events[start+offset];
-       event.anchor=Math.min(Math.max(words.length-1,0),Math.floor(offset*Math.max(words.length,1)/count));
+   section.lines.forEach((lineText,line)=>{
+     const lineEvents=section.events.filter(event=>event.line===line);
+     const words=lyricWords(lineText),count=lineEvents.length;
+     lineEvents.forEach((event,offset)=>{
+       event.anchor=Math.min(Math.max(words.length-1,0),Math.floor(offset*Math.max(words.length,1)/Math.max(count,1)));
        event.beats=Number(event.beats)||4;
-     }
-     start=end;
-   }
+     });
+   });
  });
  try{
    const saved=JSON.parse(localStorage.getItem(SONG_SYNC_KEY)||"{}");
    sections.forEach((section,si)=>section.events.forEach((event,ei)=>{
      const value=saved[`${si}:${ei}`];
      if(!value)return;
+     if(Number.isInteger(value.line))event.line=Math.min(Math.max(value.line,0),section.lines.length-1);
+     event.lyric=section.lines[event.line];
      const maxAnchor=Math.max(lyricWords(event.lyric).length-1,0);
-     if(Number.isInteger(value.anchor))event.anchor=Math.min(Math.max(value.anchor,0),maxAnchor);
+     if(Number.isInteger(value.anchor))event.anchor=Math.min(Math.max(value.anchor,0),maxAnchor+1);
      if(Number.isFinite(+value.beats)&&+value.beats>0)event.beats=+value.beats;
    }));
  }catch{}
@@ -482,7 +486,7 @@ function initializeSongSync(){
 function saveSongSync(){
  const saved={};
  sections.forEach((section,si)=>section.events.forEach((event,ei)=>{
-   saved[`${si}:${ei}`]={anchor:event.anchor,beats:event.beats};
+   saved[`${si}:${ei}`]={line:event.line,anchor:event.anchor,beats:event.beats};
  }));
  try{localStorage.setItem(SONG_SYNC_KEY,JSON.stringify(saved));syncSaveStatus.textContent="Guardado automáticamente en este dispositivo."}
  catch{syncSaveStatus.textContent="No fue posible guardar en este dispositivo."}
@@ -498,11 +502,11 @@ function updateSyncEditor(){
  songEditToggle.textContent=songEditMode?"✓ Terminar edición":"✎ Editar sincronización";
  const selected=selectedSyncData();
  if(!songEditMode||!selected){
-   syncInstruction.textContent="1. Selecciona un acorde. 2. Toca la palabra donde debe entrar.";
+   syncInstruction.textContent="1. Selecciona un acorde. 2. Toca una palabra, “Fin de línea” o una palabra de la línea siguiente.";
    syncBeats.disabled=true;
    return;
  }
- syncInstruction.textContent=`Acorde ${chordText(selected.event.chord)} seleccionado. Ahora toca la palabra donde debe entrar.`;
+ syncInstruction.textContent=`Acorde ${chordText(selected.event.chord)} seleccionado y sonando. Toca una palabra o “Fin de línea” para moverlo.`;
  syncBeats.disabled=false;
  syncBeats.value=String(selected.event.beats);
 }
@@ -511,9 +515,11 @@ function selectSyncEvent(section,step){
  updateSyncEditor();
  renderFullSong();
 }
-function placeSyncEvent(section,step,wordIndex){
- const selected=selectedSyncData(),target=sections[section]?.events[step];
- if(!selected||!target||selectedSyncEvent.section!==section||selected.event.lyric!==target.lyric)return;
+function placeSyncEvent(section,line,wordIndex){
+ const selected=selectedSyncData(),targetSection=sections[section];
+ if(!selected||!targetSection||selectedSyncEvent.section!==section||!targetSection.lines[line])return;
+ selected.event.line=line;
+ selected.event.lyric=targetSection.lines[line];
  selected.event.anchor=wordIndex;
  saveSongSync();
  renderFullSong();
@@ -614,7 +620,7 @@ function render(){
  [...steps.children].forEach((el,i)=>{el.classList.toggle("current-step",i===stepIndex);el.classList.toggle("next-step",nextPos.section===sectionIndex&&i===nextPos.step)});
 }
 function openEventFromSheet(si,ei){
- document.body.classList.remove("show-full");fullViewToggle.textContent="☰ Vista completa";
+ document.body.classList.remove("show-full");fullViewToggle.textContent="☰ Letra y acordes completos";
  sectionIndex=si;stepIndex=ei;sectionSelect.value=si;
  stopAuto();buildSteps();render();playCurrent();window.scrollTo({top:0,behavior:"smooth"});
 }
@@ -623,46 +629,65 @@ function renderFullSong(){
  sections.forEach((sectionData,si)=>{
    const section=document.createElement("section");section.className="song-part";
    const title=document.createElement("h3");title.textContent=sectionData.name;section.appendChild(title);
-   let start=0;
-   while(start<sectionData.events.length){
-     let end=start+1;
-     while(end<sectionData.events.length&&sectionData.events[end].lyric===sectionData.events[start].lyric)end++;
-     const group=[];
-     for(let ei=start;ei<end;ei++)group.push({event:sectionData.events[ei],step:ei});
-     const words=lyricWords(group[0].event.lyric);
+   sectionData.lines.forEach((lineText,lineIndex)=>{
+     const group=sectionData.events.map((event,step)=>({event,step})).filter(item=>item.event.line===lineIndex);
+     const words=lyricWords(lineText);
      const line=document.createElement("div");line.className="song-line";
      const row=document.createElement("div");row.className="song-word-row";
      const selected=selectedSyncData();
-     const canPlace=Boolean(songEditMode&&selected&&selectedSyncEvent.section===si&&selected.event.lyric===group[0].event.lyric);
+     const canPlace=Boolean(songEditMode&&selected&&selectedSyncEvent.section===si);
 
-     words.forEach((textValue,wordIndex)=>{
-       const cell=document.createElement("div");cell.className="song-word-cell";
+     const makeAnchorSlot=anchor=>{
        const slot=document.createElement("div");slot.className="song-anchor-slot";
-       group.filter(item=>item.event.anchor===wordIndex).forEach(item=>{
+       group.filter(item=>item.event.anchor===anchor).forEach(item=>{
          const chordButton=document.createElement("button");chordButton.type="button";chordButton.className="song-chord";
          chordButton.dataset.section=si;chordButton.dataset.step=item.step;
          if(songEditMode&&selectedSyncEvent?.section===si&&selectedSyncEvent?.step===item.step)chordButton.classList.add("selected-edit");
          chordButton.textContent=chordText(item.event.chord);
-         chordButton.onclick=()=>songEditMode?selectSyncEvent(si,item.step):openEventFromSheet(si,item.step);
+         chordButton.onclick=()=>{
+           if(songEditMode){selectSyncEvent(si,item.step);playChord(item.event.chord)}
+           else openEventFromSheet(si,item.step);
+         };
          slot.appendChild(chordButton);
        });
+       return slot;
+     };
 
+     words.forEach((textValue,wordIndex)=>{
+       const cell=document.createElement("div");cell.className="song-word-cell";
+       const slot=makeAnchorSlot(wordIndex);
        const word=songEditMode?document.createElement("button"):document.createElement("span");
        if(songEditMode)word.type="button";
        word.className="song-word";
-       word.dataset.section=si;word.dataset.step=group[0].step;word.dataset.word=wordIndex;
+       word.dataset.section=si;word.dataset.line=lineIndex;word.dataset.word=wordIndex;
        word.textContent=textValue;
        if(songEditMode){
          word.disabled=!canPlace;
-         if(canPlace&&selected.event.anchor===wordIndex)word.classList.add("anchor-target");
-         word.onclick=()=>placeSyncEvent(si,group[0].step,wordIndex);
+         if(canPlace&&selected.event.line===lineIndex&&selected.event.anchor===wordIndex)word.classList.add("anchor-target");
+         word.onclick=()=>placeSyncEvent(si,lineIndex,wordIndex);
        }
        cell.append(slot,word);row.appendChild(cell);
      });
 
+     const hasEndChord=group.some(item=>item.event.anchor===words.length);
+     if(songEditMode||hasEndChord){
+       const endCell=document.createElement("div");endCell.className="song-word-cell";
+       const endSlot=makeAnchorSlot(words.length);
+       const endTarget=songEditMode?document.createElement("button"):document.createElement("span");
+       if(songEditMode)endTarget.type="button";
+       endTarget.className="song-word song-line-end";
+       endTarget.dataset.section=si;endTarget.dataset.line=lineIndex;endTarget.dataset.word=words.length;
+       endTarget.textContent=songEditMode?"Fin de línea":"↵";
+       if(songEditMode){
+         endTarget.disabled=!canPlace;
+         if(canPlace&&selected.event.line===lineIndex&&selected.event.anchor===words.length)endTarget.classList.add("anchor-target");
+         endTarget.onclick=()=>placeSyncEvent(si,lineIndex,words.length);
+       }
+       endCell.append(endSlot,endTarget);row.appendChild(endCell);
+     }
+
      line.appendChild(row);section.appendChild(line);
-     start=end;
-   }
+   });
    songSheet.appendChild(section);
  });
  updateSyncEditor();
@@ -761,12 +786,13 @@ function playFallback(notes){
  const master=ctx.createGain();master.gain.setValueAtTime(.0001,now);master.gain.exponentialRampToValueAtTime(.25,now+.03);master.gain.setValueAtTime(.25,now+Math.max(.2,duration-profile.fade));master.gain.exponentialRampToValueAtTime(.0001,now+duration);master.connect(ctx.destination);
  notes.forEach((n,i)=>{const o=ctx.createOscillator(),g=ctx.createGain();o.type=i===0?"sine":"triangle";o.frequency.value=frequency(n);g.gain.value=i===0?.7:.32;o.connect(g);g.connect(master);o.start(now);o.stop(now+duration+.1)});
 }
-async function playCurrent(){
+async function playChord(chord){
  ensureAudio();
- const c=currentSection().events[stepIndex].chord,v=voicings[c],notes=[v.l,...v.r.map(x=>x[0])];
+ const v=voicings[chord],notes=[v.l,...v.r.map(x=>x[0])];
  const ready=await loadPiano();
  if(ready)playSampledChord(notes);else playFallback(notes);
 }
+async function playCurrent(){return playChord(currentSection().events[stepIndex].chord)}
 function stopAuto(){
  if(timer){clearInterval(timer);timer=null}
  playQueue=[];queueIndex=0;
