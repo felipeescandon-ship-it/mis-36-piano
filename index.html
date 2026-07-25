@@ -1,0 +1,402 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mis 36 · Canción completa en piano</title>
+<style>
+:root{
+  --bg:#f4f7fb;--panel:#fff;--ink:#152033;--muted:#657084;
+  --blue:#155fc0;--blueSoft:#dbeafe;--green:#168447;--greenSoft:#dcfce7;
+  --amber:#c46b00;--amberSoft:#fff0cc;--line:#d8e0ec;--navy:#071a33;
+  --shadow:0 12px 30px rgba(18,40,75,.10)
+}
+*{box-sizing:border-box}
+body{margin:0;background:linear-gradient(#eef4fb,#fafcff);color:var(--ink);
+font-family:Inter,system-ui,-apple-system,"Segoe UI",sans-serif}
+.app{max-width:1240px;margin:auto;padding:20px}
+header{background:linear-gradient(135deg,#06172d,#123e72);color:#fff;border-radius:22px;
+padding:22px 25px;box-shadow:var(--shadow)}
+header h1{margin:0 0 5px;font-size:clamp(26px,4vw,43px)}
+header p{margin:0;color:#d8e7fa}
+.toolbar{display:flex;gap:10px;flex-wrap:wrap;align-items:center;background:#fff;border:1px solid var(--line);
+border-radius:17px;padding:12px;margin:16px 0;box-shadow:var(--shadow)}
+button,select,input{font:inherit}
+button,select{border:0;border-radius:11px;padding:10px 14px;font-weight:750}
+button{cursor:pointer}.primary{background:var(--blue);color:#fff}.secondary{background:#e9eff7;color:#173354}
+select{background:#f3f6fa;color:#173354;border:1px solid var(--line)}
+.tempo{display:flex;gap:8px;align-items:center;margin-left:auto}.tempo input{width:135px}
+.stack{display:flex;flex-direction:column;gap:16px}
+.card{background:#fff;border:1px solid var(--line);border-radius:20px;overflow:hidden;box-shadow:var(--shadow)}
+.card h2{margin:0;padding:14px 18px;border-bottom:1px solid var(--line);font-size:18px}
+.next h2{color:var(--amber)}.current h2{color:var(--blue)}
+.content{padding:16px}
+.meta{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:10px}
+.chord{font-size:38px;font-weight:900;line-height:1}
+.sub{color:var(--muted);margin-top:6px}
+.badge{height:48px;min-width:48px;padding:0 12px;border-radius:24px;display:grid;place-items:center;
+background:var(--blue);color:#fff;font-weight:900}
+.next .badge{background:var(--amber)}
+.keyboard-wrap{overflow-x:auto;padding:7px 0}
+.keyboard{--w:29px;position:relative;display:flex;height:155px;min-width:calc(var(--w)*35);user-select:none}
+.white{width:var(--w);height:146px;background:#fff;border:1px solid #222;border-left:0;position:relative;flex:0 0 var(--w)}
+.white:first-child{border-left:1px solid #222}
+.black{position:absolute;top:0;width:18px;height:88px;background:#111;border-radius:0 0 4px 4px;
+z-index:4;transform:translateX(-9px)}
+.white.left{background:linear-gradient(#dcfce7,#85d6a9)}
+.white.right{background:linear-gradient(#dbeafe,#92c5fa)}
+.white.preview{background:linear-gradient(#fff0cc,#f7c66a)}
+.black.left{background:var(--green)}.black.right{background:var(--blue)}.black.preview{background:var(--amber)}
+.label{position:absolute;left:50%;transform:translateX(-50%);bottom:36px;font-size:10px;font-weight:900;
+z-index:6;background:rgba(255,255,255,.96);padding:2px 5px;border-radius:6px;white-space:nowrap;
+border:1px solid rgba(0,0,0,.08)}
+.label.black-label{bottom:84px}
+.finger{position:absolute;left:50%;transform:translateX(-50%);bottom:7px;width:25px;height:25px;border-radius:50%;
+display:grid;place-items:center;color:#fff;font-weight:900;z-index:7;border:2px solid #fff}
+.finger.left-f{background:var(--green)}.finger.right-f{background:var(--blue)}.finger.preview-f{background:var(--amber)}
+.finger.black-f{bottom:49px}
+.move{margin-top:10px;background:var(--amberSoft);border:1px solid #f0d291;border-radius:13px;padding:11px 13px;line-height:1.45}
+.seq{margin-top:16px}
+.section-title{display:flex;justify-content:space-between;gap:12px;align-items:center;margin-bottom:10px}
+.steps{display:flex;gap:8px;overflow-x:auto;padding:2px 2px 10px}
+.step{min-width:82px;background:#fff;border:1px solid var(--line);border-radius:11px;padding:9px;text-align:center;font-weight:850}
+.step small{display:block;color:var(--muted);font-weight:600;margin-top:3px}
+.step.current-step{background:#143f76;color:#fff}.step.current-step small{color:#dce9fa}
+.step.next-step{outline:3px solid #f3bb47;outline-offset:1px}
+.legend{margin-top:16px;padding:14px 16px}
+.legend-grid{display:grid;grid-template-columns:1.1fr 1fr 1.3fr;gap:16px}
+.legend h3{margin:0 0 8px;text-align:center}
+.legend-block{border-right:1px solid var(--line);padding-right:14px}
+.legend-block:last-child{border-right:0}
+.key{display:flex;gap:8px;align-items:center;margin:7px 0}
+.swatch{width:17px;height:17px;border-radius:4px}.green{background:var(--green)}.blue{background:var(--blue)}.amber{background:var(--amber)}
+.digits{display:flex;gap:14px;flex-wrap:wrap;justify-content:center}
+.digit{text-align:center;font-size:12px}.circle{width:31px;height:31px;border-radius:50%;display:grid;place-items:center;
+background:var(--blue);color:#fff;font-weight:900;margin:auto auto 4px}
+.info{font-size:13px;color:var(--muted);margin-top:10px;text-align:center}
+.check-row{display:flex;align-items:center;gap:8px;padding:9px 10px;border:1px solid var(--line);border-radius:10px;background:#f8fafc}
+.check-row input{width:18px;height:18px}
+@media(max-width:800px){.tempo{width:100%;margin-left:0}.legend-grid{grid-template-columns:1fr}.legend-block{border-right:0;border-bottom:1px solid var(--line);padding:0 0 12px}}
+</style>
+</head>
+<body>
+<div class="app">
+<header>
+<h1>Mis 36 · Canción completa</h1>
+<p>Guía armónica por secciones: arriba aparece lo que viene y abajo lo que está sonando.</p>
+</header>
+
+<div class="toolbar">
+<button id="prev" class="secondary">← Anterior</button>
+<button id="sound" class="primary">▶ Tocar acorde</button>
+<select id="playMode" aria-label="Modo de reproducción">
+<option value="section">Sección actual</option>
+<option value="fromHere">Desde esta sección</option>
+<option value="custom">Combinar secciones</option>
+<option value="full">Canción completa</option>
+</select>
+<button id="auto" class="primary">▶ Reproducir</button>
+<button id="next" class="secondary">Siguiente →</button>
+<select id="sectionSelect"></select>
+<button id="goSectionStart" class="secondary" type="button">↺ Inicio de sección</button>
+<button id="notation" class="secondary">Notas: Español</button>
+<div class="tempo"><strong><span id="bpmOut">72</span> BPM</strong><input id="bpm" type="range" min="45" max="120" value="72"></div>
+</div>
+
+<div id="customPanel" class="card" style="display:none;margin-bottom:16px">
+  <div class="content">
+    <div class="section-title">
+      <div>
+        <strong>Combinar secciones</strong>
+        <div class="sub">Marca las secciones y se reproducirán en el orden de la canción.</div>
+      </div>
+      <button id="selectAllSections" class="secondary" type="button">Seleccionar todas</button>
+    </div>
+    <div id="sectionChecks" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:8px"></div>
+  </div>
+</div>
+
+<div class="stack">
+<section class="card next">
+<h2>Lo que viene</h2>
+<div class="content">
+<div class="meta"><div><div id="nextChord" class="chord"></div><div id="nextSub" class="sub"></div></div><div id="nextBadge" class="badge"></div></div>
+<div class="keyboard-wrap"><div id="nextKeyboard" class="keyboard"></div></div>
+<div id="movement" class="move"></div>
+</div>
+</section>
+
+<section class="card current">
+<h2>Lo que está sonando</h2>
+<div class="content">
+<div class="meta"><div><div id="currentChord" class="chord"></div><div id="currentSub" class="sub"></div></div><div id="currentBadge" class="badge"></div></div>
+<div class="keyboard-wrap"><div id="currentKeyboard" class="keyboard"></div></div>
+</div>
+</section>
+</div>
+
+<section class="card seq">
+<div class="content">
+<div class="section-title"><div><strong id="sectionName"></strong><div id="sectionCount" class="sub"></div></div></div>
+<div id="steps" class="steps"></div>
+</div>
+</section>
+
+<section class="card legend">
+<h3>Leyenda</h3>
+<div class="legend-grid">
+<div class="legend-block">
+<div class="key"><span class="swatch green"></span>Mano izquierda: bajo, dedo 5</div>
+<div class="key"><span class="swatch blue"></span>Mano derecha: acorde sonando</div>
+<div class="key"><span class="swatch amber"></span>Mano derecha: acorde que viene</div>
+</div>
+<div class="legend-block">
+<div class="key"><span class="circle" style="background:var(--green)">5</span>Meñique de la mano izquierda</div>
+</div>
+<div>
+<div class="digits">
+<div class="digit"><span class="circle">1</span>Pulgar</div>
+<div class="digit"><span class="circle">2</span>Índice</div>
+<div class="digit"><span class="circle">3</span>Medio</div>
+<div class="digit"><span class="circle">4</span>Anular</div>
+<div class="digit"><span class="circle">5</span>Meñique</div>
+</div>
+</div>
+</div>
+<div class="info">La mano izquierda toca la fundamental dos octavas más abajo. Esta versión organiza los acordes por secciones; no intenta reproducir la duración exacta del audio original.</div>
+</section>
+</div>
+
+<script>
+const prev=document.getElementById("prev");
+const sound=document.getElementById("sound");
+const playMode=document.getElementById("playMode");
+const auto=document.getElementById("auto");
+const next=document.getElementById("next");
+const sectionSelect=document.getElementById("sectionSelect");
+const goSectionStart=document.getElementById("goSectionStart");
+const notation=document.getElementById("notation");
+const bpmOut=document.getElementById("bpmOut");
+const bpm=document.getElementById("bpm");
+const customPanel=document.getElementById("customPanel");
+const selectAllSections=document.getElementById("selectAllSections");
+const sectionChecks=document.getElementById("sectionChecks");
+const nextChord=document.getElementById("nextChord");
+const nextSub=document.getElementById("nextSub");
+const nextBadge=document.getElementById("nextBadge");
+const nextKeyboard=document.getElementById("nextKeyboard");
+const movement=document.getElementById("movement");
+const currentChord=document.getElementById("currentChord");
+const currentSub=document.getElementById("currentSub");
+const currentBadge=document.getElementById("currentBadge");
+const currentKeyboard=document.getElementById("currentKeyboard");
+const sectionName=document.getElementById("sectionName");
+const sectionCount=document.getElementById("sectionCount");
+const steps=document.getElementById("steps");
+const NOTE_ES={C:"Do","C#":"Do#",D:"Re","D#":"Re#",E:"Mi",F:"Fa","F#":"Fa#",G:"Sol","G#":"Sol#",A:"La","A#":"La#",B:"Si"};
+const CHORD_ES={"E":"Mi","F#":"Fa#","F#m":"Fa#m","A":"La","Am":"Lam","C#m":"Do#m","C#":"Do#","G#m":"Sol#m","G#":"Sol#","D":"Re","B":"Si","B/D#":"Si/Re#"};
+let notationMode="es";
+
+const voicings={
+"E":{l:"E2",r:[["E4",1],["G#4",3],["B4",5]],inv:"fundamental"},
+"F#":{l:"F#2",r:[["A#3",1],["C#4",2],["F#4",5]],inv:"2ª inversión"},
+"F#m":{l:"F#2",r:[["A3",1],["C#4",2],["F#4",5]],inv:"2ª inversión"},
+"A":{l:"A2",r:[["C#4",1],["E4",2],["A4",5]],inv:"1ª inversión"},
+"Am":{l:"A2",r:[["C4",1],["E4",2],["A4",5]],inv:"1ª inversión"},
+"C#m":{l:"C#2",r:[["G#3",2],["C#4",1],["E4",5]],inv:"2ª inversión"},
+"C#":{l:"C#2",r:[["G#3",1],["C#4",2],["F4",5]],inv:"2ª inversión"},
+"G#m":{l:"G#2",r:[["B3",1],["D#4",2],["G#4",5]],inv:"1ª inversión"},
+"G#":{l:"G#2",r:[["C4",1],["D#4",2],["G#4",5]],inv:"1ª inversión"},
+"D":{l:"D2",r:[["A3",1],["D4",2],["F#4",5]],inv:"2ª inversión"},
+"B":{l:"B1",r:[["B3",1],["D#4",3],["F#4",5]],inv:"fundamental"},
+"B/D#":{l:"D#2",r:[["B3",1],["D#4",3],["F#4",5]],inv:"acorde de Si con Re# en el bajo"}
+};
+
+const sections=[
+{name:"Introducción",chords:["E","F#","A","E","C#m","F#","Am","E"]},
+{name:"Estrofa 1",chords:["E","F#m","A","E","C#m","F#","A","E"]},
+{name:"Pre-coro 1",chords:["C#m","G#m","A","E","D","B"]},
+{name:"Coro 1",chords:["A","B/D#","G#","C#m","C#","F#m","B","E"]},
+{name:"Estrofa 2",chords:["E","F#m","A","E","C#m","F#","A","E"]},
+{name:"Pre-coro 2",chords:["C#m","G#m","A","E","D","B"]},
+{name:"Coro 2",chords:["A","B/D#","G#","C#m","C#","F#m","B"]},
+{name:"Puente",chords:["A","B/D#","G#","C#m","C#","F#m","B"]},
+{name:"Pre-coro final",chords:["C#m","G#m","A","E","D","B"]},
+{name:"Coro final",chords:["A","B/D#","G#","C#m","C#","F#m","B","E"]}
+];
+
+const whites=[],whiteNames=["C","D","E","F","G","A","B"];
+for(let o=1;o<=5;o++)for(const n of whiteNames)whites.push(n+o);
+const blackAfter={C:"C#",D:"D#",F:"F#",G:"G#",A:"A#"};
+const blacks=[];
+whites.forEach((w,i)=>{const n=w.slice(0,-1),o=w.slice(-1);if(blackAfter[n])blacks.push({note:blackAfter[n]+o,left:(i+1)*29})});
+
+function baseNote(note){return note.match(/^([A-G]#?)/)[1]}
+function noteText(note){const n=baseNote(note);return notationMode==="es"?NOTE_ES[n]:n}
+function chordText(chord){return notationMode==="es"?CHORD_ES[chord]:chord}
+function midi(note){const m=note.match(/^([A-G]#?)(\d)$/),s={C:0,"C#":1,D:2,"D#":3,E:4,F:5,"F#":6,G:7,"G#":8,A:9,"A#":10,B:11};return(+m[2]+1)*12+s[m[1]]}
+function frequency(note){return 440*Math.pow(2,(midi(note)-69)/12)}
+
+function keyboard(el,chord,preview){
+ const v=voicings[chord],left=[v.l],right=v.r.map(x=>x[0]),fingers=Object.fromEntries(v.r);
+ el.innerHTML="";
+ whites.forEach(note=>{
+   const k=document.createElement("div");k.className="white";
+   if(left.includes(note))k.classList.add("left");
+   if(right.includes(note))k.classList.add(preview?"preview":"right");
+   el.appendChild(k);
+   if(left.includes(note))marker(k,note,"5","left",false);
+   if(right.includes(note))marker(k,note,fingers[note],preview?"preview":"right",false);
+ });
+ blacks.forEach(x=>{
+   const k=document.createElement("div");k.className="black";k.style.left=x.left+"px";
+   if(left.includes(x.note))k.classList.add("left");
+   if(right.includes(x.note))k.classList.add(preview?"preview":"right");
+   if(left.includes(x.note))marker(k,x.note,"5","left",true);
+   if(right.includes(x.note))marker(k,x.note,fingers[x.note],preview?"preview":"right",true);
+   el.appendChild(k);
+ });
+}
+function marker(k,note,finger,type,isBlack){
+ const l=document.createElement("div");l.className="label"+(isBlack?" black-label":"");l.textContent=noteText(note);k.appendChild(l);
+ const f=document.createElement("div");f.className="finger "+(type==="left"?"left-f":type==="preview"?"preview-f":"right-f")+(isBlack?" black-f":"");f.textContent=finger;k.appendChild(f);
+}
+function movement(a,b){
+ const va=voicings[a],vb=voicings[b];
+ const dl=midi(vb.l)-midi(va.l),leftDir=dl>0?"a la derecha":dl<0?"a la izquierda":"sin mover";
+ const ar=va.r.map(x=>x[0]),br=vb.r.map(x=>x[0]),common=ar.filter(x=>br.includes(x));
+ return `<strong>Prepárate:</strong> bajo ${noteText(va.l)} → ${noteText(vb.l)} (${Math.abs(dl)} semitonos ${leftDir}). 
+ Mano derecha: ${common.length?`mantén como referencia ${common.map(noteText).join(", ")}.`:"cambia toda la forma del acorde."}`;
+}
+
+let sectionIndex=0,stepIndex=0,timer=null,audioCtx=null;
+let playQueue=[],queueIndex=0;
+function currentSection(){return sections[sectionIndex]}
+function render(){
+ const s=currentSection(),cur=s.chords[stepIndex],next=s.chords[(stepIndex+1)%s.chords.length];
+ currentChord.textContent=chordText(cur); nextChord.textContent=chordText(next);
+ currentBadge.textContent=`${stepIndex+1}/${s.chords.length}`;nextBadge.textContent=`${(stepIndex+1)%s.chords.length+1}/${s.chords.length}`;
+ const vc=voicings[cur],vn=voicings[next];
+ currentSub.textContent=`MI: ${noteText(vc.l)} (5) · MD: ${vc.r.map(x=>noteText(x[0])).join("–")} (${vc.r.map(x=>x[1]).join("–")})`;
+ nextSub.textContent=`MI: ${noteText(vn.l)} (5) · MD: ${vn.r.map(x=>noteText(x[0])).join("–")} (${vn.r.map(x=>x[1]).join("–")})`;
+ keyboard(currentKeyboard,cur,false);keyboard(nextKeyboard,next,true);
+ movement.innerHTML=movement(cur,next);
+ sectionName.textContent=s.name;sectionCount.textContent=`${s.chords.length} cambios de acorde`;
+ [...steps.children].forEach((el,i)=>{el.classList.toggle("current-step",i===stepIndex);el.classList.toggle("next-step",i===(stepIndex+1)%s.chords.length)});
+}
+function buildSteps(){
+ steps.innerHTML="";const s=currentSection();
+ s.chords.forEach((c,i)=>{const b=document.createElement("button");b.className="step";b.innerHTML=`${i+1}<small>${chordText(c)}</small>`;b.onclick=()=>{stepIndex=i;render();playCurrent()};steps.appendChild(b)});
+}
+function loadSection(i){sectionIndex=+i;stepIndex=0;stopAuto();buildSteps();render()}
+function initSections(){
+ sections.forEach((s,i)=>{
+   const o=document.createElement("option");
+   o.value=i;o.textContent=s.name;
+   sectionSelect.appendChild(o);
+
+   const label=document.createElement("label");
+   label.className="check-row";
+   const cb=document.createElement("input");
+   cb.type="checkbox";
+   cb.value=i;
+   cb.checked=i===sectionIndex;
+   const span=document.createElement("span");
+   span.textContent=s.name;
+   label.append(cb,span);
+   sectionChecks.appendChild(label);
+ });
+}
+function ensureAudio(){if(!audioCtx)audioCtx=new(window.AudioContext||window.webkitAudioContext)();if(audioCtx.state==="suspended")audioCtx.resume()}
+function playCurrent(){
+ ensureAudio();const c=currentSection().chords[stepIndex],v=voicings[c],notes=[v.l,...v.r.map(x=>x[0])],now=audioCtx.currentTime;
+ const master=audioCtx.createGain();master.gain.setValueAtTime(.0001,now);master.gain.exponentialRampToValueAtTime(.3,now+.03);master.gain.exponentialRampToValueAtTime(.0001,now+1.65);master.connect(audioCtx.destination);
+ notes.forEach((n,i)=>{const o=audioCtx.createOscillator(),g=audioCtx.createGain();o.type=i===0?"sine":"triangle";o.frequency.value=frequency(n);g.gain.value=i===0?.75:.35;o.connect(g);g.connect(master);o.start(now);o.stop(now+1.7)});
+}
+function stopAuto(){
+ if(timer){clearInterval(timer);timer=null}
+ playQueue=[];queueIndex=0;
+ auto.textContent="▶ Reproducir";
+}
+
+function selectedSections(){
+ return [...sectionChecks.querySelectorAll('input[type="checkbox"]:checked')].map(x=>+x.value);
+}
+
+function buildPlayQueue(){
+ const mode=playMode.value;
+ let selected=[];
+
+ if(mode==="section") selected=[sectionIndex];
+ if(mode==="fromHere") selected=sections.map((_,i)=>i).filter(i=>i>=sectionIndex);
+ if(mode==="full") selected=sections.map((_,i)=>i);
+ if(mode==="custom") selected=selectedSections();
+
+ const queue=[];
+ selected.forEach(si=>{
+   sections[si].chords.forEach((_,ci)=>queue.push({section:si,step:ci}));
+ });
+ return queue;
+}
+
+function playQueueItem(){
+ if(queueIndex>=playQueue.length){stopAuto();return}
+ const item=playQueue[queueIndex];
+ sectionIndex=item.section;
+ stepIndex=item.step;
+ sectionSelect.value=sectionIndex;
+ buildSteps();
+ render();
+ playCurrent();
+}
+
+function startAuto(){
+ stopAuto();
+ playQueue=buildPlayQueue();
+ if(!playQueue.length){
+   auto.textContent="Selecciona una sección";
+   setTimeout(()=>auto.textContent="▶ Reproducir",1400);
+   return;
+ }
+ queueIndex=0;
+ playQueueItem();
+ const ms=60000/+bpm.value*4;
+ timer=setInterval(()=>{
+   queueIndex++;
+   if(queueIndex>=playQueue.length){stopAuto();return}
+   playQueueItem();
+ },ms);
+ auto.textContent="■ Detener";
+}
+prev.onclick=()=>{stepIndex=(stepIndex-1+currentSection().chords.length)%currentSection().chords.length;render();playCurrent()};
+next.onclick=()=>{stepIndex=(stepIndex+1)%currentSection().chords.length;render();playCurrent()};
+sound.onclick=playCurrent;
+auto.onclick=()=>timer?stopAuto():startAuto();
+
+playMode.onchange=()=>{
+ customPanel.style.display=playMode.value==="custom"?"block":"none";
+ if(timer)stopAuto();
+};
+
+selectAllSections.onclick=()=>{
+ const boxes=[...sectionChecks.querySelectorAll('input[type="checkbox"]')];
+ const allSelected=boxes.every(x=>x.checked);
+ boxes.forEach(x=>x.checked=!allSelected);
+ selectAllSections.textContent=allSelected?"Seleccionar todas":"Limpiar selección";
+};
+
+sectionSelect.onchange=e=>loadSection(e.target.value);
+
+goSectionStart.onclick=()=>{
+ stopAuto();
+ sectionIndex=+sectionSelect.value;
+ stepIndex=0;
+ buildSteps();
+ render();
+};
+notation.onclick=()=>{notationMode=notationMode==="es"?"en":"es";notation.textContent=notationMode==="es"?"Notas: Español":"Notes: English";buildSteps();render()};
+bpm.oninput=e=>bpmOut.textContent=e.target.value;
+initSections();buildSteps();render();
+</script>
+</body>
+</html>
