@@ -126,6 +126,15 @@ button.song-line-end{padding:3px 8px}
 .sync-duration{display:grid;gap:5px;color:#526178;font-size:13px;font-weight:800}
 .sync-duration select{min-width:125px}
 .sync-save-status{color:var(--green);font-size:13px;font-weight:800}
+.show-full.song-editing{padding-bottom:170px}
+.show-full.song-editing .sync-editor{
+ position:fixed;left:50%;bottom:max(12px,env(safe-area-inset-bottom));transform:translateX(-50%);
+ z-index:50;width:min(1160px,calc(100% - 24px));max-height:42vh;overflow:auto;
+ margin:0;background:rgba(243,248,255,.98);box-shadow:0 16px 46px rgba(7,26,51,.24);
+ backdrop-filter:blur(10px)
+}
+.sync-adding button.song-word:not(:disabled){background:#e3efff;border-color:#4f86c6}
+.sync-adding button.song-line-end:not(:disabled){background:#d7e9ff}
 @media(max-width:900px){
  .toolbar-main{grid-template-columns:1fr auto}
  .section-control{grid-column:1/-1}
@@ -138,6 +147,12 @@ button.song-line-end{padding:3px 8px}
  .transport{grid-column:1/-1}.transport button{flex:1 1 auto}
  #settingsToggle{grid-column:1/-1}
  .settings-grid{grid-template-columns:1fr}
+ .show-full.song-editing{padding-bottom:290px}
+ .show-full.song-editing .sync-editor{gap:8px;padding:10px;align-items:end}
+ .show-full.song-editing .sync-editor>div:first-child{flex:1 1 100%}
+ .show-full.song-editing .sync-duration{flex:1 1 120px}
+ .show-full.song-editing .sync-duration select{width:100%;min-width:0}
+ .show-full.song-editing #syncAdd,.show-full.song-editing #syncDelete{flex:1 1 auto}
 }
 </style>
 </head>
@@ -237,7 +252,7 @@ button.song-line-end{padding:3px 8px}
 </div>
 <div id="syncEditor" class="sync-editor" hidden>
   <div>
-    <div id="syncInstruction" class="sync-instruction">Selecciona un acorde para moverlo o usa “Agregar acorde” para crear uno nuevo.</div>
+    <div id="syncInstruction" class="sync-instruction" aria-live="polite">Selecciona un acorde para moverlo o usa “Agregar acorde” para crear uno nuevo.</div>
     <div id="syncSaveStatus" class="sync-save-status">Los cambios se guardan en este dispositivo.</div>
   </div>
   <label class="sync-duration">
@@ -560,6 +575,8 @@ function selectedSyncData(){
 }
 function updateSyncEditor(){
  syncEditor.hidden=!songEditMode;
+ document.body.classList.toggle("song-editing",songEditMode);
+ document.body.classList.toggle("sync-adding",Boolean(songEditMode&&addingSyncChord));
  songEditToggle.setAttribute("aria-expanded",String(songEditMode));
  songEditToggle.textContent=songEditMode?"✓ Terminar edición":"✎ Editar sincronización";
  syncAddChord.disabled=!songEditMode;
