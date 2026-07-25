@@ -31,7 +31,7 @@ select{background:#f3f6fa;color:#173354;border:1px solid var(--line)}
 .card{background:#fff;border:1px solid var(--line);border-radius:20px;overflow:hidden;box-shadow:var(--shadow)}
 .card h2{margin:0;padding:14px 18px;border-bottom:1px solid var(--line);font-size:18px}
 .next h2{color:var(--amber)}.current h2{color:var(--blue)}
-.now-heading{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
+.now-heading{display:flex;align-items:baseline;justify-content:center;gap:10px;flex-wrap:wrap;text-align:center}
 .now-label{white-space:nowrap}
 .live-lyric{color:var(--ink);font-size:clamp(16px,2.2vw,22px);font-weight:750;line-height:1.35}
 .live-lyric.instrumental{color:var(--muted);font-style:italic;font-weight:650}
@@ -249,38 +249,47 @@ const voicings={
 
 const sections=[
 {name:"Introducción",chords:["E","F#","A","E","C#m","F#","Am","E"]},
-{name:"Estrofa 1",chords:["E","F#m","A","E","C#m","F#","A","E"]},
-{name:"Pre-coro 1",chords:["C#m","G#m","A","E","D","B"]},
+{name:"Estrofa 1",chords:["E","F#m","A","E","C#m","F#","Am","E","E","F#m","A","A","E","C#m","C#m","F#","A","E"]},
+{name:"Pre-coro 1",chords:["C#m","G#m","A","A","E","D","B"]},
 {name:"Coro 1",chords:["A","B/D#","G#","C#m","C#","F#m","B","E"]},
-{name:"Estrofa 2",chords:["E","F#m","A","E","C#m","F#","A","E"]},
-{name:"Pre-coro 2",chords:["C#m","G#m","A","E","D","B"]},
+{name:"Estrofa 2",chords:["E","F#m","A","E","C#m","C#m","F#","A","E"]},
+{name:"Pre-coro 2",chords:["C#m","G#m","A","A","E","D","B"]},
 {name:"Coro 2",chords:["A","B/D#","G#","C#m","C#","F#m","B"]},
 {name:"Puente",chords:["A","B/D#","G#","C#m","C#","F#m","B"]},
-{name:"Pre-coro final",chords:["C#m","G#m","A","E","D","B"]},
+{name:"Pre-coro final",chords:["C#m","G#m","A","A","E","D","B"]},
 {name:"Coro final",chords:["A","B/D#","G#","C#m","C#","F#m","B","E"]}
 ];
 
 const sectionLyrics={
- "Introducción":["Prepárate para cantar: Esto no es solo un atajo"],
+ "Introducción":[
+  "Prepárate para cantar: Esto no es solo un atajo",
+  "Prepárate para cantar: Esto no es solo un atajo",
+  "Prepárate para cantar: Esto no es solo un atajo",
+  "Prepárate para cantar: Esto no es solo un atajo",
+  "Prepárate para cantar: Esto no es solo un atajo",
+  "Prepárate para cantar: Esto no es solo un atajo",
+  "Prepárate para cantar: Esto no es solo un atajo",
+  "Prepárate para cantar: Esto no es solo un atajo"
+ ],
  "Estrofa 1":[
-  "Esto no es solo un atajo",
-  "Para evitar la guerra que viene después",
+  "Esto no es solo un atajo","Esto no es solo un atajo","Esto no es solo un atajo",
+  "Para evitar la guerra que viene después","Para evitar la guerra que viene después",
   "Ni es un domingo cualquiera",
-  "Es el previo al adiós más duro de mis 36",
-  "Te tomé la palabra",
-  "Siempre fui de ceñirme al guion",
-  "Y tú, de bailarme el agua",
-  "Con tal de lograr distraer mi atención"
+  "Es el previo al adiós más duro de mis 36","Es el previo al adiós más duro de mis 36",
+  "Te tomé la palabra","Te tomé la palabra","Te tomé la palabra",
+  "Siempre fui de ceñirme al guion","Siempre fui de ceñirme al guion","Siempre fui de ceñirme al guion",
+  "Y tú, de bailarme el agua","Y tú, de bailarme el agua",
+  "Con tal de lograr distraer mi atención","Con tal de lograr distraer mi atención"
  ],
  "Pre-coro 1":[
-  "Y sabes cuáles son todas mis cartas",
-  "Y nunca sentí que peligrara nada",
+  "Y sabes cuáles son todas mis cartas","Y sabes cuáles son todas mis cartas","Y sabes cuáles son todas mis cartas",
+  "Y nunca sentí que peligrara nada","Y nunca sentí que peligrara nada",
   "Me enseñaste tus perfiles",
   "Pero, de frente, siempre me faltabas"
  ],
  "Coro 1":[
   "Anoche, mientras dormía",
-  "Sentí una culpa que no era mía",
+  "Sentí una culpa que no era mía","Sentí una culpa que no era mía",
   "Yo siempre te he sido muy claro",
   "Cuando quería volar más alto",
   "No quiero hablar más de tus pactos",
@@ -288,39 +297,39 @@ const sectionLyrics={
   "O me marcho"
  ],
  "Estrofa 2":[
-  "Al final del camino",
-  "Puede que al marcharme haya menos dolor",
-  "Y que, con distancia, el olvido",
-  "Nos deje el recuerdo de lo que hicimos mejor"
+  "Al final del camino","Al final del camino","Al final del camino",
+  "Puede que al marcharme haya menos dolor","Puede que al marcharme haya menos dolor",
+  "Y que, con distancia, el olvido","Y que, con distancia, el olvido",
+  "Nos deje el recuerdo de lo que hicimos mejor","Nos deje el recuerdo de lo que hicimos mejor"
  ],
  "Pre-coro 2":[
-  "Y sabes cuáles son todas mis cartas",
-  "Y nunca sentí que peligrara nada",
+  "Y sabes cuáles son todas mis cartas","Y sabes cuáles son todas mis cartas","Y sabes cuáles son todas mis cartas",
+  "Y nunca sentí que peligrara nada","Y nunca sentí que peligrara nada",
   "Me enseñaste tus perfiles",
   "Pero, de frente, siempre me faltabas"
  ],
  "Coro 2":[
   "Anoche, mientras dormía",
-  "Sentí una culpa que no era mía",
+  "Sentí una culpa que no era mía","Sentí una culpa que no era mía",
   "Yo siempre te he sido muy claro",
   "Cuando quería volar más alto",
   "No quiero hablar más de tus pactos",
-  "O me quieres como yo lo hago",
-  "O me marcho"
+  "O me quieres como yo lo hago"
  ],
  "Puente":[
-  "O me marchooooooooooo",
-  "O me marcho"
+  "O me marchooooooooooo","O me marchooooooooooo","O me marchooooooooooo",
+  "O me marchooooooooooo","O me marchooooooooooo",
+  "O me marcho","O me marcho"
  ],
  "Pre-coro final":[
-  "Sabes cuáles son todas mis cartas",
-  "Y nunca sentí que peligrara nada",
+  "Sabes cuáles son todas mis cartas","Sabes cuáles son todas mis cartas","Sabes cuáles son todas mis cartas",
+  "Y nunca sentí que peligrara nada","Y nunca sentí que peligrara nada",
   "Me enseñaste tus perfiles",
   "Pero, de frente, siempre me faltabas"
  ],
  "Coro final":[
   "Anoche, mientras dormía",
-  "Sentí una culpa que no era mía",
+  "Sentí una culpa que no era mía","Sentí una culpa que no era mía",
   "Yo siempre te he sido muy claro",
   "Cuando quería volar más alto",
   "No quiero hablar más de tus pactos",
@@ -448,10 +457,8 @@ const PIANO_FILES={
 };
 function currentSection(){return sections[sectionIndex]}
 function lyricForStep(sectionName,index,totalSteps){
- const lines=sectionLyrics[sectionName]||[""];
- if(lines.length===1)return lines[0];
- const lineIndex=Math.min(lines.length-1,Math.floor(index*lines.length/totalSteps));
- return lines[lineIndex];
+ const cues=sectionLyrics[sectionName]||[""];
+ return cues[Math.min(index,cues.length-1)]||"";
 }
 function render(){
  const s=currentSection(),cur=s.chords[stepIndex],next=s.chords[(stepIndex+1)%s.chords.length];
