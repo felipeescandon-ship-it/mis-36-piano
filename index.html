@@ -247,158 +247,76 @@ const voicings={
 "B/D#":{l:"D#2",r:[["B3",1],["D#4",3],["F#4",5]],inv:"acorde de Si con Re# en el bajo"}
 };
 
+const makeSection=(name,rows)=>({name,events:rows.flatMap(([lyric,...chords])=>chords.map(chord=>({chord,lyric,beats:4})))});
 const sections=[
-{name:"Introducción",chords:["E","F#","A","E","C#m","F#","Am","E"]},
-{name:"Estrofa 1",chords:["E","F#m","A","E","C#m","F#","Am","E","E","F#m","A","A","E","C#m","C#m","F#","A","E"]},
-{name:"Pre-coro 1",chords:["C#m","G#m","A","A","E","D","B"]},
-{name:"Coro 1",chords:["A","B/D#","G#","C#m","C#","F#m","B","E"]},
-{name:"Estrofa 2",chords:["E","F#m","A","E","C#m","C#m","F#","A","E"]},
-{name:"Pre-coro 2",chords:["C#m","G#m","A","A","E","D","B"]},
-{name:"Coro 2",chords:["A","B/D#","G#","C#m","C#","F#m","B"]},
-{name:"Puente",chords:["A","B/D#","G#","C#m","C#","F#m","B"]},
-{name:"Pre-coro final",chords:["C#m","G#m","A","A","E","D","B"]},
-{name:"Coro final",chords:["A","B/D#","G#","C#m","C#","F#m","B","E"]}
-];
-
-const sectionLyrics={
- "Introducción":[
-  "Prepárate para cantar: Esto no es solo un atajo",
-  "Prepárate para cantar: Esto no es solo un atajo",
-  "Prepárate para cantar: Esto no es solo un atajo",
-  "Prepárate para cantar: Esto no es solo un atajo",
-  "Prepárate para cantar: Esto no es solo un atajo",
-  "Prepárate para cantar: Esto no es solo un atajo",
-  "Prepárate para cantar: Esto no es solo un atajo",
-  "Prepárate para cantar: Esto no es solo un atajo"
- ],
- "Estrofa 1":[
-  "Esto no es solo un atajo","Esto no es solo un atajo","Esto no es solo un atajo",
-  "Para evitar la guerra que viene después","Para evitar la guerra que viene después",
-  "Ni es un domingo cualquiera",
-  "Es el previo al adiós más duro de mis 36","Es el previo al adiós más duro de mis 36",
-  "Te tomé la palabra","Te tomé la palabra","Te tomé la palabra",
-  "Siempre fui de ceñirme al guion","Siempre fui de ceñirme al guion","Siempre fui de ceñirme al guion",
-  "Y tú, de bailarme el agua","Y tú, de bailarme el agua",
-  "Con tal de lograr distraer mi atención","Con tal de lograr distraer mi atención"
- ],
- "Pre-coro 1":[
-  "Y sabes cuáles son todas mis cartas","Y sabes cuáles son todas mis cartas","Y sabes cuáles son todas mis cartas",
-  "Y nunca sentí que peligrara nada","Y nunca sentí que peligrara nada",
-  "Me enseñaste tus perfiles",
-  "Pero, de frente, siempre me faltabas"
- ],
- "Coro 1":[
-  "Anoche, mientras dormía",
-  "Sentí una culpa que no era mía","Sentí una culpa que no era mía",
-  "Yo siempre te he sido muy claro",
-  "Cuando quería volar más alto",
-  "No quiero hablar más de tus pactos",
-  "O me quieres como yo lo hago",
-  "O me marcho"
- ],
- "Estrofa 2":[
-  "Al final del camino","Al final del camino","Al final del camino",
-  "Puede que al marcharme haya menos dolor","Puede que al marcharme haya menos dolor",
-  "Y que, con distancia, el olvido","Y que, con distancia, el olvido",
-  "Nos deje el recuerdo de lo que hicimos mejor","Nos deje el recuerdo de lo que hicimos mejor"
- ],
- "Pre-coro 2":[
-  "Y sabes cuáles son todas mis cartas","Y sabes cuáles son todas mis cartas","Y sabes cuáles son todas mis cartas",
-  "Y nunca sentí que peligrara nada","Y nunca sentí que peligrara nada",
-  "Me enseñaste tus perfiles",
-  "Pero, de frente, siempre me faltabas"
- ],
- "Coro 2":[
-  "Anoche, mientras dormía",
-  "Sentí una culpa que no era mía","Sentí una culpa que no era mía",
-  "Yo siempre te he sido muy claro",
-  "Cuando quería volar más alto",
-  "No quiero hablar más de tus pactos",
-  "O me quieres como yo lo hago"
- ],
- "Puente":[
-  "O me marchooooooooooo","O me marchooooooooooo","O me marchooooooooooo",
-  "O me marchooooooooooo","O me marchooooooooooo",
-  "O me marcho","O me marcho"
- ],
- "Pre-coro final":[
-  "Sabes cuáles son todas mis cartas","Sabes cuáles son todas mis cartas","Sabes cuáles son todas mis cartas",
-  "Y nunca sentí que peligrara nada","Y nunca sentí que peligrara nada",
-  "Me enseñaste tus perfiles",
-  "Pero, de frente, siempre me faltabas"
- ],
- "Coro final":[
-  "Anoche, mientras dormía",
-  "Sentí una culpa que no era mía","Sentí una culpa que no era mía",
-  "Yo siempre te he sido muy claro",
-  "Cuando quería volar más alto",
-  "No quiero hablar más de tus pactos",
-  "O me quieres como yo lo hago",
-  "O me marcho"
- ]
-};
-
-const fullSong=[
-{name:"Estrofa 1",lines:[
-{c:["E","F#m","A"],t:"Esto no es solo un atajo"},
-{c:["E","C#m"],t:"Para evitar la guerra que viene después"},
-{c:["F#"],t:"Ni es un domingo cualquiera"},
-{c:["Am","E"],t:"Es el previo al adiós más duro de mis 36"},
-{c:["E","F#m","A"],t:"Te tomé la palabra"},
-{c:["A","E","C#m"],t:"Siempre fui de ceñirme al guion"},
-{c:["C#m","F#"],t:"Y tú, de bailarme el agua"},
-{c:["A","E"],t:"Con tal de lograr distraer mi atención"}
-]},
-{name:"Pre-coro 1",lines:[
-{c:["C#m","G#m","A"],t:"Y sabes cuáles son todas mis cartas"},
-{c:["A","E"],t:"Y nunca sentí que peligrara nada"},
-{c:["D"],t:"Me enseñaste tus perfiles"},
-{c:["B"],t:"Pero, de frente, siempre me faltabas"}
-]},
-{name:"Coro 1",lines:[
-{c:["A"],t:"Anoche, mientras dormía"},
-{c:["B/D#","G#"],t:"Sentí una culpa que no era mía"},
-{c:["C#m"],t:"Yo siempre te he sido muy claro"},
-{c:["C#"],t:"Cuando quería volar más alto"},
-{c:["F#m"],t:"No quiero hablar más de tus pactos"},
-{c:["B"],t:"O me quieres como yo lo hago"},
-{c:["E"],t:"O me marcho"}
-]},
-{name:"Estrofa 2",lines:[
-{c:["E","F#m","A"],t:"Al final del camino"},
-{c:["E","C#m"],t:"Puede que al marcharme haya menos dolor"},
-{c:["C#m","F#"],t:"Y que, con distancia, el olvido"},
-{c:["A","E"],t:"Nos deje el recuerdo de lo que hicimos mejor"}
-]},
-{name:"Pre-coro 2",lines:[
-{c:["C#m","G#m","A"],t:"Y sabes cuáles son todas mis cartas"},
-{c:["A","E"],t:"Y nunca sentí que peligrara nada"},
-{c:["D"],t:"Me enseñaste tus perfiles"},
-{c:["B"],t:"Pero, de frente, siempre me faltabas"}
-]},
-{name:"Coro 2 y puente",lines:[
-{c:["A"],t:"Anoche, mientras dormía"},
-{c:["B/D#","G#"],t:"Sentí una culpa que no era mía"},
-{c:["C#m"],t:"Yo siempre te he sido muy claro"},
-{c:["C#"],t:"Cuando quería volar más alto"},
-{c:["F#m"],t:"No quiero hablar más de tus pactos"},
-{c:["B"],t:"O me quieres como yo lo hago"},
-{c:["A","B/D#","G#","C#m","C#"],t:"O me marchooooooooooo"},
-{c:["F#m","B"],t:"O me marcho"}
-]},
-{name:"Final",lines:[
-{c:["C#m","G#m","A"],t:"Sabes cuáles son todas mis cartas"},
-{c:["A","E"],t:"Y nunca sentí que peligrara nada"},
-{c:["D"],t:"Me enseñaste tus perfiles"},
-{c:["B"],t:"Pero, de frente, siempre me faltabas"},
-{c:["A"],t:"Anoche, mientras dormía"},
-{c:["B/D#","G#"],t:"Sentí una culpa que no era mía"},
-{c:["C#m"],t:"Yo siempre te he sido muy claro"},
-{c:["C#"],t:"Cuando quería volar más alto"},
-{c:["F#m"],t:"No quiero hablar más de tus pactos"},
-{c:["B"],t:"O me quieres como yo lo hago"},
-{c:["E"],t:"O me marcho"}
-]}
+makeSection("Introducción",[
+ ["Introducción instrumental","E","F#","A","E","C#m","F#","Am"],
+ ["Entrada: Esto no es solo un atajo","E"]
+]),
+makeSection("Estrofa 1",[
+ ["Esto no es solo un atajo","E","F#m","A"],
+ ["Para evitar la guerra que viene después","E","C#m"],
+ ["Ni es un domingo cualquiera","F#"],
+ ["Es el previo al adiós más duro de mis 36","Am","E"],
+ ["Te tomé la palabra","E","F#m","A"],
+ ["Siempre fui de ceñirme al guion","A","E","C#m"],
+ ["Y tú, de bailarme el agua","C#m","F#"],
+ ["Con tal de lograr distraer mi atención","A","E"]
+]),
+makeSection("Pre-coro 1",[
+ ["Y sabes cuáles son todas mis cartas","C#m","G#m","A"],
+ ["Y nunca sentí que peligrara nada","A","E"],
+ ["Me enseñaste tus perfiles","D"],
+ ["Pero, de frente, siempre me faltabas","B"]
+]),
+makeSection("Coro 1",[
+ ["Anoche, mientras dormía","A"],
+ ["Sentí una culpa que no era mía","B/D#","G#"],
+ ["Yo siempre te he sido muy claro","C#m"],
+ ["Cuando quería volar más alto","C#"],
+ ["No quiero hablar más de tus pactos","F#m"],
+ ["O me quieres como yo lo hago","B"],
+ ["O me marcho","E"]
+]),
+makeSection("Estrofa 2",[
+ ["Al final del camino","E","F#m","A"],
+ ["Puede que al marcharme haya menos dolor","E","C#m"],
+ ["Y que, con distancia, el olvido","C#m","F#"],
+ ["Nos deje el recuerdo de lo que hicimos mejor","A","E"]
+]),
+makeSection("Pre-coro 2",[
+ ["Y sabes cuáles son todas mis cartas","C#m","G#m","A"],
+ ["Y nunca sentí que peligrara nada","A","E"],
+ ["Me enseñaste tus perfiles","D"],
+ ["Pero, de frente, siempre me faltabas","B"]
+]),
+makeSection("Coro 2",[
+ ["Anoche, mientras dormía","A"],
+ ["Sentí una culpa que no era mía","B/D#","G#"],
+ ["Yo siempre te he sido muy claro","C#m"],
+ ["Cuando quería volar más alto","C#"],
+ ["No quiero hablar más de tus pactos","F#m"],
+ ["O me quieres como yo lo hago","B"]
+]),
+makeSection("Puente",[
+ ["O me marchooooooooooo","A","B/D#","G#","C#m","C#"],
+ ["O me marcho","F#m","B"]
+]),
+makeSection("Pre-coro final",[
+ ["Sabes cuáles son todas mis cartas","C#m","G#m","A"],
+ ["Y nunca sentí que peligrara nada","A","E"],
+ ["Me enseñaste tus perfiles","D"],
+ ["Pero, de frente, siempre me faltabas","B"]
+]),
+makeSection("Coro final",[
+ ["Anoche, mientras dormía","A"],
+ ["Sentí una culpa que no era mía","B/D#","G#"],
+ ["Yo siempre te he sido muy claro","C#m"],
+ ["Cuando quería volar más alto","C#"],
+ ["No quiero hablar más de tus pactos","F#m"],
+ ["O me quieres como yo lo hago","B"],
+ ["O me marcho","E"]
+])
 ];
 
 const whites=[],whiteNames=["C","D","E","F","G","A","B"];
@@ -456,58 +374,61 @@ const PIANO_FILES={
  "C4":"C4.mp3","D#4":"Ds4.mp3","F#4":"Fs4.mp3","A4":"A4.mp3"
 };
 function currentSection(){return sections[sectionIndex]}
-function lyricForStep(sectionName,index,totalSteps){
- const cues=sectionLyrics[sectionName]||[""];
- return cues[Math.min(index,cues.length-1)]||"";
+function nextPosition(si,ei){
+ const section=sections[si];
+ if(ei+1<section.events.length)return {section:si,step:ei+1};
+ return {section:(si+1)%sections.length,step:0};
+}
+function previousPosition(si,ei){
+ if(ei>0)return {section:si,step:ei-1};
+ const previousSection=(si-1+sections.length)%sections.length;
+ return {section:previousSection,step:sections[previousSection].events.length-1};
 }
 function render(){
- const s=currentSection(),cur=s.chords[stepIndex],next=s.chords[(stepIndex+1)%s.chords.length];
- liveLyric.textContent=lyricForStep(s.name,stepIndex,s.chords.length);
- liveLyric.classList.toggle("instrumental",false);
- currentChord.textContent=chordText(cur); nextChord.textContent=chordText(next);
- currentBadge.textContent=`${stepIndex+1}/${s.chords.length}`;nextBadge.textContent=`${(stepIndex+1)%s.chords.length+1}/${s.chords.length}`;
+ const s=currentSection(),event=s.events[stepIndex],nextPos=nextPosition(sectionIndex,stepIndex);
+ const nextSection=sections[nextPos.section],nextEvent=nextSection.events[nextPos.step];
+ const cur=event.chord,next=nextEvent.chord;
+ liveLyric.textContent=event.lyric;
+ liveLyric.classList.toggle("instrumental",event.lyric==="Introducción instrumental");
+ currentChord.textContent=chordText(cur);nextChord.textContent=chordText(next);
+ currentBadge.textContent=`${stepIndex+1}/${s.events.length}`;
+ nextBadge.textContent=`${nextPos.step+1}/${nextSection.events.length}`;
  const vc=voicings[cur],vn=voicings[next];
  currentSub.textContent=`MI: ${noteText(vc.l,cur)} (5) · MD: ${vc.r.map(x=>noteText(x[0],cur)+keyHint(x[0],cur)).join("–")} (${vc.r.map(x=>x[1]).join("–")}) · ${vc.inv}`;
  nextSub.textContent=`MI: ${noteText(vn.l,next)} (5) · MD: ${vn.r.map(x=>noteText(x[0],next)+keyHint(x[0],next)).join("–")} (${vn.r.map(x=>x[1]).join("–")}) · ${vn.inv}`;
  keyboard(currentKeyboard,cur,false);keyboard(nextKeyboard,next,true);
- movementEl.innerHTML=movement(cur,next);
- sectionName.textContent=s.name;sectionCount.textContent=`${s.chords.length} cambios de acorde`;
- [...steps.children].forEach((el,i)=>{el.classList.toggle("current-step",i===stepIndex);el.classList.toggle("next-step",i===(stepIndex+1)%s.chords.length)});
+ movement.innerHTML=movement(cur,next);
+ sectionName.textContent=s.name;sectionCount.textContent=`${s.events.length} cambios de acorde`;
+ [...steps.children].forEach((el,i)=>{el.classList.toggle("current-step",i===stepIndex);el.classList.toggle("next-step",nextPos.section===sectionIndex&&i===nextPos.step)});
 }
-function openChordFromSheet(chord){
- for(let si=0;si<sections.length;si++){
-   const ci=sections[si].chords.indexOf(chord);
-   if(ci!==-1){
-     document.body.classList.remove("show-full");
-     fullViewToggle.textContent="☰ Vista completa";
-     sectionIndex=si;stepIndex=ci;sectionSelect.value=si;
-     stopAuto();buildSteps();render();playCurrent();
-     window.scrollTo({top:0,behavior:"smooth"});
-     return;
-   }
- }
+function openEventFromSheet(si,ei){
+ document.body.classList.remove("show-full");fullViewToggle.textContent="☰ Vista completa";
+ sectionIndex=si;stepIndex=ei;sectionSelect.value=si;
+ stopAuto();buildSteps();render();playCurrent();window.scrollTo({top:0,behavior:"smooth"});
 }
 function renderFullSong(){
  songSheet.innerHTML="";
- fullSong.forEach(part=>{
+ sections.forEach((sectionData,si)=>{
    const section=document.createElement("section");section.className="song-part";
-   const title=document.createElement("h3");title.textContent=part.name;section.appendChild(title);
-   part.lines.forEach(line=>{
-     const row=document.createElement("div");row.className="song-line";
-     const chords=document.createElement("div");chords.className="song-chords";
-     line.c.forEach(chord=>{
-       const b=document.createElement("button");b.type="button";b.className="song-chord";
-       b.textContent=chordText(chord);b.onclick=()=>openChordFromSheet(chord);chords.appendChild(b);
-     });
-     const lyric=document.createElement("div");lyric.className="song-lyric";lyric.textContent=line.t;
-     row.append(chords,lyric);section.appendChild(row);
+   const title=document.createElement("h3");title.textContent=sectionData.name;section.appendChild(title);
+   let currentRow=null,currentLyric=null;
+   sectionData.events.forEach((event,ei)=>{
+     if(currentLyric!==event.lyric){
+       currentLyric=event.lyric;currentRow=document.createElement("div");currentRow.className="song-line";
+       const chords=document.createElement("div");chords.className="song-chords";
+       const lyric=document.createElement("div");lyric.className="song-lyric";lyric.textContent=event.lyric;
+       currentRow.append(chords,lyric);section.appendChild(currentRow);
+     }
+     const chords=currentRow.querySelector(".song-chords");
+     const b=document.createElement("button");b.type="button";b.className="song-chord";
+     b.textContent=chordText(event.chord);b.onclick=()=>openEventFromSheet(si,ei);chords.appendChild(b);
    });
    songSheet.appendChild(section);
  });
 }
 function buildSteps(){
  steps.innerHTML="";const s=currentSection();
- s.chords.forEach((c,i)=>{const b=document.createElement("button");b.className="step";b.innerHTML=`${i+1}<small>${chordText(c)}</small>`;b.onclick=()=>{stepIndex=i;render();playCurrent()};steps.appendChild(b)});
+ s.events.forEach((event,i)=>{const b=document.createElement("button");b.className="step";b.innerHTML=`${i+1}<small>${chordText(event.chord)}</small>`;b.onclick=()=>{stepIndex=i;render();playCurrent()};steps.appendChild(b)});
 }
 function loadSection(i){sectionIndex=+i;stepIndex=0;stopAuto();buildSteps();render()}
 function initSections(){
@@ -593,7 +514,7 @@ function playFallback(notes){
 }
 async function playCurrent(){
  ensureAudio();
- const c=currentSection().chords[stepIndex],v=voicings[c],notes=[v.l,...v.r.map(x=>x[0])];
+ const c=currentSection().events[stepIndex].chord,v=voicings[c],notes=[v.l,...v.r.map(x=>x[0])];
  const ready=await loadPiano();
  if(ready)playSampledChord(notes);else playFallback(notes);
 }
@@ -618,7 +539,7 @@ function buildPlayQueue(){
 
  const queue=[];
  selected.forEach(si=>{
-   sections[si].chords.forEach((_,ci)=>queue.push({section:si,step:ci}));
+   sections[si].events.forEach((_,ci)=>queue.push({section:si,step:ci}));
  });
  return queue;
 }
@@ -635,27 +556,20 @@ function playQueueItem(){
 }
 
 async function startAuto(){
- stopAuto();
- ensureAudio();
- await loadPiano();
- playQueue=buildPlayQueue();
- if(!playQueue.length){
-   auto.textContent="Selecciona una sección";
-   setTimeout(()=>auto.textContent="▶ Reproducir",1400);
-   return;
- }
- queueIndex=0;
- playQueueItem();
- const ms=60000/+bpm.value*4;
- timer=setInterval(()=>{
+ stopAuto();ensureAudio();await loadPiano();playQueue=buildPlayQueue();
+ if(!playQueue.length){auto.textContent="Selecciona una sección";setTimeout(()=>auto.textContent="▶ Reproducir",1400);return}
+ queueIndex=0;playQueueItem();scheduleNextQueueItem();auto.textContent="■ Detener";
+}
+function scheduleNextQueueItem(){
+ const beats=currentSection().events[stepIndex].beats||4;
+ timer=setTimeout(()=>{
    queueIndex++;
    if(queueIndex>=playQueue.length){stopAuto();return}
-   playQueueItem();
- },ms);
- auto.textContent="■ Detener";
+   playQueueItem();scheduleNextQueueItem();
+ },60000/+bpm.value*beats);
 }
-prev.onclick=()=>{stepIndex=(stepIndex-1+currentSection().chords.length)%currentSection().chords.length;render();playCurrent()};
-next.onclick=()=>{stepIndex=(stepIndex+1)%currentSection().chords.length;render();playCurrent()};
+prev.onclick=()=>{const p=previousPosition(sectionIndex,stepIndex);sectionIndex=p.section;stepIndex=p.step;sectionSelect.value=sectionIndex;buildSteps();render();playCurrent()};
+next.onclick=()=>{const p=nextPosition(sectionIndex,stepIndex);sectionIndex=p.section;stepIndex=p.step;sectionSelect.value=sectionIndex;buildSteps();render();playCurrent()};
 sound.onclick=playCurrent;
 auto.onclick=()=>timer?stopAuto():startAuto();
 
