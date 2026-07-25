@@ -43,11 +43,11 @@ select{background:#f3f6fa;color:#173354;border:1px solid var(--line)}
 background:var(--blue);color:#fff;font-weight:900}
 .next .badge{background:var(--amber)}
 .keyboard-wrap{overflow-x:auto;padding:7px 0}
-.keyboard{--w:29px;position:relative;display:flex;height:155px;min-width:calc(var(--w)*22);user-select:none}
-.white{width:var(--w);height:146px;background:#fff;border:1px solid #222;border-left:0;position:relative;flex:0 0 var(--w)}
+.keyboard{--w:clamp(34px,3.2vw,42px);position:relative;display:flex;height:181px;min-width:calc(var(--w)*22);user-select:none}
+.white{width:var(--w);height:172px;background:#fff;border:1px solid #222;border-left:0;position:relative;flex:0 0 var(--w)}
 .white:first-child{border-left:1px solid #222}
-.black{position:absolute;top:0;width:18px;height:88px;background:#111;border-radius:0 0 4px 4px;
-z-index:4;transform:translateX(-9px)}
+.black{position:absolute;top:0;width:calc(var(--w)*.62);height:104px;background:#111;border-radius:0 0 4px 4px;
+z-index:4;transform:translateX(-50%)}
 .white.left{background:linear-gradient(#dcfce7,#85d6a9)}
 .white.right{background:linear-gradient(#dbeafe,#92c5fa)}
 .white.preview{background:linear-gradient(#fff0cc,#f7c66a)}
@@ -344,7 +344,7 @@ const whiteNames=["C","D","E","F","G","A","B"],whites=["B1"];
 for(let o=2;o<=4;o++)for(const n of whiteNames)whites.push(n+o);
 const blackAfter={C:"C#",D:"D#",F:"F#",G:"G#",A:"A#"};
 const blacks=[];
-whites.forEach((w,i)=>{const n=w.slice(0,-1),o=w.slice(-1);if(blackAfter[n])blacks.push({note:blackAfter[n]+o,left:(i+1)*29})});
+whites.forEach((w,i)=>{const n=w.slice(0,-1),o=w.slice(-1);if(blackAfter[n])blacks.push({note:blackAfter[n]+o,position:i+1})});
 
 function baseNote(note){return note.match(/^([A-G]#?)/)[1]}
 function noteText(note,chord=null){const physical=baseNote(note),n=chord&&voicings[chord]?.spell?.[note]||physical;return notationMode==="es"?NOTE_ES[n]:n}
@@ -365,7 +365,7 @@ function keyboard(el,chord,preview,nextChord=null){
    if(right.includes(note))marker(k,note,fingers[note],preview?"preview":"right",false,chord);
  });
  blacks.forEach(x=>{
-   const k=document.createElement("div");k.className="black";k.dataset.note=x.note;k.style.left=x.left+"px";
+   const k=document.createElement("div");k.className="black";k.dataset.note=x.note;k.style.left=`calc(var(--w)*${x.position})`;
    if(left.includes(x.note))k.classList.add("left");
    if(right.includes(x.note))k.classList.add(preview?"preview":"right");
    if(left.includes(x.note))marker(k,x.note,"5","left",true,chord);
