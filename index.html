@@ -261,7 +261,7 @@ const sections=[
 ];
 
 const sectionLyrics={
- "Introducción":["Introducción instrumental"],
+ "Introducción":["Prepárate para cantar: Esto no es solo un atajo"],
  "Estrofa 1":[
   "Esto no es solo un atajo",
   "Para evitar la guerra que viene después",
@@ -456,7 +456,7 @@ function lyricForStep(sectionName,index,totalSteps){
 function render(){
  const s=currentSection(),cur=s.chords[stepIndex],next=s.chords[(stepIndex+1)%s.chords.length];
  liveLyric.textContent=lyricForStep(s.name,stepIndex,s.chords.length);
- liveLyric.classList.toggle("instrumental",s.name==="Introducción");
+ liveLyric.classList.toggle("instrumental",false);
  currentChord.textContent=chordText(cur); nextChord.textContent=chordText(next);
  currentBadge.textContent=`${stepIndex+1}/${s.chords.length}`;nextBadge.textContent=`${(stepIndex+1)%s.chords.length+1}/${s.chords.length}`;
  const vc=voicings[cur],vn=voicings[next];
