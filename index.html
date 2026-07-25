@@ -223,20 +223,20 @@ const currentKeyboard=document.getElementById("currentKeyboard");
 const sectionName=document.getElementById("sectionName");
 const sectionCount=document.getElementById("sectionCount");
 const steps=document.getElementById("steps");
-const NOTE_ES={C:"Do","C#":"Do#",D:"Re","D#":"Re#",E:"Mi",F:"Fa","F#":"Fa#",G:"Sol","G#":"Sol#",A:"La","A#":"La#",B:"Si"};
+const NOTE_ES={C:"Do","C#":"Do#",D:"Re","D#":"Re#",E:"Mi","E#":"Mi#",F:"Fa","F#":"Fa#",G:"Sol","G#":"Sol#",A:"La","A#":"La#",B:"Si","B#":"Si#"};
 const CHORD_ES={"E":"Mi","F#":"Fa#","F#m":"Fa#m","A":"La","Am":"Lam","C#m":"Do#m","C#":"Do#","G#m":"Sol#m","G#":"Sol#","D":"Re","B":"Si","B/D#":"Si/Re#"};
 let notationMode="es";
 
 const voicings={
 "E":{l:"E2",r:[["E4",1],["G#4",3],["B4",5]],inv:"fundamental"},
-"F#":{l:"F#2",r:[["A#3",1],["C#4",2],["F#4",5]],inv:"2ª inversión"},
-"F#m":{l:"F#2",r:[["A3",1],["C#4",2],["F#4",5]],inv:"2ª inversión"},
+"F#":{l:"F#2",r:[["A#3",1],["C#4",2],["F#4",5]],inv:"1ª inversión"},
+"F#m":{l:"F#2",r:[["A3",1],["C#4",2],["F#4",5]],inv:"1ª inversión"},
 "A":{l:"A2",r:[["C#4",1],["E4",2],["A4",5]],inv:"1ª inversión"},
 "Am":{l:"A2",r:[["C4",1],["E4",2],["A4",5]],inv:"1ª inversión"},
-"C#m":{l:"C#2",r:[["G#3",2],["C#4",1],["E4",5]],inv:"2ª inversión"},
-"C#":{l:"C#2",r:[["G#3",1],["C#4",2],["F4",5]],inv:"2ª inversión"},
+"C#m":{l:"C#2",r:[["G#3",1],["C#4",3],["E4",5]],inv:"2ª inversión"},
+"C#":{l:"C#2",r:[["G#3",1],["C#4",2],["F4",5]],spell:{"F4":"E#"},inv:"2ª inversión"},
 "G#m":{l:"G#2",r:[["B3",1],["D#4",2],["G#4",5]],inv:"1ª inversión"},
-"G#":{l:"G#2",r:[["C4",1],["D#4",2],["G#4",5]],inv:"1ª inversión"},
+"G#":{l:"G#2",r:[["C4",1],["D#4",2],["G#4",5]],spell:{"C4":"B#"},inv:"1ª inversión"},
 "D":{l:"D2",r:[["A3",1],["D4",2],["F#4",5]],inv:"2ª inversión"},
 "B":{l:"B1",r:[["B3",1],["D#4",3],["F#4",5]],inv:"fundamental"},
 "B/D#":{l:"D#2",r:[["B3",1],["D#4",3],["F#4",5]],inv:"acorde de Si con Re# en el bajo"}
@@ -325,7 +325,8 @@ const blacks=[];
 whites.forEach((w,i)=>{const n=w.slice(0,-1),o=w.slice(-1);if(blackAfter[n])blacks.push({note:blackAfter[n]+o,left:(i+1)*29})});
 
 function baseNote(note){return note.match(/^([A-G]#?)/)[1]}
-function noteText(note){const n=baseNote(note);return notationMode==="es"?NOTE_ES[n]:n}
+function noteText(note,chord=null){const physical=baseNote(note),n=chord&&voicings[chord]?.spell?.[note]||physical;return notationMode==="es"?NOTE_ES[n]:n}
+function keyHint(note,chord){const physical=baseNote(note),written=chord&&voicings[chord]?.spell?.[note];if(!written)return "";return notationMode==="es"?` (tecla ${NOTE_ES[physical]})`:` (${physical} key)`}
 function chordText(chord){return notationMode==="es"?CHORD_ES[chord]:chord}
 function midi(note){const m=note.match(/^([A-G]#?)(\d)$/),s={C:0,"C#":1,D:2,"D#":3,E:4,F:5,"F#":6,G:7,"G#":8,A:9,"A#":10,B:11};return(+m[2]+1)*12+s[m[1]]}
 function frequency(note){return 440*Math.pow(2,(midi(note)-69)/12)}
@@ -338,28 +339,28 @@ function keyboard(el,chord,preview){
    if(left.includes(note))k.classList.add("left");
    if(right.includes(note))k.classList.add(preview?"preview":"right");
    el.appendChild(k);
-   if(left.includes(note))marker(k,note,"5","left",false);
-   if(right.includes(note))marker(k,note,fingers[note],preview?"preview":"right",false);
+   if(left.includes(note))marker(k,note,"5","left",false,chord);
+   if(right.includes(note))marker(k,note,fingers[note],preview?"preview":"right",false,chord);
  });
  blacks.forEach(x=>{
    const k=document.createElement("div");k.className="black";k.style.left=x.left+"px";
    if(left.includes(x.note))k.classList.add("left");
    if(right.includes(x.note))k.classList.add(preview?"preview":"right");
-   if(left.includes(x.note))marker(k,x.note,"5","left",true);
-   if(right.includes(x.note))marker(k,x.note,fingers[x.note],preview?"preview":"right",true);
+   if(left.includes(x.note))marker(k,x.note,"5","left",true,chord);
+   if(right.includes(x.note))marker(k,x.note,fingers[x.note],preview?"preview":"right",true,chord);
    el.appendChild(k);
  });
 }
-function marker(k,note,finger,type,isBlack){
- const l=document.createElement("div");l.className="label"+(isBlack?" black-label":"");l.textContent=noteText(note);k.appendChild(l);
+function marker(k,note,finger,type,isBlack,chord){
+ const l=document.createElement("div");l.className="label"+(isBlack?" black-label":"");l.textContent=noteText(note,chord);l.title=noteText(note,chord)+keyHint(note,chord);k.appendChild(l);
  const f=document.createElement("div");f.className="finger "+(type==="left"?"left-f":type==="preview"?"preview-f":"right-f")+(isBlack?" black-f":"");f.textContent=finger;k.appendChild(f);
 }
 function movement(a,b){
  const va=voicings[a],vb=voicings[b];
  const dl=midi(vb.l)-midi(va.l),leftDir=dl>0?"a la derecha":dl<0?"a la izquierda":"sin mover";
  const ar=va.r.map(x=>x[0]),br=vb.r.map(x=>x[0]),common=ar.filter(x=>br.includes(x));
- return `<strong>Prepárate:</strong> bajo ${noteText(va.l)} → ${noteText(vb.l)} (${Math.abs(dl)} semitonos ${leftDir}). 
- Mano derecha: ${common.length?`mantén como referencia ${common.map(noteText).join(", ")}.`:"cambia toda la forma del acorde."}`;
+ return `<strong>Prepárate:</strong> bajo ${noteText(va.l,a)} → ${noteText(vb.l,b)} (${Math.abs(dl)} semitonos ${leftDir}). 
+ Mano derecha: ${common.length?`mantén como referencia ${common.map(n=>noteText(n,b)).join(", ")}.`:"cambia toda la forma del acorde."}`;
 }
 
 let sectionIndex=0,stepIndex=0,timer=null,audioCtx=null;
@@ -377,8 +378,8 @@ function render(){
  currentChord.textContent=chordText(cur); nextChord.textContent=chordText(next);
  currentBadge.textContent=`${stepIndex+1}/${s.chords.length}`;nextBadge.textContent=`${(stepIndex+1)%s.chords.length+1}/${s.chords.length}`;
  const vc=voicings[cur],vn=voicings[next];
- currentSub.textContent=`MI: ${noteText(vc.l)} (5) · MD: ${vc.r.map(x=>noteText(x[0])).join("–")} (${vc.r.map(x=>x[1]).join("–")})`;
- nextSub.textContent=`MI: ${noteText(vn.l)} (5) · MD: ${vn.r.map(x=>noteText(x[0])).join("–")} (${vn.r.map(x=>x[1]).join("–")})`;
+ currentSub.textContent=`MI: ${noteText(vc.l,cur)} (5) · MD: ${vc.r.map(x=>noteText(x[0],cur)+keyHint(x[0],cur)).join("–")} (${vc.r.map(x=>x[1]).join("–")})`;
+ nextSub.textContent=`MI: ${noteText(vn.l,next)} (5) · MD: ${vn.r.map(x=>noteText(x[0],next)+keyHint(x[0],next)).join("–")} (${vn.r.map(x=>x[1]).join("–")})`;
  keyboard(currentKeyboard,cur,false);keyboard(nextKeyboard,next,true);
  movementEl.innerHTML=movement(cur,next);
  sectionName.textContent=s.name;sectionCount.textContent=`${s.chords.length} cambios de acorde`;
