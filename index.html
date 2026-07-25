@@ -62,8 +62,8 @@ display:grid;place-items:center;color:#fff;font-weight:900;z-index:7;border:2px 
 .finger.black-f{bottom:8px}
 .next .keyboard-wrap{display:none}
 .move{display:none}.show-movements .move{display:block}
-.white.upcoming::after{content:"";position:absolute;inset:4px;border:3px dashed #8b96a6;z-index:5;pointer-events:none;border-radius:2px}
-.black.upcoming{outline:3px dashed #cbd2dc;outline-offset:-4px}
+.white.upcoming::after{content:"";position:absolute;inset:0;background:rgba(126,138,154,.22);box-shadow:inset 0 -12px 20px rgba(82,94,110,.10);z-index:5;pointer-events:none}
+.black.upcoming{background:#646d79;box-shadow:inset 0 0 0 2px rgba(229,233,239,.62)}
 .white.common{box-shadow:inset 0 0 0 4px #8b96a6}
 .black.common{outline:3px solid #d6dbe3;outline-offset:-4px}
 .label.preview-label{top:10px;bottom:auto;color:#677386;background:#f3f5f8;border:1px dashed #8b96a6}
@@ -201,7 +201,7 @@ background:var(--blue);color:#fff;font-weight:900;margin:auto auto 4px}
 <div class="legend-block">
 <div class="key"><span class="swatch green"></span>Mano izquierda: bajo, dedo 5</div>
 <div class="key"><span class="swatch blue"></span>Mano derecha: acorde sonando</div>
-<div class="key"><span class="swatch gray"></span>Contorno discontinuo: acorde que viene</div>
+<div class="key"><span class="swatch gray"></span>Sombra gris: acorde que viene</div>
 </div>
 <div class="legend-block">
 <div class="key"><span class="circle" style="background:var(--green)">5</span>Meñique de la mano izquierda</div>
