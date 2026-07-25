@@ -42,6 +42,9 @@ select{background:#f3f6fa;color:#173354;border:1px solid var(--line)}
 .stack{display:flex;flex-direction:column;gap:16px}
 .card{background:#fff;border:1px solid var(--line);border-radius:20px;overflow:hidden;box-shadow:var(--shadow)}
 .card h2{margin:0;padding:14px 18px;border-bottom:1px solid var(--line);font-size:18px}
+.card-titlebar{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:9px 12px 9px 18px;border-bottom:1px solid var(--line)}
+.card-titlebar h2{padding:0;border:0}
+.piano-visibility-toggle{padding:8px 12px;background:#fff7e7;color:#8a4900;border:1px solid #efc875;font-size:13px}
 .next h2{color:var(--amber)}.current h2{color:var(--blue)}
 .now-heading{display:flex;align-items:baseline;justify-content:center;gap:10px;flex-wrap:wrap;text-align:center}
 .now-label{white-space:nowrap}
@@ -72,7 +75,7 @@ border:1px solid rgba(0,0,0,.08)}
 display:grid;place-items:center;color:#fff;font-weight:900;z-index:7;border:2px solid #fff}
 .finger.left-f{background:var(--green)}.finger.right-f{background:var(--blue)}.finger.preview-f{background:var(--amber)}
 .finger.black-f{bottom:8px}
-.next .keyboard-wrap{display:none}
+#nextKeyboardWrap[hidden]{display:none}
 .move{display:none}.show-movements .move{display:block}
 .white.upcoming::after{content:"";position:absolute;inset:0;background:rgba(157,168,183,.28);box-shadow:inset 0 -12px 20px rgba(82,94,110,.08);z-index:5;pointer-events:none}
 .black.upcoming{background:#b9c1cc;box-shadow:inset 0 0 0 2px rgba(255,255,255,.72)}
@@ -288,10 +291,13 @@ button.song-line-end{padding:3px 8px}
 
 <div class="stack">
 <section class="card next">
+<div class="card-titlebar">
 <h2>Lo que viene</h2>
+<button id="nextPianoToggle" class="piano-visibility-toggle" type="button" aria-expanded="true" aria-controls="nextKeyboardWrap">Ocultar piano</button>
+</div>
 <div class="content">
 <div class="meta"><div><div id="nextChord" class="chord"></div><div id="nextSub" class="sub"></div></div><div id="nextBadge" class="badge"></div></div>
-<div class="keyboard-wrap"><div id="nextKeyboard" class="keyboard"></div></div>
+<div id="nextKeyboardWrap" class="keyboard-wrap"><div id="nextKeyboard" class="keyboard"></div></div>
 <div id="movement" class="move"></div>
 </div>
 </section>
@@ -300,7 +306,7 @@ button.song-line-end{padding:3px 8px}
 <h2 class="now-heading"><span class="now-label">Ahora suena:</span><span id="liveLyric" class="live-lyric" aria-live="polite"></span></h2>
 <div class="content">
 <div class="meta"><div><div id="currentChord" class="chord"></div><div id="currentSub" class="sub"></div></div><div id="currentBadge" class="badge"></div></div>
-<div class="keyboard-wrap"><div id="currentKeyboard" class="keyboard"></div></div>
+<div id="currentKeyboardWrap" class="keyboard-wrap"><div id="currentKeyboard" class="keyboard"></div></div>
 </div>
 </section>
 </div>
@@ -373,12 +379,15 @@ const sectionChecks=document.getElementById("sectionChecks");
 const nextChord=document.getElementById("nextChord");
 const nextSub=document.getElementById("nextSub");
 const nextBadge=document.getElementById("nextBadge");
+const nextPianoToggle=document.getElementById("nextPianoToggle");
+const nextKeyboardWrap=document.getElementById("nextKeyboardWrap");
 const nextKeyboard=document.getElementById("nextKeyboard");
 const movementEl=document.getElementById("movement");
 const liveLyric=document.getElementById("liveLyric");
 const currentChord=document.getElementById("currentChord");
 const currentSub=document.getElementById("currentSub");
 const currentBadge=document.getElementById("currentBadge");
+const currentKeyboardWrap=document.getElementById("currentKeyboardWrap");
 const currentKeyboard=document.getElementById("currentKeyboard");
 const sectionName=document.getElementById("sectionName");
 const sectionCount=document.getElementById("sectionCount");
@@ -391,6 +400,7 @@ function readPreference(key,fallback){try{return localStorage.getItem(key)||fall
 function savePreference(key,value){try{localStorage.setItem(key,value)}catch{}}
 let keyboardViewMode=readPreference("mis36-keyboard-mode","preview");
 let sustainViewMode=readPreference("mis36-sustain-mode","natural");
+let showNextPiano=readPreference("mis36-show-next-piano","true")!=="false";
 function updateSettingsSummary(){
  const sustainLabel=sustainMode.options[sustainMode.selectedIndex]?.text||"Sustain natural";
  const keyboardLabel=keyboardMode.options[keyboardMode.selectedIndex]?.text||"Actual + siguiente";
@@ -400,6 +410,21 @@ function setSettingsOpen(open){
  settingsPanel.hidden=!open;
  settingsToggle.setAttribute("aria-expanded",String(open));
  settingsToggle.textContent=open?"✕ Cerrar ajustes":"⚙ Ajustes";
+}
+function updateNextPianoVisibility(){
+ nextKeyboardWrap.hidden=!showNextPiano;
+ nextPianoToggle.setAttribute("aria-expanded",String(showNextPiano));
+ nextPianoToggle.textContent=showNextPiano?"Ocultar piano":"Mostrar piano";
+ if(showNextPiano)requestAnimationFrame(()=>syncPianoScroll(currentKeyboardWrap,nextKeyboardWrap));
+}
+let syncingPianoScroll=false;
+function syncPianoScroll(source,target){
+ if(syncingPianoScroll||!showNextPiano)return;
+ const sourceMax=Math.max(0,source.scrollWidth-source.clientWidth);
+ const targetMax=Math.max(0,target.scrollWidth-target.clientWidth);
+ syncingPianoScroll=true;
+ target.scrollLeft=sourceMax?source.scrollLeft/sourceMax*targetMax:0;
+ requestAnimationFrame(()=>{syncingPianoScroll=false});
 }
 
 const voicings={
@@ -1161,7 +1186,14 @@ keyboardMode.value=keyboardViewMode;
 sustainMode.value=sustainViewMode;
 keyboardMode.onchange=e=>{keyboardViewMode=e.target.value;savePreference("mis36-keyboard-mode",keyboardViewMode);updateSettingsSummary();render()};
 sustainMode.onchange=e=>{sustainViewMode=e.target.value;savePreference("mis36-sustain-mode",sustainViewMode);updateSettingsSummary()};
-renderSyncChordOptions();renderSyncInversionOptions("E");initializeSongSync();updateSettingsSummary();initSections();buildSteps();render();renderFullSong();
+nextPianoToggle.onclick=()=>{
+ showNextPiano=!showNextPiano;
+ savePreference("mis36-show-next-piano",String(showNextPiano));
+ updateNextPianoVisibility();
+};
+nextKeyboardWrap.addEventListener("scroll",()=>syncPianoScroll(nextKeyboardWrap,currentKeyboardWrap),{passive:true});
+currentKeyboardWrap.addEventListener("scroll",()=>syncPianoScroll(currentKeyboardWrap,nextKeyboardWrap),{passive:true});
+renderSyncChordOptions();renderSyncInversionOptions("E");initializeSongSync();updateSettingsSummary();updateNextPianoVisibility();initSections();buildSteps();render();renderFullSong();
 </script>
 </body>
 </html>
