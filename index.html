@@ -185,7 +185,7 @@ const nextChord=document.getElementById("nextChord");
 const nextSub=document.getElementById("nextSub");
 const nextBadge=document.getElementById("nextBadge");
 const nextKeyboard=document.getElementById("nextKeyboard");
-const movement=document.getElementById("movement");
+const movementEl=document.getElementById("movement");
 const currentChord=document.getElementById("currentChord");
 const currentSub=document.getElementById("currentSub");
 const currentBadge=document.getElementById("currentBadge");
@@ -280,7 +280,7 @@ function render(){
  currentSub.textContent=`MI: ${noteText(vc.l)} (5) · MD: ${vc.r.map(x=>noteText(x[0])).join("–")} (${vc.r.map(x=>x[1]).join("–")})`;
  nextSub.textContent=`MI: ${noteText(vn.l)} (5) · MD: ${vn.r.map(x=>noteText(x[0])).join("–")} (${vn.r.map(x=>x[1]).join("–")})`;
  keyboard(currentKeyboard,cur,false);keyboard(nextKeyboard,next,true);
- movement.innerHTML=movement(cur,next);
+ movementEl.innerHTML=movement(cur,next);
  sectionName.textContent=s.name;sectionCount.textContent=`${s.chords.length} cambios de acorde`;
  [...steps.children].forEach((el,i)=>{el.classList.toggle("current-step",i===stepIndex);el.classList.toggle("next-step",i===(stepIndex+1)%s.chords.length)});
 }
