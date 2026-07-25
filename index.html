@@ -26,6 +26,7 @@ button,select{border:0;border-radius:11px;padding:10px 14px;font-weight:750}
 button{cursor:pointer}.primary{background:var(--blue);color:#fff}.secondary{background:#e9eff7;color:#173354}
 select{background:#f3f6fa;color:#173354;border:1px solid var(--line)}
 .tempo{display:flex;gap:8px;align-items:center;margin-left:auto}.tempo input{width:135px}
+.audio-status{padding:7px 10px;border-radius:9px;background:#eef3f9;color:#526178;font-size:13px;font-weight:800}.audio-status.ready{background:var(--greenSoft);color:var(--green)}.audio-status.loading{background:var(--amberSoft);color:#8a4900}
 .stack{display:flex;flex-direction:column;gap:16px}
 .card{background:#fff;border:1px solid var(--line);border-radius:20px;overflow:hidden;box-shadow:var(--shadow)}
 .card h2{margin:0;padding:14px 18px;border-bottom:1px solid var(--line);font-size:18px}
@@ -103,6 +104,7 @@ background:var(--blue);color:#fff;font-weight:900;margin:auto auto 4px}
 <div class="toolbar">
 <button id="prev" class="secondary">← Anterior</button>
 <button id="sound" class="primary">▶ Tocar acorde</button>
+<span id="audioStatus" class="audio-status">Piano: toca para cargar</span>
 <select id="playMode" aria-label="Modo de reproducción">
 <option value="section">Sección actual</option>
 <option value="fromHere">Desde esta sección</option>
@@ -187,13 +189,14 @@ background:var(--blue);color:#fff;font-weight:900;margin:auto auto 4px}
 </div>
 </div>
 </div>
-<div class="info">La mano izquierda toca la fundamental dos octavas más abajo. Esta versión organiza los acordes por secciones; no intenta reproducir la duración exacta del audio original.</div>
+<div class="info">La mano izquierda toca la fundamental dos octavas más abajo. Esta versión organiza los acordes por secciones; no intenta reproducir la duración exacta del audio original.<br>Sonido: Salamander Grand Piano V3, Alexander Holm, licencia CC BY 3.0.</div>
 </section>
 </div>
 
 <script>
 const prev=document.getElementById("prev");
 const sound=document.getElementById("sound");
+const audioStatus=document.getElementById("audioStatus");
 const playMode=document.getElementById("playMode");
 const auto=document.getElementById("auto");
 const next=document.getElementById("next");
@@ -361,6 +364,13 @@ function movement(a,b){
 
 let sectionIndex=0,stepIndex=0,timer=null,audioCtx=null;
 let playQueue=[],queueIndex=0;
+let pianoSamples=[],pianoLoading=null,pianoReady=false,reverbNode=null;
+const PIANO_BASE="https://tonejs.github.io/audio/salamander/";
+const PIANO_FILES={
+ "A1":"A1.mp3","C2":"C2.mp3","D#2":"Ds2.mp3","F#2":"Fs2.mp3","A2":"A2.mp3",
+ "C3":"C3.mp3","D#3":"Ds3.mp3","F#3":"Fs3.mp3","A3":"A3.mp3",
+ "C4":"C4.mp3","D#4":"Ds4.mp3","F#4":"Fs4.mp3","A4":"A4.mp3"
+};
 function currentSection(){return sections[sectionIndex]}
 function render(){
  const s=currentSection(),cur=s.chords[stepIndex],next=s.chords[(stepIndex+1)%s.chords.length];
@@ -428,11 +438,74 @@ function initSections(){
    sectionChecks.appendChild(label);
  });
 }
-function ensureAudio(){if(!audioCtx)audioCtx=new(window.AudioContext||window.webkitAudioContext)();if(audioCtx.state==="suspended")audioCtx.resume()}
-function playCurrent(){
- ensureAudio();const c=currentSection().chords[stepIndex],v=voicings[c],notes=[v.l,...v.r.map(x=>x[0])],now=audioCtx.currentTime;
- const master=audioCtx.createGain();master.gain.setValueAtTime(.0001,now);master.gain.exponentialRampToValueAtTime(.3,now+.03);master.gain.exponentialRampToValueAtTime(.0001,now+1.65);master.connect(audioCtx.destination);
- notes.forEach((n,i)=>{const o=audioCtx.createOscillator(),g=audioCtx.createGain();o.type=i===0?"sine":"triangle";o.frequency.value=frequency(n);g.gain.value=i===0?.75:.35;o.connect(g);g.connect(master);o.start(now);o.stop(now+1.7)});
+function ensureAudio(){
+ if(!audioCtx)audioCtx=new(window.AudioContext||window.webkitAudioContext)();
+ if(audioCtx.state==="suspended")audioCtx.resume();
+ return audioCtx;
+}
+function setAudioStatus(textValue,state=""){
+ audioStatus.textContent=textValue;
+ audioStatus.className="audio-status"+(state?" "+state:"");
+}
+function makeReverb(ctx){
+ if(reverbNode)return reverbNode;
+ const seconds=1.8,length=Math.floor(ctx.sampleRate*seconds),impulse=ctx.createBuffer(2,length,ctx.sampleRate);
+ for(let channel=0;channel<2;channel++){
+   const data=impulse.getChannelData(channel);
+   for(let i=0;i<length;i++)data[i]=(Math.random()*2-1)*Math.pow(1-i/length,2.7);
+ }
+ const convolver=ctx.createConvolver();convolver.buffer=impulse;
+ const wet=ctx.createGain();wet.gain.value=.12;convolver.connect(wet);wet.connect(ctx.destination);
+ reverbNode=convolver;return reverbNode;
+}
+async function loadPiano(){
+ ensureAudio();
+ if(pianoReady)return true;
+ if(pianoLoading)return pianoLoading;
+ setAudioStatus("Piano: cargando…","loading");
+ pianoLoading=Promise.all(Object.entries(PIANO_FILES).map(async([note,file])=>{
+   const response=await fetch(PIANO_BASE+file);
+   if(!response.ok)throw new Error("No se pudo cargar "+file);
+   const buffer=await audioCtx.decodeAudioData(await response.arrayBuffer());
+   return {note,midi:midi(note),buffer};
+ })).then(samples=>{
+   pianoSamples=samples.sort((a,b)=>a.midi-b.midi);pianoReady=true;
+   setAudioStatus("Piano real: listo","ready");return true;
+ }).catch(error=>{
+   console.warn("Piano muestreado no disponible; se usa respaldo.",error);
+   pianoReady=false;setAudioStatus("Sonido básico de respaldo");return false;
+ });
+ return pianoLoading;
+}
+function nearestSample(note){
+ const target=midi(note);
+ return pianoSamples.reduce((best,sample)=>Math.abs(sample.midi-target)<Math.abs(best.midi-target)?sample:best,pianoSamples[0]);
+}
+function playSampledChord(notes){
+ const ctx=ensureAudio(),now=ctx.currentTime+.025;
+ const master=ctx.createGain();master.gain.value=.82;
+ const compressor=ctx.createDynamicsCompressor();
+ compressor.threshold.value=-18;compressor.knee.value=16;compressor.ratio.value=3;
+ master.connect(compressor);compressor.connect(ctx.destination);compressor.connect(makeReverb(ctx));
+ notes.forEach((note,index)=>{
+   const sample=nearestSample(note),source=ctx.createBufferSource(),gain=ctx.createGain();
+   source.buffer=sample.buffer;source.playbackRate.value=Math.pow(2,(midi(note)-sample.midi)/12);
+   const start=now+index*.012,level=index===0?.78:.48;
+   gain.gain.setValueAtTime(.0001,start);gain.gain.exponentialRampToValueAtTime(level,start+.018);
+   gain.gain.exponentialRampToValueAtTime(.0001,start+2.55);
+   source.connect(gain);gain.connect(master);source.start(start);source.stop(start+2.65);
+ });
+}
+function playFallback(notes){
+ const ctx=ensureAudio(),now=ctx.currentTime;
+ const master=ctx.createGain();master.gain.setValueAtTime(.0001,now);master.gain.exponentialRampToValueAtTime(.25,now+.03);master.gain.exponentialRampToValueAtTime(.0001,now+1.65);master.connect(ctx.destination);
+ notes.forEach((n,i)=>{const o=ctx.createOscillator(),g=ctx.createGain();o.type=i===0?"sine":"triangle";o.frequency.value=frequency(n);g.gain.value=i===0?.7:.32;o.connect(g);g.connect(master);o.start(now);o.stop(now+1.7)});
+}
+async function playCurrent(){
+ ensureAudio();
+ const c=currentSection().chords[stepIndex],v=voicings[c],notes=[v.l,...v.r.map(x=>x[0])];
+ const ready=await loadPiano();
+ if(ready)playSampledChord(notes);else playFallback(notes);
 }
 function stopAuto(){
  if(timer){clearInterval(timer);timer=null}
@@ -471,8 +544,10 @@ function playQueueItem(){
  playCurrent();
 }
 
-function startAuto(){
+async function startAuto(){
  stopAuto();
+ ensureAudio();
+ await loadPiano();
  playQueue=buildPlayQueue();
  if(!playQueue.length){
    auto.textContent="Selecciona una sección";
