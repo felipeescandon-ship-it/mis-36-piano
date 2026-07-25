@@ -34,6 +34,8 @@ border-radius:17px;padding:12px;margin:16px 0;box-shadow:var(--shadow)}
 button,select,input{font:inherit}
 button,select{border:0;border-radius:11px;padding:10px 14px;font-weight:750}
 button{cursor:pointer}.primary{background:var(--blue);color:#fff}.secondary{background:#e9eff7;color:#173354}
+.danger{background:#fee2e2;color:#9f1d1d;border:1px solid #fecaca}
+button:disabled,select:disabled{cursor:not-allowed;opacity:.55}
 select{background:#f3f6fa;color:#173354;border:1px solid var(--line)}
 .tempo{display:grid;grid-template-columns:auto 1fr;gap:8px;align-items:center}.tempo strong{grid-column:1/-1}.tempo input{width:100%}
 .audio-status{padding:7px 10px;border-radius:9px;background:#eef3f9;color:#526178;font-size:13px;font-weight:800}.audio-status.ready{background:var(--greenSoft);color:var(--green)}.audio-status.loading{background:var(--amberSoft);color:#8a4900}
@@ -239,6 +241,10 @@ button.song-line-end{padding:3px 8px}
     <div id="syncSaveStatus" class="sync-save-status">Los cambios se guardan en este dispositivo.</div>
   </div>
   <label class="sync-duration">
+    <span>Cambiar acorde</span>
+    <select id="syncChord" disabled aria-label="Cambiar acorde"></select>
+  </label>
+  <label class="sync-duration">
     <span>Duración del acorde</span>
     <select id="syncBeats" disabled>
       <option value="0.5">½ tiempo</option>
@@ -250,6 +256,7 @@ button.song-line-end{padding:3px 8px}
       <option value="8">8 tiempos</option>
     </select>
   </label>
+  <button id="syncDelete" class="danger" type="button" disabled>Eliminar acorde</button>
 </div>
 <div id="songSheet" class="song-sheet"></div>
 </div>
@@ -328,7 +335,9 @@ const songEditToggle=document.getElementById("songEditToggle");
 const syncEditor=document.getElementById("syncEditor");
 const syncInstruction=document.getElementById("syncInstruction");
 const syncSaveStatus=document.getElementById("syncSaveStatus");
+const syncChord=document.getElementById("syncChord");
 const syncBeats=document.getElementById("syncBeats");
+const syncDelete=document.getElementById("syncDelete");
 const bpmOut=document.getElementById("bpmOut");
 const bpm=document.getElementById("bpm");
 const customPanel=document.getElementById("customPanel");
@@ -384,7 +393,9 @@ const voicings={
 const makeSection=(name,rows)=>({
  name,
  lines:rows.map(([lyric])=>lyric),
- events:rows.flatMap(([lyric,...chords],line)=>chords.map(chord=>({chord,lyric,line,beats:4})))
+ events:rows.flatMap(([lyric,...chords],line)=>chords.map((chord,chordIndex)=>({
+   uid:`${line}:${chordIndex}`,chord,lyric,line,beats:4
+ })))
 });
 const sections=[
 makeSection("Introducción",[
@@ -458,7 +469,9 @@ makeSection("Coro final",[
 ];
 
 const SONG_SYNC_KEY="mis36-song-sync-v1";
+const deletedSongEvents=new Set();
 function lyricWords(text){return text.trim().split(/\s+/).filter(Boolean)}
+function syncEventKey(section,event){return `${section}:${event.uid}`}
 function initializeSongSync(){
  sections.forEach(section=>{
    section.lines.forEach((lineText,line)=>{
@@ -472,21 +485,41 @@ function initializeSongSync(){
  });
  try{
    const saved=JSON.parse(localStorage.getItem(SONG_SYNC_KEY)||"{}");
-   sections.forEach((section,si)=>section.events.forEach((event,ei)=>{
-     const value=saved[`${si}:${ei}`];
-     if(!value)return;
-     if(Number.isInteger(value.line))event.line=Math.min(Math.max(value.line,0),section.lines.length-1);
-     event.lyric=section.lines[event.line];
-     const maxAnchor=Math.max(lyricWords(event.lyric).length-1,0);
-     if(Number.isInteger(value.anchor))event.anchor=Math.min(Math.max(value.anchor,0),maxAnchor+1);
-     if(Number.isFinite(+value.beats)&&+value.beats>0)event.beats=+value.beats;
-   }));
+   if(saved?.version===2){
+     const overrides=saved.events||{};
+     (Array.isArray(saved.deleted)?saved.deleted:[]).forEach(key=>deletedSongEvents.add(key));
+     sections.forEach((section,si)=>{
+       section.events.forEach(event=>{
+         const value=overrides[syncEventKey(si,event)];
+         if(!value)return;
+         if(voicings[value.chord])event.chord=value.chord;
+         if(Number.isInteger(value.line))event.line=Math.min(Math.max(value.line,0),section.lines.length-1);
+         event.lyric=section.lines[event.line];
+         const maxAnchor=lyricWords(event.lyric).length;
+         if(Number.isInteger(value.anchor))event.anchor=Math.min(Math.max(value.anchor,0),maxAnchor);
+         if(Number.isFinite(+value.beats)&&+value.beats>0)event.beats=+value.beats;
+       });
+       section.events=section.events.filter(event=>!deletedSongEvents.has(syncEventKey(si,event)));
+     });
+   }else{
+     sections.forEach((section,si)=>section.events.forEach((event,ei)=>{
+       const value=saved[`${si}:${ei}`];
+       if(!value)return;
+       if(Number.isInteger(value.line))event.line=Math.min(Math.max(value.line,0),section.lines.length-1);
+       event.lyric=section.lines[event.line];
+       const maxAnchor=lyricWords(event.lyric).length;
+       if(Number.isInteger(value.anchor))event.anchor=Math.min(Math.max(value.anchor,0),maxAnchor);
+       if(Number.isFinite(+value.beats)&&+value.beats>0)event.beats=+value.beats;
+     }));
+   }
  }catch{}
 }
 function saveSongSync(){
- const saved={};
- sections.forEach((section,si)=>section.events.forEach((event,ei)=>{
-   saved[`${si}:${ei}`]={line:event.line,anchor:event.anchor,beats:event.beats};
+ const saved={version:2,events:{},deleted:[...deletedSongEvents]};
+ sections.forEach((section,si)=>section.events.forEach(event=>{
+   saved.events[syncEventKey(si,event)]={
+     chord:event.chord,line:event.line,anchor:event.anchor,beats:event.beats
+   };
  }));
  try{localStorage.setItem(SONG_SYNC_KEY,JSON.stringify(saved));syncSaveStatus.textContent="Guardado automáticamente en este dispositivo."}
  catch{syncSaveStatus.textContent="No fue posible guardar en este dispositivo."}
@@ -503,12 +536,17 @@ function updateSyncEditor(){
  const selected=selectedSyncData();
  if(!songEditMode||!selected){
    syncInstruction.textContent="1. Selecciona un acorde. 2. Toca una palabra, “Fin de línea” o una palabra de la línea siguiente.";
+   syncChord.disabled=true;
    syncBeats.disabled=true;
+   syncDelete.disabled=true;
    return;
  }
  syncInstruction.textContent=`Acorde ${chordText(selected.event.chord)} seleccionado y sonando. Toca una palabra o “Fin de línea” para moverlo.`;
+ syncChord.disabled=false;
+ syncChord.value=selected.event.chord;
  syncBeats.disabled=false;
  syncBeats.value=String(selected.event.beats);
+ syncDelete.disabled=false;
 }
 function selectSyncEvent(section,step){
  selectedSyncEvent={section,step};
@@ -535,6 +573,17 @@ function baseNote(note){return note.match(/^([A-G]#?)/)[1]}
 function noteText(note,chord=null){const physical=baseNote(note),n=chord&&voicings[chord]?.spell?.[note]||physical;return notationMode==="es"?NOTE_ES[n]:n}
 function keyHint(note,chord){const physical=baseNote(note),written=chord&&voicings[chord]?.spell?.[note];if(!written)return "";return notationMode==="es"?` (tecla ${NOTE_ES[physical]})`:` (${physical} key)`}
 function chordText(chord){return notationMode==="es"?CHORD_ES[chord]:chord}
+function renderSyncChordOptions(){
+ const selectedValue=syncChord.value;
+ syncChord.innerHTML="";
+ Object.keys(voicings).forEach(chord=>{
+   const option=document.createElement("option");
+   option.value=chord;
+   option.textContent=chordText(chord);
+   syncChord.appendChild(option);
+ });
+ if(voicings[selectedValue])syncChord.value=selectedValue;
+}
 function midi(note){const m=note.match(/^([A-G]#?)(\d)$/),s={C:0,"C#":1,D:2,"D#":3,E:4,F:5,"F#":6,G:7,"G#":8,A:9,"A#":10,B:11};return(+m[2]+1)*12+s[m[1]]}
 function frequency(note){return 440*Math.pow(2,(midi(note)-69)/12)}
 
@@ -882,14 +931,47 @@ syncBeats.onchange=()=>{
  saveSongSync();
  updateSyncEditor();
 };
-notation.onclick=()=>{notationMode=notationMode==="es"?"en":"es";notation.textContent=notationMode==="es"?"Notas: Español":"Notes: English";buildSteps();render();renderFullSong()};
+syncChord.onchange=()=>{
+ const selected=selectedSyncData();
+ if(!selected||!voicings[syncChord.value])return;
+ selected.event.chord=syncChord.value;
+ saveSongSync();
+ if(selectedSyncEvent.section===sectionIndex)buildSteps();
+ render();
+ renderFullSong();
+ playChord(selected.event.chord);
+};
+syncDelete.onclick=()=>{
+ const selected=selectedSyncData();
+ if(!selected)return;
+ if(selected.section.events.length<=1){
+   alert("Esta sección debe conservar al menos un acorde.");
+   return;
+ }
+ const chordName=chordText(selected.event.chord);
+ if(!confirm(`¿Eliminar el acorde ${chordName} de esta parte de la canción?`))return;
+ const deletedSection=selectedSyncEvent.section;
+ const deletedStep=selectedSyncEvent.step;
+ deletedSongEvents.add(syncEventKey(deletedSection,selected.event));
+ selected.section.events.splice(deletedStep,1);
+ selectedSyncEvent=null;
+ if(deletedSection===sectionIndex){
+   if(stepIndex>deletedStep)stepIndex--;
+   else if(stepIndex===deletedStep)stepIndex=Math.min(stepIndex,selected.section.events.length-1);
+   buildSteps();
+ }
+ saveSongSync();
+ render();
+ renderFullSong();
+};
+notation.onclick=()=>{notationMode=notationMode==="es"?"en":"es";notation.textContent=notationMode==="es"?"Notas: Español":"Notes: English";renderSyncChordOptions();buildSteps();render();renderFullSong()};
 fullViewToggle.onclick=()=>{const showing=document.body.classList.toggle("show-full");fullViewToggle.textContent=showing?"🎹 Vista piano":"☰ Letra y acordes completos";if(showing)window.scrollTo({top:0,behavior:"smooth"})};
 bpm.oninput=e=>{bpmOut.textContent=e.target.value;updateSettingsSummary()};
 keyboardMode.value=keyboardViewMode;
 sustainMode.value=sustainViewMode;
 keyboardMode.onchange=e=>{keyboardViewMode=e.target.value;savePreference("mis36-keyboard-mode",keyboardViewMode);updateSettingsSummary();render()};
 sustainMode.onchange=e=>{sustainViewMode=e.target.value;savePreference("mis36-sustain-mode",sustainViewMode);updateSettingsSummary()};
-initializeSongSync();updateSettingsSummary();initSections();buildSteps();render();renderFullSong();
+renderSyncChordOptions();initializeSongSync();updateSettingsSummary();initSections();buildSteps();render();renderFullSong();
 </script>
 </body>
 </html>
