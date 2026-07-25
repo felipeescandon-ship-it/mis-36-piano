@@ -237,9 +237,14 @@ button.song-line-end{padding:3px 8px}
 </div>
 <div id="syncEditor" class="sync-editor" hidden>
   <div>
-    <div id="syncInstruction" class="sync-instruction"><strong>1.</strong> Selecciona un acorde. <strong>2.</strong> Toca una palabra, “Fin de línea” o una palabra de la línea siguiente.</div>
+    <div id="syncInstruction" class="sync-instruction">Selecciona un acorde para moverlo o usa “Agregar acorde” para crear uno nuevo.</div>
     <div id="syncSaveStatus" class="sync-save-status">Los cambios se guardan en este dispositivo.</div>
   </div>
+  <label class="sync-duration">
+    <span>Agregar acorde</span>
+    <select id="syncAddChord" aria-label="Acorde para agregar"></select>
+  </label>
+  <button id="syncAdd" class="primary" type="button">＋ Agregar acorde</button>
   <label class="sync-duration">
     <span>Cambiar acorde</span>
     <select id="syncChord" disabled aria-label="Cambiar acorde"></select>
@@ -335,6 +340,8 @@ const songEditToggle=document.getElementById("songEditToggle");
 const syncEditor=document.getElementById("syncEditor");
 const syncInstruction=document.getElementById("syncInstruction");
 const syncSaveStatus=document.getElementById("syncSaveStatus");
+const syncAddChord=document.getElementById("syncAddChord");
+const syncAdd=document.getElementById("syncAdd");
 const syncChord=document.getElementById("syncChord");
 const syncBeats=document.getElementById("syncBeats");
 const syncDelete=document.getElementById("syncDelete");
@@ -359,7 +366,7 @@ const steps=document.getElementById("steps");
 const NOTE_ES={C:"Do","C#":"Do#",D:"Re","D#":"Re#",E:"Mi","E#":"Mi#",F:"Fa","F#":"Fa#",G:"Sol","G#":"Sol#",A:"La","A#":"La#",B:"Si","B#":"Si#"};
 const CHORD_ES={"E":"Mi","F#":"Fa#","F#m":"Fa#m","A":"La","Am":"Lam","C#m":"Do#m","C#":"Do#","G#m":"Sol#m","G#":"Sol#","D":"Re","B":"Si","B/D#":"Si/Re#"};
 let notationMode="es";
-let songEditMode=false,selectedSyncEvent=null;
+let songEditMode=false,selectedSyncEvent=null,addingSyncChord=null;
 function readPreference(key,fallback){try{return localStorage.getItem(key)||fallback}catch{return fallback}}
 function savePreference(key,value){try{localStorage.setItem(key,value)}catch{}}
 let keyboardViewMode=readPreference("mis36-keyboard-mode","preview");
@@ -485,21 +492,37 @@ function initializeSongSync(){
  });
  try{
    const saved=JSON.parse(localStorage.getItem(SONG_SYNC_KEY)||"{}");
-   if(saved?.version===2){
+   if(saved?.version>=2){
      const overrides=saved.events||{};
+     if(saved.version>=3&&Array.isArray(saved.added)){
+       saved.added.forEach(value=>{
+         const section=sections[value.section];
+         if(!section||!voicings[value.chord]||typeof value.uid!=="string"||!value.uid.startsWith("custom:"))return;
+         if(section.events.some(event=>event.uid===value.uid))return;
+         const line=Number.isInteger(value.line)?Math.min(Math.max(value.line,0),section.lines.length-1):0;
+         section.events.push({
+           uid:value.uid,chord:value.chord,line,lyric:section.lines[line],
+           anchor:Number.isInteger(value.anchor)?value.anchor:0,
+           beats:Number.isFinite(+value.beats)&&+value.beats>0?+value.beats:4
+         });
+       });
+     }
      (Array.isArray(saved.deleted)?saved.deleted:[]).forEach(key=>deletedSongEvents.add(key));
      sections.forEach((section,si)=>{
-       section.events.forEach(event=>{
+       section.events.forEach((event,defaultPosition)=>{
          const value=overrides[syncEventKey(si,event)];
-         if(!value)return;
-         if(voicings[value.chord])event.chord=value.chord;
-         if(Number.isInteger(value.line))event.line=Math.min(Math.max(value.line,0),section.lines.length-1);
+         if(value&&voicings[value.chord])event.chord=value.chord;
+         if(value&&Number.isInteger(value.line))event.line=Math.min(Math.max(value.line,0),section.lines.length-1);
          event.lyric=section.lines[event.line];
          const maxAnchor=lyricWords(event.lyric).length;
-         if(Number.isInteger(value.anchor))event.anchor=Math.min(Math.max(value.anchor,0),maxAnchor);
-         if(Number.isFinite(+value.beats)&&+value.beats>0)event.beats=+value.beats;
+         if(value&&Number.isInteger(value.anchor))event.anchor=Math.min(Math.max(value.anchor,0),maxAnchor);
+         if(value&&Number.isFinite(+value.beats)&&+value.beats>0)event.beats=+value.beats;
+         event.savedPosition=value&&Number.isInteger(value.position)?value.position:defaultPosition;
        });
-       section.events=section.events.filter(event=>!deletedSongEvents.has(syncEventKey(si,event)));
+       section.events=section.events
+         .filter(event=>!deletedSongEvents.has(syncEventKey(si,event)))
+         .sort((a,b)=>a.savedPosition-b.savedPosition);
+       section.events.forEach(event=>delete event.savedPosition);
      });
    }else{
      sections.forEach((section,si)=>section.events.forEach((event,ei)=>{
@@ -515,11 +538,17 @@ function initializeSongSync(){
  }catch{}
 }
 function saveSongSync(){
- const saved={version:2,events:{},deleted:[...deletedSongEvents]};
- sections.forEach((section,si)=>section.events.forEach(event=>{
+ const saved={version:3,events:{},deleted:[...deletedSongEvents],added:[]};
+ sections.forEach((section,si)=>section.events.forEach((event,position)=>{
    saved.events[syncEventKey(si,event)]={
-     chord:event.chord,line:event.line,anchor:event.anchor,beats:event.beats
+     chord:event.chord,line:event.line,anchor:event.anchor,beats:event.beats,position
    };
+   if(event.uid.startsWith("custom:")){
+     saved.added.push({
+       section:si,uid:event.uid,chord:event.chord,line:event.line,
+       anchor:event.anchor,beats:event.beats
+     });
+   }
  }));
  try{localStorage.setItem(SONG_SYNC_KEY,JSON.stringify(saved));syncSaveStatus.textContent="Guardado automáticamente en este dispositivo."}
  catch{syncSaveStatus.textContent="No fue posible guardar en este dispositivo."}
@@ -533,9 +562,19 @@ function updateSyncEditor(){
  syncEditor.hidden=!songEditMode;
  songEditToggle.setAttribute("aria-expanded",String(songEditMode));
  songEditToggle.textContent=songEditMode?"✓ Terminar edición":"✎ Editar sincronización";
+ syncAddChord.disabled=!songEditMode;
+ syncAdd.disabled=!songEditMode;
+ syncAdd.textContent=addingSyncChord?"Cancelar agregado":"＋ Agregar acorde";
  const selected=selectedSyncData();
+ if(songEditMode&&addingSyncChord){
+   syncInstruction.textContent=`Agregar ${chordText(addingSyncChord)}: toca la palabra o “Fin de línea” donde debe comenzar.`;
+   syncChord.disabled=true;
+   syncBeats.disabled=true;
+   syncDelete.disabled=true;
+   return;
+ }
  if(!songEditMode||!selected){
-   syncInstruction.textContent="1. Selecciona un acorde. 2. Toca una palabra, “Fin de línea” o una palabra de la línea siguiente.";
+   syncInstruction.textContent="Selecciona un acorde para moverlo o usa “Agregar acorde” para crear uno nuevo.";
    syncChord.disabled=true;
    syncBeats.disabled=true;
    syncDelete.disabled=true;
@@ -549,6 +588,7 @@ function updateSyncEditor(){
  syncDelete.disabled=false;
 }
 function selectSyncEvent(section,step){
+ addingSyncChord=null;
  selectedSyncEvent={section,step};
  updateSyncEditor();
  renderFullSong();
@@ -561,6 +601,29 @@ function placeSyncEvent(section,line,wordIndex){
  selected.event.anchor=wordIndex;
  saveSongSync();
  renderFullSong();
+}
+function addSyncEvent(section,line,wordIndex){
+ const targetSection=sections[section];
+ if(!addingSyncChord||!targetSection||!targetSection.lines[line]||!voicings[addingSyncChord])return;
+ const event={
+   uid:`custom:${Date.now().toString(36)}:${Math.random().toString(36).slice(2,8)}`,
+   chord:addingSyncChord,line,lyric:targetSection.lines[line],anchor:wordIndex,beats:4
+ };
+ const insertAt=targetSection.events.findIndex(existing=>
+   existing.line>line||(existing.line===line&&existing.anchor>wordIndex)
+ );
+ const step=insertAt<0?targetSection.events.length:insertAt;
+ targetSection.events.splice(step,0,event);
+ addingSyncChord=null;
+ selectedSyncEvent={section,step};
+ saveSongSync();
+ if(section===sectionIndex){
+   if(step<=stepIndex)stepIndex++;
+   buildSteps();
+ }
+ render();
+ renderFullSong();
+ playChord(event.chord);
 }
 
 const whiteNames=["C","D","E","F","G","A","B"],whites=["B1"];
@@ -575,14 +638,19 @@ function keyHint(note,chord){const physical=baseNote(note),written=chord&&voicin
 function chordText(chord){return notationMode==="es"?CHORD_ES[chord]:chord}
 function renderSyncChordOptions(){
  const selectedValue=syncChord.value;
+ const addValue=syncAddChord.value;
  syncChord.innerHTML="";
+ syncAddChord.innerHTML="";
  Object.keys(voicings).forEach(chord=>{
    const option=document.createElement("option");
    option.value=chord;
    option.textContent=chordText(chord);
    syncChord.appendChild(option);
+   const addOption=option.cloneNode(true);
+   syncAddChord.appendChild(addOption);
  });
  if(voicings[selectedValue])syncChord.value=selectedValue;
+ if(voicings[addValue])syncAddChord.value=addValue;
 }
 function midi(note){const m=note.match(/^([A-G]#?)(\d)$/),s={C:0,"C#":1,D:2,"D#":3,E:4,F:5,"F#":6,G:7,"G#":8,A:9,"A#":10,B:11};return(+m[2]+1)*12+s[m[1]]}
 function frequency(note){return 440*Math.pow(2,(midi(note)-69)/12)}
@@ -684,7 +752,7 @@ function renderFullSong(){
      const line=document.createElement("div");line.className="song-line";
      const row=document.createElement("div");row.className="song-word-row";
      const selected=selectedSyncData();
-     const canPlace=Boolean(songEditMode&&selected&&selectedSyncEvent.section===si);
+     const canPlace=Boolean(songEditMode&&(addingSyncChord||(selected&&selectedSyncEvent.section===si)));
 
      const makeAnchorSlot=anchor=>{
        const slot=document.createElement("div");slot.className="song-anchor-slot";
@@ -712,8 +780,8 @@ function renderFullSong(){
        word.textContent=textValue;
        if(songEditMode){
          word.disabled=!canPlace;
-         if(canPlace&&selected.event.line===lineIndex&&selected.event.anchor===wordIndex)word.classList.add("anchor-target");
-         word.onclick=()=>placeSyncEvent(si,lineIndex,wordIndex);
+         if(!addingSyncChord&&canPlace&&selected.event.line===lineIndex&&selected.event.anchor===wordIndex)word.classList.add("anchor-target");
+         word.onclick=()=>addingSyncChord?addSyncEvent(si,lineIndex,wordIndex):placeSyncEvent(si,lineIndex,wordIndex);
        }
        cell.append(slot,word);row.appendChild(cell);
      });
@@ -729,8 +797,8 @@ function renderFullSong(){
        endTarget.textContent=songEditMode?"Fin de línea":"↵";
        if(songEditMode){
          endTarget.disabled=!canPlace;
-         if(canPlace&&selected.event.line===lineIndex&&selected.event.anchor===words.length)endTarget.classList.add("anchor-target");
-         endTarget.onclick=()=>placeSyncEvent(si,lineIndex,words.length);
+         if(!addingSyncChord&&canPlace&&selected.event.line===lineIndex&&selected.event.anchor===words.length)endTarget.classList.add("anchor-target");
+         endTarget.onclick=()=>addingSyncChord?addSyncEvent(si,lineIndex,words.length):placeSyncEvent(si,lineIndex,words.length);
        }
        endCell.append(endSlot,endTarget);row.appendChild(endCell);
      }
@@ -921,8 +989,24 @@ goSectionStart.onclick=()=>{
 };
 songEditToggle.onclick=()=>{
  songEditMode=!songEditMode;
- if(!songEditMode)selectedSyncEvent=null;
+ if(!songEditMode){selectedSyncEvent=null;addingSyncChord=null}
  renderFullSong();
+};
+syncAdd.onclick=()=>{
+ if(addingSyncChord){
+   addingSyncChord=null;
+ }else{
+   addingSyncChord=syncAddChord.value;
+   selectedSyncEvent=null;
+   playChord(addingSyncChord);
+ }
+ renderFullSong();
+};
+syncAddChord.onchange=()=>{
+ if(!addingSyncChord)return;
+ addingSyncChord=syncAddChord.value;
+ playChord(addingSyncChord);
+ updateSyncEditor();
 };
 syncBeats.onchange=()=>{
  const selected=selectedSyncData();
@@ -952,7 +1036,9 @@ syncDelete.onclick=()=>{
  if(!confirm(`¿Eliminar el acorde ${chordName} de esta parte de la canción?`))return;
  const deletedSection=selectedSyncEvent.section;
  const deletedStep=selectedSyncEvent.step;
- deletedSongEvents.add(syncEventKey(deletedSection,selected.event));
+ if(!selected.event.uid.startsWith("custom:")){
+   deletedSongEvents.add(syncEventKey(deletedSection,selected.event));
+ }
  selected.section.events.splice(deletedStep,1);
  selectedSyncEvent=null;
  if(deletedSection===sectionIndex){
