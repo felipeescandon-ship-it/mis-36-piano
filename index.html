@@ -64,14 +64,6 @@ display:grid;place-items:center;color:#fff;font-weight:900;z-index:7;border:2px 
 .move{display:none}.show-movements .move{display:block}
 .white.upcoming::after{content:"";position:absolute;inset:0;background:rgba(126,138,154,.22);box-shadow:inset 0 -12px 20px rgba(82,94,110,.10);z-index:5;pointer-events:none}
 .black.upcoming{background:#646d79;box-shadow:inset 0 0 0 2px rgba(229,233,239,.62)}
-.white.common{box-shadow:inset 0 0 0 4px #8b96a6}
-.black.common{outline:3px solid #d6dbe3;outline-offset:-4px}
-.label.preview-label{top:10px;bottom:auto;color:#677386;background:#f3f5f8;border:1px dashed #8b96a6}
-.label.black-label.preview-label{top:5px;bottom:auto}
-.finger.preview-f{top:45px;bottom:auto;width:23px;height:23px;background:#f3f5f8;color:#677386;border:2px dashed #788496;font-size:13px}
-.finger.black-f.preview-f{top:48px;bottom:auto}
-.keep-badge{position:absolute;z-index:9;top:8px;left:50%;transform:translateX(-50%);padding:3px 6px;border-radius:7px;background:#f3f5f8;color:#5d6878;border:2px solid #8b96a6;font-size:11px;font-weight:900;white-space:nowrap}
-.black .keep-badge{top:31px;font-size:10px}
 .gray{background:#8b96a6}
 .move{margin-top:10px;background:var(--amberSoft);border:1px solid #f0d291;border-radius:13px;padding:11px 13px;line-height:1.45}
 .seq{margin-top:16px}
@@ -384,22 +376,12 @@ function keyboard(el,chord,preview,nextChord=null){
 }
 function renderUpcoming(el,currentChord,nextChord){
  const current=voicings[currentChord],upcoming=voicings[nextChord];
- const currentFingers=new Map([[current.l,"5"],...current.r.map(x=>[x[0],String(x[1])])]);
- const upcomingNotes=[[upcoming.l,"5"],...upcoming.r.map(x=>[x[0],String(x[1])])];
- upcomingNotes.forEach(([note,nextFinger])=>{
+ const currentNotes=new Set([current.l,...current.r.map(x=>x[0])]);
+ const upcomingNotes=[upcoming.l,...upcoming.r.map(x=>x[0])];
+ upcomingNotes.forEach(note=>{
+   if(currentNotes.has(note))return;
    const key=[...el.children].find(child=>child.dataset.note===note);
-   if(!key)return;
-   const isBlack=key.classList.contains("black"),currentFinger=currentFingers.get(note);
-   if(currentFinger){
-     key.classList.add("common");
-     const badge=document.createElement("div");badge.className="keep-badge";
-     badge.textContent=currentFinger===nextFinger?"mantén":currentFinger+"→"+nextFinger;
-     badge.title=currentFinger===nextFinger?"La nota y el dedo se mantienen":"La nota se mantiene y cambia el dedo";
-     key.appendChild(badge);
-   }else{
-     key.classList.add("upcoming");
-     marker(key,note,nextFinger,"preview",isBlack,nextChord);
-   }
+   if(key)key.classList.add("upcoming");
  });
 }
 function marker(k,note,finger,type,isBlack,chord){
