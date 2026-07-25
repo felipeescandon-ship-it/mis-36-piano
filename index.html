@@ -105,10 +105,23 @@ background:var(--blue);color:#fff;font-weight:900;margin:auto auto 4px}
 .song-part:last-child{border-bottom:0}
 .song-part h3{margin:0 0 16px;color:#123e72;font-size:21px}
 .song-line{margin:0 0 15px;line-height:1.45}
-.song-chords{display:flex;gap:8px;flex-wrap:wrap;min-height:29px;margin-bottom:3px}
 .song-chord{padding:4px 10px;border-radius:8px;background:var(--amberSoft);color:#8a4900;border:1px solid #efc875;font-weight:900;font-size:15px}
-.song-lyric{font-size:18px;color:var(--ink)}
+.song-chord.selected-edit{background:var(--blue);color:#fff;border-color:var(--blue);outline:3px solid var(--blueSoft)}
+.song-word-row{display:flex;gap:8px 6px;flex-wrap:wrap;align-items:flex-end}
+.song-word-cell{display:grid;grid-template-rows:minmax(31px,auto) auto;justify-items:start}
+.song-anchor-slot{min-height:31px;display:flex;gap:4px;align-items:end;flex-wrap:wrap}
+.song-word{font-size:18px;color:var(--ink);padding:2px 1px;border-radius:6px}
+button.song-word{background:#f1f5fa;border:1px dashed #9eabc0;cursor:pointer}
+button.song-word:disabled{background:transparent;border-color:transparent;cursor:default;opacity:1}
+.song-word.anchor-target{background:var(--blueSoft);border-color:var(--blue)}
 .song-help{margin:0 0 8px;color:var(--muted)}
+.song-editor-actions{display:flex;gap:8px;flex-wrap:wrap}
+.sync-editor{display:flex;gap:12px;align-items:end;flex-wrap:wrap;padding:12px;border:1px solid #bfd3ed;border-radius:13px;background:#f3f8ff;margin-bottom:16px}
+.sync-editor[hidden]{display:none}
+.sync-instruction{flex:1 1 280px;line-height:1.4}
+.sync-duration{display:grid;gap:5px;color:#526178;font-size:13px;font-weight:800}
+.sync-duration select{min-width:125px}
+.sync-save-status{color:var(--green);font-size:13px;font-weight:800}
 @media(max-width:900px){
  .toolbar-main{grid-template-columns:1fr auto}
  .section-control{grid-column:1/-1}
@@ -117,6 +130,7 @@ background:var(--blue);color:#fff;font-weight:900;margin:auto auto 4px}
 }
 @media(max-width:600px){
  .song-sheet{padding-inline:2px}.song-lyric{font-size:17px}.song-part{padding:15px 0}
+ .song-word{font-size:17px}
  .transport{grid-column:1/-1}.transport button{flex:1 1 auto}
  #settingsToggle{grid-column:1/-1}
  .settings-grid{grid-template-columns:1fr}
@@ -212,7 +226,28 @@ background:var(--blue);color:#fff;font-weight:900;margin:auto auto 4px}
 <section id="fullView" class="card full-view">
 <div class="content">
 <div class="section-title">
-  <div><h2 style="margin:0">Letra y acordes completos</h2><p class="song-help">Todos los acordes de la canción en una sola vista. Toca un acorde para abrir su posición en el piano.</p></div>
+  <div><h2 style="margin:0">Letra y acordes completos</h2><p class="song-help">Toca un acorde para abrirlo en el piano o activa la edición para colocarlo sobre la palabra donde entra.</p></div>
+  <div class="song-editor-actions">
+    <button id="songEditToggle" class="secondary" type="button" aria-expanded="false" aria-controls="syncEditor">✎ Editar sincronización</button>
+  </div>
+</div>
+<div id="syncEditor" class="sync-editor" hidden>
+  <div>
+    <div id="syncInstruction" class="sync-instruction"><strong>1.</strong> Selecciona un acorde. <strong>2.</strong> Toca la palabra donde debe entrar.</div>
+    <div id="syncSaveStatus" class="sync-save-status">Los cambios se guardan en este dispositivo.</div>
+  </div>
+  <label class="sync-duration">
+    <span>Duración del acorde</span>
+    <select id="syncBeats" disabled>
+      <option value="0.5">½ tiempo</option>
+      <option value="1">1 tiempo</option>
+      <option value="2">2 tiempos</option>
+      <option value="3">3 tiempos</option>
+      <option value="4">4 tiempos</option>
+      <option value="6">6 tiempos</option>
+      <option value="8">8 tiempos</option>
+    </select>
+  </label>
 </div>
 <div id="songSheet" class="song-sheet"></div>
 </div>
@@ -287,6 +322,11 @@ const notation=document.getElementById("notation");
 const fullViewToggle=document.getElementById("fullViewToggle");
 const fullView=document.getElementById("fullView");
 const songSheet=document.getElementById("songSheet");
+const songEditToggle=document.getElementById("songEditToggle");
+const syncEditor=document.getElementById("syncEditor");
+const syncInstruction=document.getElementById("syncInstruction");
+const syncSaveStatus=document.getElementById("syncSaveStatus");
+const syncBeats=document.getElementById("syncBeats");
 const bpmOut=document.getElementById("bpmOut");
 const bpm=document.getElementById("bpm");
 const customPanel=document.getElementById("customPanel");
@@ -308,6 +348,7 @@ const steps=document.getElementById("steps");
 const NOTE_ES={C:"Do","C#":"Do#",D:"Re","D#":"Re#",E:"Mi","E#":"Mi#",F:"Fa","F#":"Fa#",G:"Sol","G#":"Sol#",A:"La","A#":"La#",B:"Si","B#":"Si#"};
 const CHORD_ES={"E":"Mi","F#":"Fa#","F#m":"Fa#m","A":"La","Am":"Lam","C#m":"Do#m","C#":"Do#","G#m":"Sol#m","G#":"Sol#","D":"Re","B":"Si","B/D#":"Si/Re#"};
 let notationMode="es";
+let songEditMode=false,selectedSyncEvent=null;
 function readPreference(key,fallback){try{return localStorage.getItem(key)||fallback}catch{return fallback}}
 function savePreference(key,value){try{localStorage.setItem(key,value)}catch{}}
 let keyboardViewMode=readPreference("mis36-keyboard-mode","preview");
@@ -409,6 +450,74 @@ makeSection("Coro final",[
  ["O me marcho","E"]
 ])
 ];
+
+const SONG_SYNC_KEY="mis36-song-sync-v1";
+function lyricWords(text){return text.trim().split(/\s+/).filter(Boolean)}
+function initializeSongSync(){
+ sections.forEach(section=>{
+   let start=0;
+   while(start<section.events.length){
+     let end=start+1;
+     while(end<section.events.length&&section.events[end].lyric===section.events[start].lyric)end++;
+     const words=lyricWords(section.events[start].lyric),count=end-start;
+     for(let offset=0;offset<count;offset++){
+       const event=section.events[start+offset];
+       event.anchor=Math.min(Math.max(words.length-1,0),Math.floor(offset*Math.max(words.length,1)/count));
+       event.beats=Number(event.beats)||4;
+     }
+     start=end;
+   }
+ });
+ try{
+   const saved=JSON.parse(localStorage.getItem(SONG_SYNC_KEY)||"{}");
+   sections.forEach((section,si)=>section.events.forEach((event,ei)=>{
+     const value=saved[`${si}:${ei}`];
+     if(!value)return;
+     const maxAnchor=Math.max(lyricWords(event.lyric).length-1,0);
+     if(Number.isInteger(value.anchor))event.anchor=Math.min(Math.max(value.anchor,0),maxAnchor);
+     if(Number.isFinite(+value.beats)&&+value.beats>0)event.beats=+value.beats;
+   }));
+ }catch{}
+}
+function saveSongSync(){
+ const saved={};
+ sections.forEach((section,si)=>section.events.forEach((event,ei)=>{
+   saved[`${si}:${ei}`]={anchor:event.anchor,beats:event.beats};
+ }));
+ try{localStorage.setItem(SONG_SYNC_KEY,JSON.stringify(saved));syncSaveStatus.textContent="Guardado automáticamente en este dispositivo."}
+ catch{syncSaveStatus.textContent="No fue posible guardar en este dispositivo."}
+}
+function selectedSyncData(){
+ if(!selectedSyncEvent)return null;
+ const section=sections[selectedSyncEvent.section],event=section?.events[selectedSyncEvent.step];
+ return event?{section,event}:null;
+}
+function updateSyncEditor(){
+ syncEditor.hidden=!songEditMode;
+ songEditToggle.setAttribute("aria-expanded",String(songEditMode));
+ songEditToggle.textContent=songEditMode?"✓ Terminar edición":"✎ Editar sincronización";
+ const selected=selectedSyncData();
+ if(!songEditMode||!selected){
+   syncInstruction.textContent="1. Selecciona un acorde. 2. Toca la palabra donde debe entrar.";
+   syncBeats.disabled=true;
+   return;
+ }
+ syncInstruction.textContent=`Acorde ${chordText(selected.event.chord)} seleccionado. Ahora toca la palabra donde debe entrar.`;
+ syncBeats.disabled=false;
+ syncBeats.value=String(selected.event.beats);
+}
+function selectSyncEvent(section,step){
+ selectedSyncEvent={section,step};
+ updateSyncEditor();
+ renderFullSong();
+}
+function placeSyncEvent(section,step,wordIndex){
+ const selected=selectedSyncData(),target=sections[section]?.events[step];
+ if(!selected||!target||selectedSyncEvent.section!==section||selected.event.lyric!==target.lyric)return;
+ selected.event.anchor=wordIndex;
+ saveSongSync();
+ renderFullSong();
+}
 
 const whiteNames=["C","D","E","F","G","A","B"],whites=["B1"];
 for(let o=2;o<=4;o++)for(const n of whiteNames)whites.push(n+o);
@@ -514,20 +623,49 @@ function renderFullSong(){
  sections.forEach((sectionData,si)=>{
    const section=document.createElement("section");section.className="song-part";
    const title=document.createElement("h3");title.textContent=sectionData.name;section.appendChild(title);
-   let currentRow=null,currentLyric=null;
-   sectionData.events.forEach((event,ei)=>{
-     if(currentLyric!==event.lyric){
-       currentLyric=event.lyric;currentRow=document.createElement("div");currentRow.className="song-line";
-       const chords=document.createElement("div");chords.className="song-chords";
-       const lyric=document.createElement("div");lyric.className="song-lyric";lyric.textContent=event.lyric;
-       currentRow.append(chords,lyric);section.appendChild(currentRow);
-     }
-     const chords=currentRow.querySelector(".song-chords");
-     const b=document.createElement("button");b.type="button";b.className="song-chord";
-     b.textContent=chordText(event.chord);b.onclick=()=>openEventFromSheet(si,ei);chords.appendChild(b);
-   });
+   let start=0;
+   while(start<sectionData.events.length){
+     let end=start+1;
+     while(end<sectionData.events.length&&sectionData.events[end].lyric===sectionData.events[start].lyric)end++;
+     const group=[];
+     for(let ei=start;ei<end;ei++)group.push({event:sectionData.events[ei],step:ei});
+     const words=lyricWords(group[0].event.lyric);
+     const line=document.createElement("div");line.className="song-line";
+     const row=document.createElement("div");row.className="song-word-row";
+     const selected=selectedSyncData();
+     const canPlace=Boolean(songEditMode&&selected&&selectedSyncEvent.section===si&&selected.event.lyric===group[0].event.lyric);
+
+     words.forEach((textValue,wordIndex)=>{
+       const cell=document.createElement("div");cell.className="song-word-cell";
+       const slot=document.createElement("div");slot.className="song-anchor-slot";
+       group.filter(item=>item.event.anchor===wordIndex).forEach(item=>{
+         const chordButton=document.createElement("button");chordButton.type="button";chordButton.className="song-chord";
+         chordButton.dataset.section=si;chordButton.dataset.step=item.step;
+         if(songEditMode&&selectedSyncEvent?.section===si&&selectedSyncEvent?.step===item.step)chordButton.classList.add("selected-edit");
+         chordButton.textContent=chordText(item.event.chord);
+         chordButton.onclick=()=>songEditMode?selectSyncEvent(si,item.step):openEventFromSheet(si,item.step);
+         slot.appendChild(chordButton);
+       });
+
+       const word=songEditMode?document.createElement("button"):document.createElement("span");
+       if(songEditMode)word.type="button";
+       word.className="song-word";
+       word.dataset.section=si;word.dataset.step=group[0].step;word.dataset.word=wordIndex;
+       word.textContent=textValue;
+       if(songEditMode){
+         word.disabled=!canPlace;
+         if(canPlace&&selected.event.anchor===wordIndex)word.classList.add("anchor-target");
+         word.onclick=()=>placeSyncEvent(si,group[0].step,wordIndex);
+       }
+       cell.append(slot,word);row.appendChild(cell);
+     });
+
+     line.appendChild(row);section.appendChild(line);
+     start=end;
+   }
    songSheet.appendChild(section);
  });
+ updateSyncEditor();
 }
 function buildSteps(){
  steps.innerHTML="";const s=currentSection();
@@ -706,6 +844,18 @@ goSectionStart.onclick=()=>{
  buildSteps();
  render();
 };
+songEditToggle.onclick=()=>{
+ songEditMode=!songEditMode;
+ if(!songEditMode)selectedSyncEvent=null;
+ renderFullSong();
+};
+syncBeats.onchange=()=>{
+ const selected=selectedSyncData();
+ if(!selected)return;
+ selected.event.beats=+syncBeats.value;
+ saveSongSync();
+ updateSyncEditor();
+};
 notation.onclick=()=>{notationMode=notationMode==="es"?"en":"es";notation.textContent=notationMode==="es"?"Notas: Español":"Notes: English";buildSteps();render();renderFullSong()};
 fullViewToggle.onclick=()=>{const showing=document.body.classList.toggle("show-full");fullViewToggle.textContent=showing?"🎹 Vista piano":"☰ Letra y acordes completos";if(showing)window.scrollTo({top:0,behavior:"smooth"})};
 bpm.oninput=e=>{bpmOut.textContent=e.target.value;updateSettingsSummary()};
@@ -713,7 +863,7 @@ keyboardMode.value=keyboardViewMode;
 sustainMode.value=sustainViewMode;
 keyboardMode.onchange=e=>{keyboardViewMode=e.target.value;savePreference("mis36-keyboard-mode",keyboardViewMode);updateSettingsSummary();render()};
 sustainMode.onchange=e=>{sustainViewMode=e.target.value;savePreference("mis36-sustain-mode",sustainViewMode);updateSettingsSummary()};
-updateSettingsSummary();initSections();buildSteps();render();renderFullSong();
+initializeSongSync();updateSettingsSummary();initSections();buildSteps();render();renderFullSong();
 </script>
 </body>
 </html>
