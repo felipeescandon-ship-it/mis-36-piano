@@ -60,6 +60,19 @@ border:1px solid rgba(0,0,0,.08)}
 display:grid;place-items:center;color:#fff;font-weight:900;z-index:7;border:2px solid #fff}
 .finger.left-f{background:var(--green)}.finger.right-f{background:var(--blue)}.finger.preview-f{background:var(--amber)}
 .finger.black-f{bottom:8px}
+.next .keyboard-wrap{display:none}
+.move{display:none}.show-movements .move{display:block}
+.white.upcoming{box-shadow:inset 0 0 0 3px #8b96a6}
+.black.upcoming{outline:3px dashed #cbd2dc;outline-offset:-4px}
+.white.common{box-shadow:inset 0 0 0 4px #8b96a6}
+.black.common{outline:3px solid #d6dbe3;outline-offset:-4px}
+.label.preview-label{top:10px;bottom:auto;color:#677386;background:#f3f5f8;border:1px dashed #8b96a6}
+.label.black-label.preview-label{top:5px;bottom:auto}
+.finger.preview-f{top:45px;bottom:auto;width:23px;height:23px;background:#f3f5f8;color:#677386;border:2px dashed #788496;font-size:13px}
+.finger.black-f.preview-f{top:48px;bottom:auto}
+.keep-badge{position:absolute;z-index:9;top:8px;left:50%;transform:translateX(-50%);padding:3px 6px;border-radius:7px;background:#f3f5f8;color:#5d6878;border:2px solid #8b96a6;font-size:11px;font-weight:900;white-space:nowrap}
+.black .keep-badge{top:5px;font-size:10px}
+.gray{background:#8b96a6}
 .move{margin-top:10px;background:var(--amberSoft);border:1px solid #f0d291;border-radius:13px;padding:11px 13px;line-height:1.45}
 .seq{margin-top:16px}
 .section-title{display:flex;justify-content:space-between;gap:12px;align-items:center;margin-bottom:10px}
@@ -109,6 +122,16 @@ background:var(--blue);color:#fff;font-weight:900;margin:auto auto 4px}
 <button id="prev" class="secondary">← Anterior</button>
 <button id="sound" class="primary">▶ Tocar acorde</button>
 <span id="audioStatus" class="audio-status">Piano: toca para cargar</span>
+<select id="keyboardMode" aria-label="Vista del teclado">
+ <option value="current">Solo actual</option>
+ <option value="preview" selected>Actual + siguiente</option>
+ <option value="movement">Con movimientos</option>
+</select>
+<select id="sustainMode" aria-label="Duración del sonido">
+ <option value="short">Sustain corto</option>
+ <option value="natural" selected>Sustain natural</option>
+ <option value="long">Sustain largo</option>
+</select>
 <select id="playMode" aria-label="Modo de reproducción">
 <option value="section">Sección actual</option>
 <option value="fromHere">Desde esta sección</option>
@@ -178,7 +201,7 @@ background:var(--blue);color:#fff;font-weight:900;margin:auto auto 4px}
 <div class="legend-block">
 <div class="key"><span class="swatch green"></span>Mano izquierda: bajo, dedo 5</div>
 <div class="key"><span class="swatch blue"></span>Mano derecha: acorde sonando</div>
-<div class="key"><span class="swatch amber"></span>Mano derecha: acorde que viene</div>
+<div class="key"><span class="swatch gray"></span>Contorno discontinuo: acorde que viene</div>
 </div>
 <div class="legend-block">
 <div class="key"><span class="circle" style="background:var(--green)">5</span>Meñique de la mano izquierda</div>
@@ -201,6 +224,8 @@ background:var(--blue);color:#fff;font-weight:900;margin:auto auto 4px}
 const prev=document.getElementById("prev");
 const sound=document.getElementById("sound");
 const audioStatus=document.getElementById("audioStatus");
+const keyboardMode=document.getElementById("keyboardMode");
+const sustainMode=document.getElementById("sustainMode");
 const playMode=document.getElementById("playMode");
 const auto=document.getElementById("auto");
 const next=document.getElementById("next");
@@ -231,6 +256,10 @@ const steps=document.getElementById("steps");
 const NOTE_ES={C:"Do","C#":"Do#",D:"Re","D#":"Re#",E:"Mi","E#":"Mi#",F:"Fa","F#":"Fa#",G:"Sol","G#":"Sol#",A:"La","A#":"La#",B:"Si","B#":"Si#"};
 const CHORD_ES={"E":"Mi","F#":"Fa#","F#m":"Fa#m","A":"La","Am":"Lam","C#m":"Do#m","C#":"Do#","G#m":"Sol#m","G#":"Sol#","D":"Re","B":"Si","B/D#":"Si/Re#"};
 let notationMode="es";
+function readPreference(key,fallback){try{return localStorage.getItem(key)||fallback}catch{return fallback}}
+function savePreference(key,value){try{localStorage.setItem(key,value)}catch{}}
+let keyboardViewMode=readPreference("mis36-keyboard-mode","preview");
+let sustainViewMode=readPreference("mis36-sustain-mode","natural");
 
 const voicings={
 "E":{l:"E2",r:[["E4",1],["G#4",3],["B4",5]],inv:"fundamental"},
@@ -332,11 +361,11 @@ function chordText(chord){return notationMode==="es"?CHORD_ES[chord]:chord}
 function midi(note){const m=note.match(/^([A-G]#?)(\d)$/),s={C:0,"C#":1,D:2,"D#":3,E:4,F:5,"F#":6,G:7,"G#":8,A:9,"A#":10,B:11};return(+m[2]+1)*12+s[m[1]]}
 function frequency(note){return 440*Math.pow(2,(midi(note)-69)/12)}
 
-function keyboard(el,chord,preview){
+function keyboard(el,chord,preview,nextChord=null){
  const v=voicings[chord],left=[v.l],right=v.r.map(x=>x[0]),fingers=Object.fromEntries(v.r);
  el.innerHTML="";
  whites.forEach(note=>{
-   const k=document.createElement("div");k.className="white";
+   const k=document.createElement("div");k.className="white";k.dataset.note=note;
    if(left.includes(note))k.classList.add("left");
    if(right.includes(note))k.classList.add(preview?"preview":"right");
    el.appendChild(k);
@@ -344,16 +373,37 @@ function keyboard(el,chord,preview){
    if(right.includes(note))marker(k,note,fingers[note],preview?"preview":"right",false,chord);
  });
  blacks.forEach(x=>{
-   const k=document.createElement("div");k.className="black";k.style.left=x.left+"px";
+   const k=document.createElement("div");k.className="black";k.dataset.note=x.note;k.style.left=x.left+"px";
    if(left.includes(x.note))k.classList.add("left");
    if(right.includes(x.note))k.classList.add(preview?"preview":"right");
    if(left.includes(x.note))marker(k,x.note,"5","left",true,chord);
    if(right.includes(x.note))marker(k,x.note,fingers[x.note],preview?"preview":"right",true,chord);
    el.appendChild(k);
  });
+ if(nextChord&&!preview&&keyboardViewMode!=="current")renderUpcoming(el,chord,nextChord);
+}
+function renderUpcoming(el,currentChord,nextChord){
+ const current=voicings[currentChord],upcoming=voicings[nextChord];
+ const currentFingers=new Map([[current.l,"5"],...current.r.map(x=>[x[0],String(x[1])])]);
+ const upcomingNotes=[[upcoming.l,"5"],...upcoming.r.map(x=>[x[0],String(x[1])])];
+ upcomingNotes.forEach(([note,nextFinger])=>{
+   const key=[...el.children].find(child=>child.dataset.note===note);
+   if(!key)return;
+   const isBlack=key.classList.contains("black"),currentFinger=currentFingers.get(note);
+   if(currentFinger){
+     key.classList.add("common");
+     const badge=document.createElement("div");badge.className="keep-badge";
+     badge.textContent=currentFinger===nextFinger?"mantén":currentFinger+"→"+nextFinger;
+     badge.title=currentFinger===nextFinger?"La nota y el dedo se mantienen":"La nota se mantiene y cambia el dedo";
+     key.appendChild(badge);
+   }else{
+     key.classList.add("upcoming");
+     marker(key,note,nextFinger,"preview",isBlack,nextChord);
+   }
+ });
 }
 function marker(k,note,finger,type,isBlack,chord){
- const l=document.createElement("div");l.className="label"+(isBlack?" black-label":"");l.textContent=noteText(note,chord);l.title=noteText(note,chord)+keyHint(note,chord);k.appendChild(l);
+ const l=document.createElement("div");l.className="label"+(isBlack?" black-label":"")+(type==="preview"?" preview-label":"");l.textContent=noteText(note,chord);l.title=noteText(note,chord)+keyHint(note,chord);k.appendChild(l);
  const f=document.createElement("div");f.className="finger "+(type==="left"?"left-f":type==="preview"?"preview-f":"right-f")+(isBlack?" black-f":"");f.textContent=finger;k.appendChild(f);
 }
 function movement(a,b){
@@ -396,7 +446,8 @@ function render(){
  const vc=voicings[cur],vn=voicings[next];
  currentSub.textContent=`MI: ${noteText(vc.l,cur)} (5) · MD: ${vc.r.map(x=>noteText(x[0],cur)+keyHint(x[0],cur)).join("–")} (${vc.r.map(x=>x[1]).join("–")}) · ${vc.inv}`;
  nextSub.textContent=`MI: ${noteText(vn.l,next)} (5) · MD: ${vn.r.map(x=>noteText(x[0],next)+keyHint(x[0],next)).join("–")} (${vn.r.map(x=>x[1]).join("–")}) · ${vn.inv}`;
- keyboard(currentKeyboard,cur,false);keyboard(nextKeyboard,next,true);
+ keyboard(currentKeyboard,cur,false,next);keyboard(nextKeyboard,next,true);
+ document.body.classList.toggle("show-movements",keyboardViewMode==="movement");
  movement.innerHTML=movement(cur,next);
  sectionName.textContent=s.name;sectionCount.textContent=`${s.events.length} cambios de acorde`;
  [...steps.children].forEach((el,i)=>{el.classList.toggle("current-step",i===stepIndex);el.classList.toggle("next-step",nextPos.section===sectionIndex&&i===nextPos.step)});
@@ -492,8 +543,15 @@ function nearestSample(note){
  const target=midi(note);
  return pianoSamples.reduce((best,sample)=>Math.abs(sample.midi-target)<Math.abs(best.midi-target)?sample:best,pianoSamples[0]);
 }
+function sustainProfile(){
+ return {
+  short:{bass:1.8,chord:2.4,fade:0.85},
+  natural:{bass:3.1,chord:4.0,fade:1.25},
+  long:{bass:4.4,chord:5.6,fade:1.65}
+ }[sustainViewMode]||{bass:3.1,chord:4.0,fade:1.25};
+}
 function playSampledChord(notes){
- const ctx=ensureAudio(),now=ctx.currentTime+.025;
+ const ctx=ensureAudio(),now=ctx.currentTime+.025,profile=sustainProfile();
  const master=ctx.createGain();master.gain.value=.82;
  const compressor=ctx.createDynamicsCompressor();
  compressor.threshold.value=-18;compressor.knee.value=16;compressor.ratio.value=3;
@@ -501,16 +559,17 @@ function playSampledChord(notes){
  notes.forEach((note,index)=>{
    const sample=nearestSample(note),source=ctx.createBufferSource(),gain=ctx.createGain();
    source.buffer=sample.buffer;source.playbackRate.value=Math.pow(2,(midi(note)-sample.midi)/12);
-   const start=now+index*.012,level=index===0?.78:.48;
+   const start=now+index*.012,level=index===0?.78:.48,duration=index===0?profile.bass:profile.chord;
    gain.gain.setValueAtTime(.0001,start);gain.gain.exponentialRampToValueAtTime(level,start+.018);
-   gain.gain.exponentialRampToValueAtTime(.0001,start+2.55);
-   source.connect(gain);gain.connect(master);source.start(start);source.stop(start+2.65);
+   gain.gain.setValueAtTime(level,start+Math.max(.2,duration-profile.fade));
+   gain.gain.exponentialRampToValueAtTime(.0001,start+duration);
+   source.connect(gain);gain.connect(master);source.start(start);source.stop(start+duration+.12);
  });
 }
 function playFallback(notes){
- const ctx=ensureAudio(),now=ctx.currentTime;
- const master=ctx.createGain();master.gain.setValueAtTime(.0001,now);master.gain.exponentialRampToValueAtTime(.25,now+.03);master.gain.exponentialRampToValueAtTime(.0001,now+1.65);master.connect(ctx.destination);
- notes.forEach((n,i)=>{const o=ctx.createOscillator(),g=ctx.createGain();o.type=i===0?"sine":"triangle";o.frequency.value=frequency(n);g.gain.value=i===0?.7:.32;o.connect(g);g.connect(master);o.start(now);o.stop(now+1.7)});
+ const ctx=ensureAudio(),now=ctx.currentTime,profile=sustainProfile(),duration=profile.chord;
+ const master=ctx.createGain();master.gain.setValueAtTime(.0001,now);master.gain.exponentialRampToValueAtTime(.25,now+.03);master.gain.setValueAtTime(.25,now+Math.max(.2,duration-profile.fade));master.gain.exponentialRampToValueAtTime(.0001,now+duration);master.connect(ctx.destination);
+ notes.forEach((n,i)=>{const o=ctx.createOscillator(),g=ctx.createGain();o.type=i===0?"sine":"triangle";o.frequency.value=frequency(n);g.gain.value=i===0?.7:.32;o.connect(g);g.connect(master);o.start(now);o.stop(now+duration+.1)});
 }
 async function playCurrent(){
  ensureAudio();
@@ -597,6 +656,10 @@ goSectionStart.onclick=()=>{
 notation.onclick=()=>{notationMode=notationMode==="es"?"en":"es";notation.textContent=notationMode==="es"?"Notas: Español":"Notes: English";buildSteps();render();renderFullSong()};
 fullViewToggle.onclick=()=>{const showing=document.body.classList.toggle("show-full");fullViewToggle.textContent=showing?"🎹 Vista piano":"☰ Vista completa";if(showing)window.scrollTo({top:0,behavior:"smooth"})};
 bpm.oninput=e=>bpmOut.textContent=e.target.value;
+keyboardMode.value=keyboardViewMode;
+sustainMode.value=sustainViewMode;
+keyboardMode.onchange=e=>{keyboardViewMode=e.target.value;savePreference("mis36-keyboard-mode",keyboardViewMode);render()};
+sustainMode.onchange=e=>{sustainViewMode=e.target.value;savePreference("mis36-sustain-mode",sustainViewMode)};
 initSections();buildSteps();render();renderFullSong();
 </script>
 </body>
