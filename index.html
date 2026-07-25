@@ -76,6 +76,20 @@ background:var(--blue);color:#fff;font-weight:900;margin:auto auto 4px}
 .info{font-size:13px;color:var(--muted);margin-top:10px;text-align:center}
 .check-row{display:flex;align-items:center;gap:8px;padding:9px 10px;border:1px solid var(--line);border-radius:10px;background:#f8fafc}
 .check-row input{width:18px;height:18px}
+
+.full-view{display:none;margin-bottom:16px}
+.show-full .full-view{display:block}
+.show-full .stack,.show-full .seq,.show-full .legend{display:none}
+.song-sheet{max-width:860px;margin:0 auto;padding:6px 0 18px}
+.song-part{padding:18px 0;border-bottom:1px solid var(--line)}
+.song-part:last-child{border-bottom:0}
+.song-part h3{margin:0 0 16px;color:#123e72;font-size:21px}
+.song-line{margin:0 0 15px;line-height:1.45}
+.song-chords{display:flex;gap:8px;flex-wrap:wrap;min-height:29px;margin-bottom:3px}
+.song-chord{padding:4px 10px;border-radius:8px;background:var(--amberSoft);color:#8a4900;border:1px solid #efc875;font-weight:900;font-size:15px}
+.song-lyric{font-size:18px;color:var(--ink)}
+.song-help{margin:0 0 8px;color:var(--muted)}
+@media(max-width:600px){.song-sheet{padding-inline:2px}.song-lyric{font-size:17px}.song-part{padding:15px 0}}
 @media(max-width:800px){.tempo{width:100%;margin-left:0}.legend-grid{grid-template-columns:1fr}.legend-block{border-right:0;border-bottom:1px solid var(--line);padding:0 0 12px}}
 </style>
 </head>
@@ -100,6 +114,7 @@ background:var(--blue);color:#fff;font-weight:900;margin:auto auto 4px}
 <select id="sectionSelect"></select>
 <button id="goSectionStart" class="secondary" type="button">↺ Inicio de sección</button>
 <button id="notation" class="secondary">Notas: Español</button>
+<button id="fullViewToggle" class="secondary" type="button">☰ Vista completa</button>
 <div class="tempo"><strong><span id="bpmOut">72</span> BPM</strong><input id="bpm" type="range" min="45" max="120" value="72"></div>
 </div>
 
@@ -115,6 +130,15 @@ background:var(--blue);color:#fff;font-weight:900;margin:auto auto 4px}
     <div id="sectionChecks" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:8px"></div>
   </div>
 </div>
+
+<section id="fullView" class="card full-view">
+<div class="content">
+<div class="section-title">
+  <div><h2 style="margin:0">Letra y acordes completos</h2><p class="song-help">Todos los acordes de la canción en una sola vista. Toca un acorde para abrir su posición en el piano.</p></div>
+</div>
+<div id="songSheet" class="song-sheet"></div>
+</div>
+</section>
 
 <div class="stack">
 <section class="card next">
@@ -176,6 +200,9 @@ const next=document.getElementById("next");
 const sectionSelect=document.getElementById("sectionSelect");
 const goSectionStart=document.getElementById("goSectionStart");
 const notation=document.getElementById("notation");
+const fullViewToggle=document.getElementById("fullViewToggle");
+const fullView=document.getElementById("fullView");
+const songSheet=document.getElementById("songSheet");
 const bpmOut=document.getElementById("bpmOut");
 const bpm=document.getElementById("bpm");
 const customPanel=document.getElementById("customPanel");
@@ -223,6 +250,69 @@ const sections=[
 {name:"Puente",chords:["A","B/D#","G#","C#m","C#","F#m","B"]},
 {name:"Pre-coro final",chords:["C#m","G#m","A","E","D","B"]},
 {name:"Coro final",chords:["A","B/D#","G#","C#m","C#","F#m","B","E"]}
+];
+
+const fullSong=[
+{name:"Estrofa 1",lines:[
+{c:["E","F#m","A"],t:"Esto no es solo un atajo"},
+{c:["E","C#m"],t:"Para evitar la guerra que viene después"},
+{c:["F#"],t:"Ni es un domingo cualquiera"},
+{c:["Am","E"],t:"Es el previo al adiós más duro de mis 36"},
+{c:["E","F#m","A"],t:"Te tomé la palabra"},
+{c:["A","E","C#m"],t:"Siempre fui de ceñirme al guion"},
+{c:["C#m","F#"],t:"Y tú, de bailarme el agua"},
+{c:["A","E"],t:"Con tal de lograr distraer mi atención"}
+]},
+{name:"Pre-coro 1",lines:[
+{c:["C#m","G#m","A"],t:"Y sabes cuáles son todas mis cartas"},
+{c:["A","E"],t:"Y nunca sentí que peligrara nada"},
+{c:["D"],t:"Me enseñaste tus perfiles"},
+{c:["B"],t:"Pero, de frente, siempre me faltabas"}
+]},
+{name:"Coro 1",lines:[
+{c:["A"],t:"Anoche, mientras dormía"},
+{c:["B/D#","G#"],t:"Sentí una culpa que no era mía"},
+{c:["C#m"],t:"Yo siempre te he sido muy claro"},
+{c:["C#"],t:"Cuando quería volar más alto"},
+{c:["F#m"],t:"No quiero hablar más de tus pactos"},
+{c:["B"],t:"O me quieres como yo lo hago"},
+{c:["E"],t:"O me marcho"}
+]},
+{name:"Estrofa 2",lines:[
+{c:["E","F#m","A"],t:"Al final del camino"},
+{c:["E","C#m"],t:"Puede que al marcharme haya menos dolor"},
+{c:["C#m","F#"],t:"Y que, con distancia, el olvido"},
+{c:["A","E"],t:"Nos deje el recuerdo de lo que hicimos mejor"}
+]},
+{name:"Pre-coro 2",lines:[
+{c:["C#m","G#m","A"],t:"Y sabes cuáles son todas mis cartas"},
+{c:["A","E"],t:"Y nunca sentí que peligrara nada"},
+{c:["D"],t:"Me enseñaste tus perfiles"},
+{c:["B"],t:"Pero, de frente, siempre me faltabas"}
+]},
+{name:"Coro 2 y puente",lines:[
+{c:["A"],t:"Anoche, mientras dormía"},
+{c:["B/D#","G#"],t:"Sentí una culpa que no era mía"},
+{c:["C#m"],t:"Yo siempre te he sido muy claro"},
+{c:["C#"],t:"Cuando quería volar más alto"},
+{c:["F#m"],t:"No quiero hablar más de tus pactos"},
+{c:["B"],t:"O me quieres como yo lo hago"},
+{c:["A","B/D#","G#","C#m","C#"],t:"O me marchooooooooooo"},
+{c:["F#m","B"],t:"O me marcho"}
+]},
+{name:"Final",lines:[
+{c:["C#m","G#m","A"],t:"Sabes cuáles son todas mis cartas"},
+{c:["A","E"],t:"Y nunca sentí que peligrara nada"},
+{c:["D"],t:"Me enseñaste tus perfiles"},
+{c:["B"],t:"Pero, de frente, siempre me faltabas"},
+{c:["A"],t:"Anoche, mientras dormía"},
+{c:["B/D#","G#"],t:"Sentí una culpa que no era mía"},
+{c:["C#m"],t:"Yo siempre te he sido muy claro"},
+{c:["C#"],t:"Cuando quería volar más alto"},
+{c:["F#m"],t:"No quiero hablar más de tus pactos"},
+{c:["B"],t:"O me quieres como yo lo hago"},
+{c:["E"],t:"O me marcho"}
+]}
 ];
 
 const whites=[],whiteNames=["C","D","E","F","G","A","B"];
@@ -283,6 +373,37 @@ function render(){
  movementEl.innerHTML=movement(cur,next);
  sectionName.textContent=s.name;sectionCount.textContent=`${s.chords.length} cambios de acorde`;
  [...steps.children].forEach((el,i)=>{el.classList.toggle("current-step",i===stepIndex);el.classList.toggle("next-step",i===(stepIndex+1)%s.chords.length)});
+}
+function openChordFromSheet(chord){
+ for(let si=0;si<sections.length;si++){
+   const ci=sections[si].chords.indexOf(chord);
+   if(ci!==-1){
+     document.body.classList.remove("show-full");
+     fullViewToggle.textContent="☰ Vista completa";
+     sectionIndex=si;stepIndex=ci;sectionSelect.value=si;
+     stopAuto();buildSteps();render();playCurrent();
+     window.scrollTo({top:0,behavior:"smooth"});
+     return;
+   }
+ }
+}
+function renderFullSong(){
+ songSheet.innerHTML="";
+ fullSong.forEach(part=>{
+   const section=document.createElement("section");section.className="song-part";
+   const title=document.createElement("h3");title.textContent=part.name;section.appendChild(title);
+   part.lines.forEach(line=>{
+     const row=document.createElement("div");row.className="song-line";
+     const chords=document.createElement("div");chords.className="song-chords";
+     line.c.forEach(chord=>{
+       const b=document.createElement("button");b.type="button";b.className="song-chord";
+       b.textContent=chordText(chord);b.onclick=()=>openChordFromSheet(chord);chords.appendChild(b);
+     });
+     const lyric=document.createElement("div");lyric.className="song-lyric";lyric.textContent=line.t;
+     row.append(chords,lyric);section.appendChild(row);
+   });
+   songSheet.appendChild(section);
+ });
 }
 function buildSteps(){
  steps.innerHTML="";const s=currentSection();
@@ -394,9 +515,10 @@ goSectionStart.onclick=()=>{
  buildSteps();
  render();
 };
-notation.onclick=()=>{notationMode=notationMode==="es"?"en":"es";notation.textContent=notationMode==="es"?"Notas: Español":"Notes: English";buildSteps();render()};
+notation.onclick=()=>{notationMode=notationMode==="es"?"en":"es";notation.textContent=notationMode==="es"?"Notas: Español":"Notes: English";buildSteps();render();renderFullSong()};
+fullViewToggle.onclick=()=>{const showing=document.body.classList.toggle("show-full");fullViewToggle.textContent=showing?"🎹 Vista piano":"☰ Vista completa";if(showing)window.scrollTo({top:0,behavior:"smooth"})};
 bpm.oninput=e=>bpmOut.textContent=e.target.value;
-initSections();buildSteps();render();
+initSections();buildSteps();render();renderFullSong();
 </script>
 </body>
 </html>
