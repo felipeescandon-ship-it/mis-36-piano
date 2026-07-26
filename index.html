@@ -946,6 +946,10 @@ async function loadCloudSongSync(forceRefresh=false){
      return false;
    }
    if(response.status===404&&result.empty){
+     if(!hadLocalSongSync){
+       setCloudStatus("Nube vacía · abre primero el dispositivo principal","warning");
+       return false;
+     }
      cloudRequestRunning=false;
      cloudSyncNow.disabled=false;
      return await saveCloudSongSync(true);

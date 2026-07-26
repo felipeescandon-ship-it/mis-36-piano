@@ -31,7 +31,7 @@ async function readCurrent() {
   const result = await get(CURRENT_PATH, { access: "private" });
   if (!result || result.statusCode !== 200 || !result.stream) return null;
   const document = await new Response(result.stream).json();
-  return { document, etag: result.blob.etag };
+  return { document };
 }
 
 function validateSongSync(data) {
@@ -132,15 +132,13 @@ export async function PUT(request) {
       access: "private",
       contentType: "application/json",
       addRandomSuffix: false,
-      allowOverwrite: Boolean(current),
+      allowOverwrite: true,
       cacheControlMaxAge: 60,
     };
-    if (current?.etag) options.ifMatch = current.etag;
     await put(CURRENT_PATH, body, options);
 
     return json(document);
   } catch (error) {
-    if (error?.name === "BlobPreconditionFailedError") return json({ error: "revision_conflict" }, 409);
     if (error instanceof SyntaxError || error instanceof ValidationError) {
       return json({ error: "invalid_song_sync", message: error.message }, 400);
     }
