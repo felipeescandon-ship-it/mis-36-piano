@@ -50,10 +50,16 @@ select{background:#f3f6fa;color:#173354;border:1px solid var(--line)}
 .card-titlebar h2{padding:0;border:0}
 .piano-visibility-toggle{padding:8px 12px;background:#fff7e7;color:#8a4900;border:1px solid #efc875;font-size:13px}
 .next h2{color:var(--amber)}.current h2{color:var(--blue)}
-.now-heading{display:flex;align-items:baseline;justify-content:center;gap:10px;flex-wrap:wrap;text-align:center}
-.now-label{white-space:nowrap}
-.live-lyric{color:var(--ink);font-size:clamp(16px,2.2vw,22px);font-weight:750;line-height:1.35}
+.now-heading{display:grid;grid-template-columns:minmax(120px,1fr) minmax(0,3fr) minmax(120px,1fr);
+align-items:center;gap:12px;text-align:left}
+.now-label{white-space:nowrap;justify-self:start}
+.lyric-stage{grid-column:2;min-width:0;text-align:center}
+.live-lyric{display:block;color:var(--ink);font-size:clamp(16px,2.2vw,22px);font-weight:750;line-height:1.35}
 .live-lyric.instrumental{color:var(--muted);font-style:italic;font-weight:650}
+.next-live-row{display:block;margin-top:3px;color:#7c8a9f;font-size:clamp(12px,1.35vw,15px);font-weight:650;line-height:1.3}
+.next-live-row[hidden]{display:none}
+.next-live-label{color:#57749a;font-weight:800}
+.now-spacer{grid-column:3}
 .content{padding:16px}
 .meta{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:10px}
 .chord-title-row{display:flex;align-items:center;gap:16px;flex-wrap:wrap}
@@ -194,6 +200,10 @@ button.song-line-end{padding:3px 8px}
  .view-switch button{flex:1;min-width:0}
  .chord-title-row{gap:10px}
  .chord-notes{font-size:18px;padding-left:10px}
+ .now-heading{grid-template-columns:1fr;gap:5px}
+ .now-label,.lyric-stage,.now-spacer{grid-column:1}
+ .lyric-stage{width:100%}
+ .now-spacer{display:none}
  .show-full.song-editing{padding-bottom:310px}
  .show-full.song-editing.sync-editor-collapsed{padding-bottom:110px}
  .show-full.song-editing .sync-editor{gap:8px;padding:10px;align-items:end}
@@ -355,7 +365,14 @@ button.song-line-end{padding:3px 8px}
 </section>
 
 <section class="card current">
-<h2 class="now-heading"><span class="now-label">Ahora suena:</span><span id="liveLyric" class="live-lyric" aria-live="polite"></span></h2>
+<h2 class="now-heading">
+<span class="now-label">Ahora suena:</span>
+<span class="lyric-stage">
+  <span id="liveLyric" class="live-lyric" aria-live="polite"></span>
+  <span id="nextLyricPreview" class="next-live-row"><span class="next-live-label">Sigue:</span> <span id="nextLiveLyric"></span></span>
+</span>
+<span class="now-spacer" aria-hidden="true"></span>
+</h2>
 <div class="content">
 <div class="meta"><div><div class="chord-title-row"><div id="currentChord" class="chord"></div><div id="currentNotes" class="chord-notes"></div></div><div id="currentSub" class="sub"></div></div><div id="currentBadge" class="badge"></div></div>
 <div id="currentKeyboardWrap" class="keyboard-wrap"><div id="currentKeyboard" class="keyboard"></div></div>
@@ -439,6 +456,8 @@ const nextPianoToggle=document.getElementById("nextPianoToggle");
 const nextKeyboardWrap=document.getElementById("nextKeyboardWrap");
 const nextKeyboard=document.getElementById("nextKeyboard");
 const liveLyric=document.getElementById("liveLyric");
+const nextLyricPreview=document.getElementById("nextLyricPreview");
+const nextLiveLyric=document.getElementById("nextLiveLyric");
 const currentChord=document.getElementById("currentChord");
 const currentNotes=document.getElementById("currentNotes");
 const currentSub=document.getElementById("currentSub");
@@ -896,12 +915,30 @@ function previousPosition(si,ei){
  const previousSection=(si-1+sections.length)%sections.length;
  return {section:previousSection,step:sections[previousSection].events.length-1};
 }
+function nextDifferentLyric(si,ei){
+ const currentLyric=sections[si]?.events[ei]?.lyric||"";
+ let sectionCursor=si,eventCursor=ei;
+ while(sectionCursor<sections.length){
+   eventCursor++;
+   if(eventCursor>=sections[sectionCursor].events.length){
+     sectionCursor++;
+     eventCursor=0;
+   }
+   if(sectionCursor>=sections.length)return "";
+   const candidate=sections[sectionCursor].events[eventCursor]?.lyric||"";
+   if(candidate&&candidate!==currentLyric)return candidate;
+ }
+ return "";
+}
 function render(){
  const s=currentSection(),event=s.events[stepIndex],nextPos=nextPosition(sectionIndex,stepIndex);
  const nextSection=sections[nextPos.section],nextEvent=nextSection.events[nextPos.step];
  const cur=event.chord,next=nextEvent.chord;
  liveLyric.textContent=event.lyric;
  liveLyric.classList.toggle("instrumental",event.lyric==="Introducción instrumental");
+ const upcomingLyric=nextDifferentLyric(sectionIndex,stepIndex);
+ nextLiveLyric.textContent=upcomingLyric;
+ nextLyricPreview.hidden=!upcomingLyric;
  currentChord.textContent=chordText(cur);nextChord.textContent=chordText(next);
  currentBadge.textContent=`${stepIndex+1}/${s.events.length}`;
  nextBadge.textContent=`${nextPos.step+1}/${nextSection.events.length}`;
