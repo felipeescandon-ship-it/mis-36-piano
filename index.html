@@ -21,7 +21,8 @@ padding:16px 22px;box-shadow:var(--shadow)}
 .app-header h1{margin:2px 0 4px;font-size:clamp(28px,4vw,42px)}
 .app-header p{margin:0;color:#d8e7fa}
 .eyebrow{color:#8fc2ff;font-size:11px;font-weight:900;letter-spacing:.14em;text-transform:uppercase}
-.header-mark{width:56px;height:56px;flex:0 0 56px;display:grid;place-items:center;border:1px solid rgba(255,255,255,.22);border-radius:18px;background:rgba(255,255,255,.08);font-size:22px;font-weight:950}
+.notation-toggle{min-width:76px;min-height:52px;flex:0 0 auto;padding:9px 13px;border:1px solid rgba(255,255,255,.26);border-radius:16px;background:rgba(255,255,255,.10);color:#fff;font-size:15px;font-weight:900;letter-spacing:.02em}
+.notation-toggle:hover{background:rgba(255,255,255,.17)}
 .toolbar{display:grid;gap:10px;background:#fff;border:1px solid var(--line);
 border-radius:17px;padding:12px;margin:16px 0;box-shadow:var(--shadow)}
 .toolbar-main{display:grid;grid-template-columns:minmax(360px,1fr) auto auto;gap:14px;align-items:end}
@@ -240,7 +241,7 @@ button.song-line-end{padding:3px 8px}
  .app{padding:12px}
  .app-header{padding:17px 18px;border-radius:18px}
  .app-header p{font-size:13px}
- .header-mark{width:54px;height:54px;flex-basis:54px;border-radius:16px;font-size:21px}
+ .notation-toggle{min-width:68px;min-height:48px;padding:8px 10px;font-size:14px}
  .song-sheet{padding-inline:2px}.song-part{padding:15px 0}
  .song-word{font-size:17px}
  .practice-selectors{grid-template-columns:1fr}
@@ -287,7 +288,7 @@ button.song-line-end{padding:3px 8px}
     <h1>Mis 36</h1>
     <p>Acordes claros para tocar, acompañar y cantar.</p>
   </div>
-  <div class="header-mark" aria-hidden="true">36</div>
+  <button id="notation" class="notation-toggle" type="button" aria-label="Usar nombres de notas en inglés" title="Usar nombres de notas en inglés">Do · Re</button>
 </header>
 
 <div class="view-switch-bar">
@@ -357,9 +358,8 @@ button.song-line-end{padding:3px 8px}
     </div>
 
     <div class="settings-actions">
-      <button id="notation" class="secondary" type="button">Notas: Español</button>
-      <button id="exportSongSync" class="secondary" type="button">↓ Exportar ajustes</button>
-      <button id="importSongSync" class="secondary" type="button">↧ Importar ajustes</button>
+      <button id="exportSongSync" class="secondary" type="button" hidden>↓ Exportar ajustes</button>
+      <button id="importSongSync" class="secondary" type="button" hidden>↧ Importar ajustes</button>
       <button id="cloudSyncNow" class="secondary" type="button">☁ Sincronizar ahora</button>
       <button id="cloudUseLocal" class="primary" type="button" hidden>Subir este dispositivo</button>
       <button id="cloudUseRemote" class="secondary" type="button" hidden>Cargar versión de la nube</button>
@@ -572,11 +572,20 @@ let notationMode="es";
 let songEditMode=false,selectedSyncEvent=null,addingSyncChord=null;
 function readPreference(key,fallback){try{return localStorage.getItem(key)||fallback}catch{return fallback}}
 function savePreference(key,value){try{localStorage.setItem(key,value)}catch{}}
+notationMode=readPreference("mis36-notation-mode","es");
+if(!["es","en"].includes(notationMode))notationMode="es";
 let keyboardViewMode=readPreference("mis36-keyboard-mode","preview");
 if(!["current","preview"].includes(keyboardViewMode))keyboardViewMode="preview";
 let sustainViewMode=readPreference("mis36-sustain-mode","natural");
 let showNextPiano=readPreference("mis36-show-next-piano","false")==="true";
 let syncEditorCollapsed=readPreference("mis36-editor-collapsed","true")!=="false";
+function updateNotationToggle(){
+ const spanish=notationMode==="es";
+ const action=spanish?"Usar nombres de notas en inglés":"Usar nombres de notas en español";
+ notation.textContent=spanish?"Do · Re":"C · D";
+ notation.setAttribute("aria-label",action);
+ notation.title=action;
+}
 function updateSettingsSummary(){
  const sustainLabel=sustainMode.options[sustainMode.selectedIndex]?.text||"Sustain natural";
  const keyboardLabel=keyboardMode.options[keyboardMode.selectedIndex]?.text||"Anticipar próximas teclas";
@@ -1855,7 +1864,15 @@ syncDelete.onclick=()=>{
  render();
  renderFullSong();
 };
-notation.onclick=()=>{notationMode=notationMode==="es"?"en":"es";notation.textContent=notationMode==="es"?"Notas: Español":"Notes: English";renderSyncChordOptions();buildSteps();render();renderFullSong()};
+notation.onclick=()=>{
+ notationMode=notationMode==="es"?"en":"es";
+ savePreference("mis36-notation-mode",notationMode);
+ updateNotationToggle();
+ renderSyncChordOptions();
+ buildSteps();
+ render();
+ renderFullSong();
+};
 exportSongSync.onclick=exportSongSyncFile;
 importSongSync.onclick=()=>importSongSyncFile.click();
 cloudSyncNow.onclick=()=>loadCloudSongSync(true);
@@ -1894,7 +1911,7 @@ nextPianoToggle.onclick=()=>{
 };
 nextKeyboardWrap.addEventListener("scroll",()=>syncPianoScroll(nextKeyboardWrap,currentKeyboardWrap),{passive:true});
 currentKeyboardWrap.addEventListener("scroll",()=>syncPianoScroll(currentKeyboardWrap,nextKeyboardWrap),{passive:true});
-renderSyncChordOptions();renderSyncInversionOptions("E");initializeSongSync();updateSettingsSummary();updateNextPianoVisibility();initSections();buildSteps();render();renderFullSong();loadCloudSongSync();
+updateNotationToggle();renderSyncChordOptions();renderSyncInversionOptions("E");initializeSongSync();updateSettingsSummary();updateNextPianoVisibility();initSections();buildSteps();render();renderFullSong();loadCloudSongSync();
 </script>
 </body>
 </html>
