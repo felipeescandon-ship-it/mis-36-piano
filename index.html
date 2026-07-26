@@ -186,20 +186,29 @@ background:var(--blue);color:#fff;font-weight:900;margin:auto auto 4px}
 .show-full .full-view{display:block}
 .show-full.auto-playing .full-view{padding-bottom:82px}
 .show-full .stack,.show-full .seq,.show-full .legend,.show-full #customPanel{display:none!important}
-.song-sheet{max-width:860px;margin:0 auto;padding:6px 0 18px}
-.song-part{padding:18px 0;border-bottom:1px solid var(--line)}
+.show-full:not(.song-editing) .toolbar-status{display:none}
+.lyrics-page{max-width:960px;margin:0 auto;background:#fff;border:1px solid var(--line);border-radius:22px;overflow:hidden;box-shadow:var(--shadow);padding:0 30px 28px}
+.lyrics-header{display:flex;align-items:flex-start;justify-content:space-between;gap:18px;margin:0 -30px 6px;padding:22px 30px 20px;border-bottom:1px solid var(--line);background:linear-gradient(135deg,#f5f9ff,#fff)}
+.lyrics-eyebrow{display:block;margin-bottom:5px;color:var(--blue);font-size:11px;font-weight:900;letter-spacing:.14em;text-transform:uppercase}
+.lyrics-header h2{margin:0;font-size:clamp(26px,3vw,34px);color:#102f57;letter-spacing:-.02em}
+.lyrics-header .song-help{max-width:620px;margin:7px 0 0;font-size:15px;line-height:1.5}
+body:not(.song-editing) .song-editor-actions{display:none}
+.song-sheet{max-width:880px;margin:0 auto;padding:0 0 10px}
+.song-part{padding:27px 6px;border-bottom:1px solid var(--line);scroll-margin-top:92px}
 .song-part:last-child{border-bottom:0}
-.song-part h3{margin:0 0 16px;color:#123e72;font-size:21px}
-.song-part.current-song-part{background:#f7fbff;border-radius:14px;box-shadow:0 0 0 4px rgba(21,95,192,.08);padding-inline:14px;scroll-margin-top:22px}
-.song-line{margin:0 0 15px;line-height:1.45}
-.song-chord{padding:4px 10px;border-radius:8px;background:var(--amberSoft);color:#8a4900;border:1px solid #efc875;font-weight:900;font-size:15px}
+.song-part h3{display:flex;align-items:center;gap:10px;margin:0 0 21px;color:#123e72;font-size:20px}
+.song-part h3::after{content:"";height:1px;flex:1;background:linear-gradient(90deg,#cdd9e8,transparent)}
+.song-part.current-song-part{margin-inline:-12px;padding-inline:18px;background:#f8fbff;border-radius:16px;box-shadow:inset 4px 0 0 var(--blue);scroll-margin-top:92px}
+.song-line{margin:0 0 21px;padding:8px 10px;line-height:1.55;border-radius:11px;border-left:3px solid transparent;transition:background .2s ease,border-color .2s ease}
+.song-line.current-song-line{background:#eef6ff;border-left-color:#78aee8}
+.song-chord{padding:4px 9px;border-radius:7px;background:#fff7e5;color:#965600;border:1px solid #efd39b;font-weight:900;font-size:14px;box-shadow:0 2px 5px rgba(150,86,0,.06)}
 .song-chord.current-song-chord{background:var(--blue);color:#fff;border-color:var(--blue);outline:4px solid var(--blueSoft);scroll-margin:120px}
 .song-chord.loop-song-chord{box-shadow:0 0 0 3px #c4b5fd}
 .song-chord.selected-edit{background:var(--blue);color:#fff;border-color:var(--blue);outline:3px solid var(--blueSoft)}
 .song-word-row{display:flex;gap:8px 6px;flex-wrap:wrap;align-items:flex-end}
 .song-word-cell{display:grid;grid-template-rows:minmax(31px,auto) auto;justify-items:start}
 .song-anchor-slot{min-height:31px;display:flex;gap:4px;align-items:end;flex-wrap:wrap}
-.song-word{font-size:18px;color:var(--ink);padding:2px 1px;border-radius:6px}
+.song-word{font-size:20px;color:var(--ink);padding:2px 1px;border-radius:6px}
 button.song-word{background:#f1f5fa;border:1px dashed #9eabc0;cursor:pointer}
 button.song-word:disabled{background:transparent;border-color:transparent;cursor:default;opacity:1}
 .song-word.anchor-target{background:var(--blueSoft);border-color:var(--blue)}
@@ -242,8 +251,15 @@ button.song-line-end{padding:3px 8px}
  .app-header{padding:17px 18px;border-radius:18px}
  .app-header p{font-size:13px}
  .notation-toggle{min-width:68px;min-height:48px;padding:8px 10px;font-size:14px}
- .song-sheet{padding-inline:2px}.song-part{padding:15px 0}
- .song-word{font-size:17px}
+ .lyrics-page{padding:0 16px 20px;border-radius:18px}
+ .lyrics-header{display:grid;margin:0 -16px 4px;padding:18px 16px 16px}
+ .lyrics-header h2{font-size:26px}
+ .lyrics-header .song-help{font-size:14px}
+ .song-sheet{padding-inline:0}.song-part{padding:22px 2px}
+ .song-part.current-song-part{margin-inline:-8px;padding-inline:10px}
+ .song-part h3{font-size:18px;margin-bottom:17px}
+ .song-line{margin-bottom:16px;padding:7px 5px}
+ .song-word{font-size:18px}
  .practice-selectors{grid-template-columns:1fr}
  .transport{grid-column:1;grid-template-columns:44px minmax(128px,1fr) 44px;width:100%}
  #settingsToggle{grid-column:2;justify-self:end;align-self:stretch}
@@ -388,10 +404,10 @@ button.song-line-end{padding:3px 8px}
   </div>
 </div>
 
-<section id="fullView" class="card full-view">
-<div class="content">
-<div class="section-title">
-  <div><h2 style="margin:0">Letra y acordes completos</h2><p class="song-help">Toca un acorde para abrirlo en el piano o activa la edición para colocarlo sobre la palabra donde entra.</p></div>
+<section id="fullView" class="full-view">
+<div class="lyrics-page">
+<div class="lyrics-header">
+  <div><span id="fullViewEyebrow" class="lyrics-eyebrow">Lectura</span><h2 id="fullViewTitle">Letra y acordes</h2><p id="fullViewHelp" class="song-help">Toca cualquier acorde para abrirlo en el piano y escucharlo.</p></div>
   <div class="song-editor-actions">
     <button id="songEditToggle" class="secondary" type="button" aria-expanded="false" aria-controls="syncEditor">✎ Editar sincronización</button>
   </div>
@@ -531,6 +547,9 @@ const resumeLyricsFollow=document.getElementById("resumeLyricsFollow");
 const floatingStop=document.getElementById("floatingStop");
 const songSheet=document.getElementById("songSheet");
 const songEditToggle=document.getElementById("songEditToggle");
+const fullViewEyebrow=document.getElementById("fullViewEyebrow");
+const fullViewTitle=document.getElementById("fullViewTitle");
+const fullViewHelp=document.getElementById("fullViewHelp");
 const syncEditor=document.getElementById("syncEditor");
 const syncEditorCollapse=document.getElementById("syncEditorCollapse");
 const syncInstruction=document.getElementById("syncInstruction");
@@ -1102,6 +1121,11 @@ function updateSyncEditor(){
  syncEditor.hidden=!songEditMode;
  document.body.classList.toggle("song-editing",songEditMode);
  document.body.classList.toggle("sync-adding",Boolean(songEditMode&&addingSyncChord));
+ fullViewEyebrow.textContent=songEditMode?"Edición":"Lectura";
+ fullViewTitle.textContent=songEditMode?"Editar sincronización":"Letra y acordes";
+ fullViewHelp.textContent=songEditMode
+   ?"Selecciona un acorde y colócalo sobre la palabra exacta donde debe entrar."
+   :"Toca cualquier acorde para abrirlo en el piano y escucharlo.";
  updateSyncEditorCollapse();
  songEditToggle.setAttribute("aria-expanded",String(songEditMode));
  songEditToggle.textContent=songEditMode?"✓ Terminar edición":"✎ Editar sincronización";
@@ -1390,6 +1414,7 @@ function renderFullSong(){
      const group=sectionData.events.map((event,step)=>({event,step})).filter(item=>item.event.line===lineIndex);
      const words=lyricWords(lineText);
      const line=document.createElement("div");line.className="song-line";
+     if(si===sectionIndex&&sectionData.events[stepIndex]?.line===lineIndex)line.classList.add("current-song-line");
      const row=document.createElement("div");row.className="song-word-row";
      const selected=selectedSyncData();
      const canPlace=Boolean(songEditMode&&(addingSyncChord||(selected&&selectedSyncEvent.section===si)));
