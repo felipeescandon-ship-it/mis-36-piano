@@ -10,11 +10,15 @@
   --bg:#f4f7fb;--panel:#fff;--ink:#152033;--muted:#657084;
   --blue:#155fc0;--blueSoft:#dbeafe;--green:#168447;--greenSoft:#dcfce7;
   --amber:#c46b00;--amberSoft:#fff0cc;--line:#d8e0ec;--navy:#071a33;
-  --shadow:0 12px 30px rgba(18,40,75,.10)
+  --focus:#0b6ff4;--shadow:0 12px 30px rgba(18,40,75,.10)
 }
 *{box-sizing:border-box}
 body{margin:0;background:linear-gradient(#eef4fb,#fafcff);color:var(--ink);
 font-family:Inter,system-ui,-apple-system,"Segoe UI",sans-serif}
+.skip-link{position:fixed;left:16px;top:12px;z-index:200;display:inline-flex;align-items:center;min-height:44px;
+transform:translateY(-160%);padding:10px 14px;border-radius:10px;background:#fff;color:var(--navy);font-weight:850;
+box-shadow:0 8px 24px rgba(7,26,51,.25)}
+.skip-link:focus{transform:translateY(0)}
 .app{max-width:1240px;margin:auto;padding:20px}
 .app-header{display:flex;align-items:center;justify-content:space-between;gap:20px;background:linear-gradient(135deg,#06172d,#123e72);color:#fff;border-radius:22px;
 padding:16px 22px;box-shadow:var(--shadow)}
@@ -30,7 +34,7 @@ border-radius:17px;padding:12px;margin:16px 0;box-shadow:var(--shadow)}
 .section-control,.setting{display:grid;gap:5px;color:#526178;font-size:13px;font-weight:800}
 .section-control select{width:100%}
 .transport{display:grid;grid-template-columns:46px minmax(142px,1fr) 46px;gap:4px;align-items:center;padding:4px;border-radius:15px;background:#edf2f8}
-.transport button{height:43px;padding:8px 10px;background:transparent;border-radius:11px;font-size:18px}
+.transport button{height:44px;padding:8px 10px;background:transparent;border-radius:11px;font-size:18px}
 .transport .play-main{min-width:142px;padding-inline:20px;background:var(--blue);color:#fff;font-size:15px}
 .toolbar-status{display:flex;gap:9px;align-items:center;flex-wrap:wrap}
 .settings-summary{color:var(--muted);font-size:13px;font-weight:750}
@@ -52,10 +56,11 @@ background:rgba(255,255,255,.96);box-shadow:0 12px 34px rgba(7,26,51,.24);backdr
 .data-status{align-self:center;color:var(--muted);font-size:13px;font-weight:750}
 .data-status.ready{color:var(--green)}.data-status.warning{color:#9a5700}.data-status.error{color:#a92d2d}
 button,select,input{font:inherit}
-button,select{border:0;border-radius:11px;padding:10px 14px;font-weight:750}
-button{cursor:pointer}.primary{background:var(--blue);color:#fff}.secondary{background:#e9eff7;color:#173354}
+button,select{min-height:44px;border:0;border-radius:11px;padding:10px 14px;font-weight:750}
+button{min-width:44px;cursor:pointer}.primary{background:var(--blue);color:#fff}.secondary{background:#e9eff7;color:#173354}
 .danger{background:#fee2e2;color:#9f1d1d;border:1px solid #fecaca}
 button:disabled,select:disabled{cursor:not-allowed;opacity:.55}
+:where(button,select,input,a):focus-visible{outline:3px solid var(--focus);outline-offset:3px}
 select{background:#f3f6fa;color:#173354;border:1px solid var(--line)}
 .tempo{display:grid;grid-template-columns:auto 1fr;gap:8px;align-items:center}.tempo strong{grid-column:1/-1}.tempo input{width:100%}
 .audio-status{padding:7px 10px;border-radius:9px;background:#eef3f9;color:#526178;font-size:13px;font-weight:800}.audio-status.ready{background:var(--greenSoft);color:var(--green)}.audio-status.loading{background:var(--amberSoft);color:#8a4900}
@@ -137,6 +142,7 @@ box-shadow:inset 0 0 0 2px rgba(255,255,255,.72),0 0 0 2px rgba(99,204,232,.16);
 .black.held-note{box-shadow:inset 0 0 0 3px #7ddaf0,0 0 0 2px rgba(99,204,232,.28)}
 .seq{margin-top:16px}
 .section-title{display:flex;justify-content:space-between;gap:12px;align-items:center;margin-bottom:10px}
+.sequence-title{margin:0;color:#123e72;font-size:18px}
 .steps{display:flex;gap:8px;overflow-x:auto;padding:2px 2px 10px}
 .step{min-width:82px;background:#fff;border:1px solid var(--line);border-radius:11px;padding:9px;text-align:center;font-weight:850}
 .step small{display:block;color:var(--muted);font-weight:600;margin-top:3px}
@@ -165,11 +171,12 @@ box-shadow:inset 0 0 0 2px rgba(255,255,255,.72),0 0 0 2px rgba(99,204,232,.16);
 }
 @keyframes playingDotPulse{0%,100%{opacity:.5}50%{opacity:1}}
 @media(prefers-reduced-motion:reduce){
+ *,*::before,*::after{scroll-behavior:auto!important;transition-duration:.01ms!important}
  .step.playing-step,.auto-playing .now-label::before,.lyric-outgoing,.live-lyric.lyric-incoming,.next-live-row.lyric-preview-incoming{animation:none}
 }
 .legend{margin-top:16px;padding:14px 16px}
 .legend-grid{display:grid;grid-template-columns:1.1fr 1fr 1.3fr;gap:16px}
-.legend h3{margin:0 0 8px;text-align:center}
+.legend h2{margin:0 0 8px;padding:0;border:0;text-align:center;font-size:18px}
 .legend-block{border-right:1px solid var(--line);padding-right:14px}
 .legend-block:last-child{border-right:0}
 .key{display:flex;gap:8px;align-items:center;margin:7px 0}
@@ -229,12 +236,13 @@ button.song-line-end{padding:3px 8px}
 .sync-editor{display:flex;gap:12px;align-items:end;flex-wrap:wrap;padding:12px;border:1px solid #bfd3ed;border-radius:13px;background:#f3f8ff;margin-bottom:16px}
 .sync-editor[hidden]{display:none}
 .sync-editor-summary{flex:1 1 280px;display:flex;align-items:center;justify-content:space-between;gap:10px}
+.sync-editor-summary>div{min-width:0}
 .sync-instruction{flex:1 1 280px;line-height:1.4}
 .sync-duration{display:grid;gap:5px;color:#526178;font-size:13px;font-weight:800}
 .sync-duration select{min-width:125px}
 .sync-save-status{display:flex;align-items:center;gap:6px;color:var(--green);font-size:13px;font-weight:800}
 .sync-save-status::before{content:"";width:8px;height:8px;border-radius:50%;background:currentColor}
-.sync-editor-collapse{display:none;white-space:nowrap}
+.sync-editor-collapse{display:none;flex-shrink:0;white-space:nowrap}
 .show-full.song-editing{padding-bottom:170px}
 .show-full.song-editing .sync-editor{
  position:fixed;left:50%;bottom:max(12px,env(safe-area-inset-bottom));transform:translateX(-50%);
@@ -317,6 +325,7 @@ button.song-line-end{padding:3px 8px}
 </head>
 <body>
 <div class="app">
+<a class="skip-link" href="#mainContent">Saltar al contenido</a>
 <header class="app-header">
   <div>
     <span class="eyebrow">Guía de acompañamiento</span>
@@ -326,6 +335,7 @@ button.song-line-end{padding:3px 8px}
   <button id="notation" class="notation-toggle" type="button" aria-label="Usar nombres de notas en inglés" title="Usar nombres de notas en inglés">Do · Re</button>
 </header>
 
+<main id="mainContent" tabindex="-1">
 <div class="view-switch-bar">
   <div class="view-switch" role="group" aria-label="Cambiar vista">
     <button id="pianoViewButton" type="button" aria-pressed="true">🎹 Tocar</button>
@@ -363,7 +373,7 @@ button.song-line-end{padding:3px 8px}
   </div>
 
   <div class="toolbar-status">
-    <span id="audioStatus" class="audio-status">Piano: toca para cargar</span>
+    <span id="audioStatus" class="audio-status" role="status" aria-live="polite">Piano: toca para cargar</span>
     <span id="settingsSummary" class="settings-summary">72 BPM · Sustain natural · Anticipar próximas teclas</span>
   </div>
 
@@ -410,7 +420,7 @@ button.song-line-end{padding:3px 8px}
   <button id="floatingStop" class="lyrics-stop" type="button">■ Detener</button>
 </div>
 
-<div id="customPanel" class="card" style="display:none;margin-bottom:16px">
+<div id="customPanel" class="card" role="region" aria-label="Elegir varias secciones" style="display:none;margin-bottom:16px">
   <div class="content">
     <div class="section-title">
       <div>
@@ -443,7 +453,7 @@ button.song-line-end{padding:3px 8px}
   <div class="sync-editor-summary">
     <div>
       <div id="syncInstruction" class="sync-instruction" aria-live="polite">Selecciona un acorde para moverlo o usa “Añadir” para crear uno nuevo.</div>
-      <div id="syncSaveStatus" class="sync-save-status">Todo guardado automáticamente</div>
+      <div id="syncSaveStatus" class="sync-save-status" role="status" aria-live="polite">Todo guardado automáticamente</div>
     </div>
     <button id="syncEditorCollapse" class="secondary sync-editor-collapse" type="button" aria-expanded="false" aria-controls="syncEditor">Mostrar controles</button>
   </div>
@@ -462,7 +472,7 @@ button.song-line-end{padding:3px 8px}
   </label>
   <label class="sync-duration sync-editor-control">
     <span>Duración</span>
-    <select id="syncBeats" disabled>
+    <select id="syncBeats" disabled aria-label="Duración del acorde">
       <option value="0.5">½ tiempo</option>
       <option value="1">1 tiempo</option>
       <option value="2">2 tiempos</option>
@@ -511,13 +521,13 @@ button.song-line-end{padding:3px 8px}
 
 <section class="card seq">
 <div class="content">
-<div class="section-title"><div><strong id="sectionName"></strong><div id="sectionCount" class="sub"></div></div><button id="goSectionStart" class="secondary sequence-start" type="button" aria-label="Inicio de sección">↺ Inicio de sección</button></div>
+<div class="section-title"><div><h2 id="sectionName" class="sequence-title"></h2><div id="sectionCount" class="sub"></div></div><button id="goSectionStart" class="secondary sequence-start" type="button" aria-label="Inicio de sección">↺ Inicio de sección</button></div>
 <div id="steps" class="steps"></div>
 </div>
 </section>
 
 <section class="card legend">
-<h3>Leyenda</h3>
+<h2>Leyenda</h2>
 <div class="legend-grid">
 <div class="legend-block">
 <div class="key"><span class="swatch green"></span>Mano izquierda: bajo, dedo 5</div>
@@ -540,6 +550,7 @@ button.song-line-end{padding:3px 8px}
 </div>
 <div class="info">La mano izquierda toca una nota de bajo, normalmente la fundamental; en Si/Re#, toca Re#. Registro sugerido para el bajo: Si1–La2. Esta versión organiza los acordes por secciones; la sincronización exacta debe calibrarse con la grabación original.<br>Sonido: Salamander Grand Piano V3, Alexander Holm, licencia CC BY 3.0.</div>
 </section>
+</main>
 </div>
 
 <script>
@@ -620,6 +631,7 @@ const CHORD_ES={"E":"Mi","F#":"Fa#","F#m":"Fa#m","A":"La","Am":"Lam","C#m":"Do#m
 let notationMode="es";
 let songEditMode=false,selectedSyncEvent=null,addingSyncChord=null;
 let editorUndoStack=[],editorRedoStack=[];
+const scrollBehavior=()=>window.matchMedia?.("(prefers-reduced-motion: reduce)").matches?"auto":"smooth";
 function readPreference(key,fallback){try{return localStorage.getItem(key)||fallback}catch{return fallback}}
 function savePreference(key,value){try{localStorage.setItem(key,value)}catch{}}
 notationMode=readPreference("mis36-notation-mode","es");
@@ -1470,13 +1482,13 @@ function updatePlaybackHighlight(){
  const activeStep=steps.children[stepIndex];
  if(isAutoPlaying&&activeStep)requestAnimationFrame(()=>{
    const centeredLeft=activeStep.offsetLeft-(steps.clientWidth-activeStep.offsetWidth)/2;
-   steps.scrollTo({left:Math.max(0,centeredLeft),behavior:"smooth"});
+   steps.scrollTo({left:Math.max(0,centeredLeft),behavior:scrollBehavior()});
  });
 }
 function openEventFromSheet(si,ei){
  setMainView("piano",false);
  sectionIndex=si;stepIndex=ei;sectionSelect.value=si;
- stopAuto();buildSteps();render();playCurrent();window.scrollTo({top:0,behavior:"smooth"});
+ stopAuto();buildSteps();render();playCurrent();window.scrollTo({top:0,behavior:scrollBehavior()});
 }
 function renderFullSong(){
  songSheet.innerHTML="";
@@ -1567,7 +1579,7 @@ function focusCurrentSongEvent(force=false){
  const currentSongChord=songSheet.querySelector(`.song-chord[data-section="${sectionIndex}"][data-step="${stepIndex}"]`);
  const currentSongPart=songSheet.querySelector(`.song-part[data-section="${sectionIndex}"]`);
  const target=currentSongChord||currentSongPart;
- if(target)requestAnimationFrame(()=>target.scrollIntoView({behavior:"smooth",block:"center",inline:"nearest"}));
+ if(target)requestAnimationFrame(()=>target.scrollIntoView({behavior:scrollBehavior(),block:"center",inline:"nearest"}));
 }
 function setMainView(view,scroll=true){
  const showLyrics=view!=="piano";
@@ -1590,7 +1602,7 @@ function setMainView(view,scroll=true){
    renderFullSong();
    focusCurrentSongEvent();
  }else if(scroll){
-   window.scrollTo({top:0,behavior:"smooth"});
+   window.scrollTo({top:0,behavior:scrollBehavior()});
  }
  updateLyricsPlaybackDock();
 }
@@ -1872,6 +1884,23 @@ settingsToggle.onclick=()=>setSettingsOpen(settingsPanel.hidden);
 document.addEventListener(window.PointerEvent?"pointerdown":"touchstart",unlockAudioFromGesture,{capture:true,passive:true});
 window.addEventListener("touchmove",pauseLyricsFollowFromUser,{passive:true});
 window.addEventListener("wheel",pauseLyricsFollowFromUser,{passive:true});
+document.addEventListener("keydown",event=>{
+ if(!songEditMode)return;
+ const key=event.key.toLowerCase();
+ if((event.metaKey||event.ctrlKey)&&(key==="z"||key==="y")){
+   event.preventDefault();
+   const redo=key==="y"||(key==="z"&&event.shiftKey);
+   if(redo)moveEditorHistory(editorRedoStack,editorUndoStack);
+   else moveEditorHistory(editorUndoStack,editorRedoStack);
+   return;
+ }
+ if(event.key==="Escape"&&(addingSyncChord||selectedSyncEvent)){
+   event.preventDefault();
+   addingSyncChord=null;
+   selectedSyncEvent=null;
+   renderFullSong();
+ }
+});
 document.addEventListener("visibilitychange",()=>{
  if(!document.hidden&&audioCtx&&audioCtx.state!=="running")setAudioStatus("Toca un control para reactivar el audio");
  if(!document.hidden)loadCloudSongSync();
