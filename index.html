@@ -122,6 +122,9 @@ box-shadow:inset 0 0 0 2px rgba(255,255,255,.72),0 0 0 2px rgba(99,204,232,.16);
  animation:playingChordPulse 1.35s ease-in-out infinite
 }
 .step.playing-step small{color:#fff}
+.step.loop-step{box-shadow:inset 0 0 0 3px #8b5cf6}
+.step.loop-step.playing-step{box-shadow:0 0 0 4px rgba(21,95,192,.10),0 8px 20px rgba(21,95,192,.20),inset 0 0 0 3px #c4b5fd}
+.loop-toggle[aria-pressed="true"]{background:#6d28d9;color:#fff}
 .auto-playing .current{
  border-color:#75b4ff;
  box-shadow:0 0 0 4px rgba(21,95,192,.10),0 18px 38px rgba(18,70,140,.17)
@@ -144,7 +147,7 @@ box-shadow:inset 0 0 0 2px rgba(255,255,255,.72),0 0 0 2px rgba(99,204,232,.16);
 .legend-block{border-right:1px solid var(--line);padding-right:14px}
 .legend-block:last-child{border-right:0}
 .key{display:flex;gap:8px;align-items:center;margin:7px 0}
-.swatch{width:17px;height:17px;border-radius:4px}.green{background:var(--green)}.blue{background:var(--blue)}.amber{background:var(--amber)}
+.swatch{width:17px;height:17px;border-radius:4px}.green{background:var(--green)}.blue{background:var(--blue)}.amber{background:var(--amber)}.gray{background:#8b96a6}
 .held-swatch{background:var(--blue);border:3px solid #7ddaf0}
 .digits{display:flex;gap:14px;flex-wrap:wrap;justify-content:center}
 .digit{text-align:center;font-size:12px}.circle{width:31px;height:31px;border-radius:50%;display:grid;place-items:center;
@@ -165,6 +168,7 @@ background:var(--blue);color:#fff;font-weight:900;margin:auto auto 4px}
 .song-line{margin:0 0 15px;line-height:1.45}
 .song-chord{padding:4px 10px;border-radius:8px;background:var(--amberSoft);color:#8a4900;border:1px solid #efc875;font-weight:900;font-size:15px}
 .song-chord.current-song-chord{background:var(--blue);color:#fff;border-color:var(--blue);outline:4px solid var(--blueSoft);scroll-margin:120px}
+.song-chord.loop-song-chord{box-shadow:0 0 0 3px #c4b5fd}
 .song-chord.selected-edit{background:var(--blue);color:#fff;border-color:var(--blue);outline:3px solid var(--blueSoft)}
 .song-word-row{display:flex;gap:8px 6px;flex-wrap:wrap;align-items:flex-end}
 .song-word-cell{display:grid;grid-template-rows:minmax(31px,auto) auto;justify-items:start}
@@ -250,6 +254,7 @@ button.song-line-end{padding:3px 8px}
       <button id="prev" class="secondary" type="button" aria-label="Acorde anterior">←</button>
       <button id="sound" class="secondary" type="button">▶ Tocar acorde</button>
       <button id="auto" class="primary" type="button">▶ Reproducir</button>
+      <button id="transitionLoop" class="secondary loop-toggle" type="button" aria-pressed="false">🔁 Repetir cambio</button>
       <button id="next" class="secondary" type="button" aria-label="Acorde siguiente">→</button>
     </div>
 
@@ -454,6 +459,7 @@ const keyboardMode=document.getElementById("keyboardMode");
 const sustainMode=document.getElementById("sustainMode");
 const playMode=document.getElementById("playMode");
 const auto=document.getElementById("auto");
+const transitionLoop=document.getElementById("transitionLoop");
 const next=document.getElementById("next");
 const sectionSelect=document.getElementById("sectionSelect");
 const goSectionStart=document.getElementById("goSectionStart");
@@ -1187,7 +1193,7 @@ function marker(k,note,finger,type,isBlack,chord){
  const l=document.createElement("div");l.className="label"+(isBlack?" black-label":"");l.textContent=noteText(note,chord);l.title=noteText(note,chord)+keyHint(note,chord);k.appendChild(l);
  const f=document.createElement("div");f.className="finger "+(type==="left"?"left-f":type==="preview"?"preview-f":"right-f")+(isBlack?" black-f":"");f.textContent=finger;k.appendChild(f);
 }
-let sectionIndex=0,stepIndex=0,timer=null,audioCtx=null,isAutoPlaying=false,lyricsFollowPlayback=true;
+let sectionIndex=0,stepIndex=0,timer=null,audioCtx=null,isAutoPlaying=false,isTransitionLoop=false,lyricsFollowPlayback=true;
 let playQueue=[],queueIndex=0;
 let pianoSamples=[],pianoLoading=null,pianoReady=false,reverbNode=null,activeAudioGroup=null;
 const PIANO_BASE="https://tonejs.github.io/audio/salamander/";
@@ -1201,6 +1207,15 @@ function nextPosition(si,ei){
  const section=sections[si];
  if(ei+1<section.events.length)return {section:si,step:ei+1};
  return {section:(si+1)%sections.length,step:0};
+}
+function nextLinearPosition(si,ei){
+ const section=sections[si];
+ if(ei+1<section.events.length)return {section:si,step:ei+1};
+ if(si+1<sections.length)return {section:si+1,step:0};
+ return null;
+}
+function isLoopPosition(si,ei){
+ return isTransitionLoop&&playQueue.some(item=>item.section===si&&item.step===ei);
 }
 function previousPosition(si,ei){
  if(ei>0)return {section:si,step:ei-1};
@@ -1315,6 +1330,7 @@ function renderFullSong(){
          const chordButton=document.createElement("button");chordButton.type="button";chordButton.className="song-chord";
          chordButton.dataset.section=si;chordButton.dataset.step=item.step;
          if(si===sectionIndex&&item.step===stepIndex)chordButton.classList.add("current-song-chord");
+         if(isLoopPosition(si,item.step))chordButton.classList.add("loop-song-chord");
          if(songEditMode&&selectedSyncEvent?.section===si&&selectedSyncEvent?.step===item.step)chordButton.classList.add("selected-edit");
          chordButton.textContent=chordText(item.event.chord);
          chordButton.onclick=()=>{
@@ -1405,7 +1421,7 @@ function updateFullSongPosition(){
 }
 function buildSteps(){
  steps.innerHTML="";const s=currentSection();
- s.events.forEach((event,i)=>{const b=document.createElement("button");b.className="step";b.innerHTML=`${i+1}<small>${chordText(event.chord)}</small>`;b.onclick=()=>{stopAuto();stepIndex=i;render();playCurrent()};steps.appendChild(b)});
+ s.events.forEach((event,i)=>{const b=document.createElement("button");b.className="step";if(isLoopPosition(sectionIndex,i))b.classList.add("loop-step");b.innerHTML=`${i+1}<small>${chordText(event.chord)}</small>`;b.onclick=()=>{stopAuto();stepIndex=i;render();playCurrent()};steps.appendChild(b)});
 }
 function loadSection(i){sectionIndex=+i;stepIndex=0;stopAuto();buildSteps();render();updateFullSongPosition()}
 function initSections(){
@@ -1566,11 +1582,16 @@ async function playCurrent(){
  return playChord(event.chord,event.inversion,event.beats);
 }
 function stopAuto(){
- if(timer){clearInterval(timer);timer=null}
+ if(timer){clearTimeout(timer);timer=null}
  if(audioCtx&&activeAudioGroup)dampActiveChord(audioCtx,audioCtx.currentTime,.12);
  isAutoPlaying=false;
+ isTransitionLoop=false;
  playQueue=[];queueIndex=0;
  auto.textContent="▶ Reproducir";
+ transitionLoop.textContent="🔁 Repetir cambio";
+ transitionLoop.setAttribute("aria-pressed","false");
+ document.querySelectorAll(".loop-step").forEach(element=>element.classList.remove("loop-step"));
+ document.querySelectorAll(".loop-song-chord").forEach(element=>element.classList.remove("loop-song-chord"));
  updatePlaybackHighlight();
 }
 
@@ -1616,11 +1637,37 @@ async function startAuto(){
  if(!playQueue.length){auto.textContent="Selecciona una sección";setTimeout(()=>auto.textContent="▶ Reproducir",1400);return}
  isAutoPlaying=true;queueIndex=0;playQueueItem();scheduleNextQueueItem();auto.textContent="■ Detener";
 }
+async function startTransitionLoop(){
+ const loopStart={section:sectionIndex,step:stepIndex};
+ const loopEnd=nextLinearPosition(sectionIndex,stepIndex);
+ if(!loopEnd){
+   transitionLoop.textContent="No hay un acorde siguiente";
+   setTimeout(()=>transitionLoop.textContent="🔁 Repetir cambio",1600);
+   return;
+ }
+ stopAuto();
+ const audioRunning=await resumeAudio();
+ if(!audioRunning)return;
+ lyricsFollowPlayback=true;
+ loadPiano();
+ playQueue=[loopStart,loopEnd];
+ isTransitionLoop=true;
+ isAutoPlaying=true;
+ queueIndex=0;
+ transitionLoop.textContent="■ Detener bucle";
+ transitionLoop.setAttribute("aria-pressed","true");
+ auto.textContent="■ Detener";
+ playQueueItem();
+ scheduleNextQueueItem();
+}
 function scheduleNextQueueItem(){
  const beats=currentSection().events[stepIndex].beats||4;
  timer=setTimeout(()=>{
    queueIndex++;
-   if(queueIndex>=playQueue.length){stopAuto();return}
+   if(queueIndex>=playQueue.length){
+     if(isTransitionLoop)queueIndex=0;
+     else{stopAuto();return}
+   }
    playQueueItem();scheduleNextQueueItem();
  },60000/+bpm.value*beats);
 }
@@ -1628,6 +1675,7 @@ prev.onclick=()=>{stopAuto();const p=previousPosition(sectionIndex,stepIndex);se
 next.onclick=()=>{stopAuto();const p=nextPosition(sectionIndex,stepIndex);sectionIndex=p.section;stepIndex=p.step;sectionSelect.value=sectionIndex;buildSteps();render();updateFullSongPosition();playCurrent()};
 sound.onclick=playCurrent;
 auto.onclick=()=>isAutoPlaying?stopAuto():startAuto();
+transitionLoop.onclick=()=>isTransitionLoop?stopAuto():startTransitionLoop();
 floatingStop.onclick=stopAuto;
 resumeLyricsFollow.onclick=()=>{
  lyricsFollowPlayback=true;
