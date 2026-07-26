@@ -76,11 +76,9 @@ display:grid;place-items:center;color:#fff;font-weight:900;z-index:7;border:2px 
 .finger.left-f{background:var(--green)}.finger.right-f{background:var(--blue)}.finger.preview-f{background:var(--amber)}
 .finger.black-f{bottom:8px}
 #nextKeyboardWrap[hidden]{display:none}
-.move{display:none}.show-movements .move{display:block}
 .white.upcoming::after{content:"";position:absolute;inset:0;background:rgba(157,168,183,.28);box-shadow:inset 0 -12px 20px rgba(82,94,110,.08);z-index:5;pointer-events:none}
 .black.upcoming{background:#b9c1cc;box-shadow:inset 0 0 0 2px rgba(255,255,255,.72)}
 .gray{background:#8b96a6}
-.move{margin-top:10px;background:var(--amberSoft);border:1px solid #f0d291;border-radius:13px;padding:11px 13px;line-height:1.45}
 .seq{margin-top:16px}
 .section-title{display:flex;justify-content:space-between;gap:12px;align-items:center;margin-bottom:10px}
 .steps{display:flex;gap:8px;overflow-x:auto;padding:2px 2px 10px}
@@ -131,8 +129,10 @@ background:var(--blue);color:#fff;font-weight:900;margin:auto auto 4px}
 .song-part{padding:18px 0;border-bottom:1px solid var(--line)}
 .song-part:last-child{border-bottom:0}
 .song-part h3{margin:0 0 16px;color:#123e72;font-size:21px}
+.song-part.current-song-part{background:#f7fbff;border-radius:14px;box-shadow:0 0 0 4px rgba(21,95,192,.08);padding-inline:14px;scroll-margin-top:22px}
 .song-line{margin:0 0 15px;line-height:1.45}
 .song-chord{padding:4px 10px;border-radius:8px;background:var(--amberSoft);color:#8a4900;border:1px solid #efc875;font-weight:900;font-size:15px}
+.song-chord.current-song-chord{background:var(--blue);color:#fff;border-color:var(--blue);outline:4px solid var(--blueSoft);scroll-margin:120px}
 .song-chord.selected-edit{background:var(--blue);color:#fff;border-color:var(--blue);outline:3px solid var(--blueSoft)}
 .song-word-row{display:flex;gap:8px 6px;flex-wrap:wrap;align-items:flex-end}
 .song-word-cell{display:grid;grid-template-rows:minmax(31px,auto) auto;justify-items:start}
@@ -147,10 +147,12 @@ button.song-line-end{padding:3px 8px}
 .song-editor-actions{display:flex;gap:8px;flex-wrap:wrap}
 .sync-editor{display:flex;gap:12px;align-items:end;flex-wrap:wrap;padding:12px;border:1px solid #bfd3ed;border-radius:13px;background:#f3f8ff;margin-bottom:16px}
 .sync-editor[hidden]{display:none}
+.sync-editor-summary{flex:1 1 280px;display:flex;align-items:center;justify-content:space-between;gap:10px}
 .sync-instruction{flex:1 1 280px;line-height:1.4}
 .sync-duration{display:grid;gap:5px;color:#526178;font-size:13px;font-weight:800}
 .sync-duration select{min-width:125px}
 .sync-save-status{color:var(--green);font-size:13px;font-weight:800}
+.sync-editor-collapse{display:none;white-space:nowrap}
 .show-full.song-editing{padding-bottom:170px}
 .show-full.song-editing .sync-editor{
  position:fixed;left:50%;bottom:max(12px,env(safe-area-inset-bottom));transform:translateX(-50%);
@@ -165,6 +167,10 @@ button.song-line-end{padding:3px 8px}
  .section-control{grid-column:1/-1}
  .settings-grid{grid-template-columns:repeat(2,minmax(160px,1fr))}
  .legend-grid{grid-template-columns:1fr}.legend-block{border-right:0;border-bottom:1px solid var(--line);padding:0 0 12px}
+ .sync-editor-collapse{display:inline-flex}
+ .sync-editor.editor-collapsed{align-items:center;max-height:130px;overflow:hidden}
+ .sync-editor.editor-collapsed .sync-editor-control{display:none}
+ .show-full.song-editing.sync-editor-collapsed{padding-bottom:110px}
 }
 @media(max-width:600px){
  .song-sheet{padding-inline:2px}.song-lyric{font-size:17px}.song-part{padding:15px 0}
@@ -173,6 +179,7 @@ button.song-line-end{padding:3px 8px}
  #settingsToggle{grid-column:1/-1}
  .settings-grid{grid-template-columns:1fr}
  .show-full.song-editing{padding-bottom:310px}
+ .show-full.song-editing.sync-editor-collapsed{padding-bottom:110px}
  .show-full.song-editing .sync-editor{gap:8px;padding:10px;align-items:end}
  .show-full.song-editing .sync-editor>div:first-child{flex:1 1 100%}
  .show-full.song-editing .sync-duration{flex:1 1 120px}
@@ -208,7 +215,7 @@ button.song-line-end{padding:3px 8px}
 
   <div class="toolbar-status">
     <span id="audioStatus" class="audio-status">Piano: toca para cargar</span>
-    <span id="settingsSummary" class="settings-summary">72 BPM · Sustain natural · Actual + siguiente</span>
+    <span id="settingsSummary" class="settings-summary">72 BPM · Sustain natural · Anticipar próximas teclas</span>
   </div>
 
   <div id="settingsPanel" class="settings-panel" hidden>
@@ -224,11 +231,10 @@ button.song-line-end{padding:3px 8px}
       </label>
 
       <label class="setting">
-        <span>Vista del teclado</span>
-        <select id="keyboardMode" aria-label="Vista del teclado">
-          <option value="current">Solo actual</option>
-          <option value="preview" selected>Actual + siguiente</option>
-          <option value="movement">Con movimientos</option>
+        <span>Ayuda visual</span>
+        <select id="keyboardMode" aria-label="Ayuda visual del teclado">
+          <option value="current">Sin anticipación</option>
+          <option value="preview" selected>Anticipar próximas teclas</option>
         </select>
       </label>
 
@@ -276,24 +282,27 @@ button.song-line-end{padding:3px 8px}
   </div>
 </div>
 <div id="syncEditor" class="sync-editor" hidden>
-  <div>
-    <div id="syncInstruction" class="sync-instruction" aria-live="polite">Selecciona un acorde para moverlo o usa “Agregar acorde” para crear uno nuevo.</div>
-    <div id="syncSaveStatus" class="sync-save-status">Los cambios se guardan en este dispositivo.</div>
+  <div class="sync-editor-summary">
+    <div>
+      <div id="syncInstruction" class="sync-instruction" aria-live="polite">Selecciona un acorde para moverlo o usa “Agregar acorde” para crear uno nuevo.</div>
+      <div id="syncSaveStatus" class="sync-save-status">Los cambios se guardan en este dispositivo.</div>
+    </div>
+    <button id="syncEditorCollapse" class="secondary sync-editor-collapse" type="button" aria-expanded="false" aria-controls="syncEditor">Mostrar controles</button>
   </div>
-  <label class="sync-duration">
+  <label class="sync-duration sync-editor-control">
     <span>Agregar acorde</span>
     <select id="syncAddChord" aria-label="Acorde para agregar"></select>
   </label>
-  <button id="syncAdd" class="primary" type="button">＋ Agregar acorde</button>
-  <label class="sync-duration">
+  <button id="syncAdd" class="primary sync-editor-control" type="button">＋ Agregar acorde</button>
+  <label class="sync-duration sync-editor-control">
     <span>Cambiar acorde</span>
     <select id="syncChord" disabled aria-label="Cambiar acorde"></select>
   </label>
-  <label class="sync-duration">
-    <span>Inversión MD</span>
-    <select id="syncInversion" disabled aria-label="Inversión de la mano derecha"></select>
+  <label class="sync-duration sync-editor-control">
+    <span>Posición MD</span>
+    <select id="syncInversion" disabled aria-label="Posición de la mano derecha"></select>
   </label>
-  <label class="sync-duration">
+  <label class="sync-duration sync-editor-control">
     <span>Duración del acorde</span>
     <select id="syncBeats" disabled>
       <option value="0.5">½ tiempo</option>
@@ -305,7 +314,7 @@ button.song-line-end{padding:3px 8px}
       <option value="8">8 tiempos</option>
     </select>
   </label>
-  <button id="syncDelete" class="danger" type="button" disabled>Eliminar acorde</button>
+  <button id="syncDelete" class="danger sync-editor-control" type="button" disabled>Eliminar acorde</button>
 </div>
 <div id="songSheet" class="song-sheet"></div>
 </div>
@@ -320,7 +329,6 @@ button.song-line-end{padding:3px 8px}
 <div class="content">
 <div class="meta"><div><div id="nextChord" class="chord"></div><div id="nextSub" class="sub"></div></div><div id="nextBadge" class="badge"></div></div>
 <div id="nextKeyboardWrap" class="keyboard-wrap"><div id="nextKeyboard" class="keyboard"></div></div>
-<div id="movement" class="move"></div>
 </div>
 </section>
 
@@ -385,6 +393,7 @@ const fullView=document.getElementById("fullView");
 const songSheet=document.getElementById("songSheet");
 const songEditToggle=document.getElementById("songEditToggle");
 const syncEditor=document.getElementById("syncEditor");
+const syncEditorCollapse=document.getElementById("syncEditorCollapse");
 const syncInstruction=document.getElementById("syncInstruction");
 const syncSaveStatus=document.getElementById("syncSaveStatus");
 const syncAddChord=document.getElementById("syncAddChord");
@@ -404,7 +413,6 @@ const nextBadge=document.getElementById("nextBadge");
 const nextPianoToggle=document.getElementById("nextPianoToggle");
 const nextKeyboardWrap=document.getElementById("nextKeyboardWrap");
 const nextKeyboard=document.getElementById("nextKeyboard");
-const movementEl=document.getElementById("movement");
 const liveLyric=document.getElementById("liveLyric");
 const currentChord=document.getElementById("currentChord");
 const currentSub=document.getElementById("currentSub");
@@ -421,17 +429,25 @@ let songEditMode=false,selectedSyncEvent=null,addingSyncChord=null;
 function readPreference(key,fallback){try{return localStorage.getItem(key)||fallback}catch{return fallback}}
 function savePreference(key,value){try{localStorage.setItem(key,value)}catch{}}
 let keyboardViewMode=readPreference("mis36-keyboard-mode","preview");
+if(!["current","preview"].includes(keyboardViewMode))keyboardViewMode="preview";
 let sustainViewMode=readPreference("mis36-sustain-mode","natural");
 let showNextPiano=readPreference("mis36-show-next-piano","true")!=="false";
+let syncEditorCollapsed=readPreference("mis36-editor-collapsed","true")!=="false";
 function updateSettingsSummary(){
  const sustainLabel=sustainMode.options[sustainMode.selectedIndex]?.text||"Sustain natural";
- const keyboardLabel=keyboardMode.options[keyboardMode.selectedIndex]?.text||"Actual + siguiente";
+ const keyboardLabel=keyboardMode.options[keyboardMode.selectedIndex]?.text||"Anticipar próximas teclas";
  settingsSummary.textContent=`${bpm.value} BPM · ${sustainLabel} · ${keyboardLabel}`;
 }
 function setSettingsOpen(open){
  settingsPanel.hidden=!open;
  settingsToggle.setAttribute("aria-expanded",String(open));
  settingsToggle.textContent=open?"✕ Cerrar ajustes":"⚙ Ajustes";
+}
+function updateSyncEditorCollapse(){
+ syncEditor.classList.toggle("editor-collapsed",syncEditorCollapsed);
+ document.body.classList.toggle("sync-editor-collapsed",songEditMode&&syncEditorCollapsed);
+ syncEditorCollapse.setAttribute("aria-expanded",String(!syncEditorCollapsed));
+ syncEditorCollapse.textContent=syncEditorCollapsed?"Mostrar controles":"Ocultar controles";
 }
 function updateNextPianoVisibility(){
  nextKeyboardWrap.hidden=!showNextPiano;
@@ -682,6 +698,7 @@ function updateSyncEditor(){
  syncEditor.hidden=!songEditMode;
  document.body.classList.toggle("song-editing",songEditMode);
  document.body.classList.toggle("sync-adding",Boolean(songEditMode&&addingSyncChord));
+ updateSyncEditorCollapse();
  songEditToggle.setAttribute("aria-expanded",String(songEditMode));
  songEditToggle.textContent=songEditMode?"✓ Terminar edición":"✎ Editar sincronización";
  syncAddChord.disabled=!songEditMode;
@@ -750,7 +767,7 @@ function addSyncEvent(section,line,wordIndex){
  }
  render();
  renderFullSong();
- playChord(event.chord,event.inversion);
+ playChord(event.chord,event.inversion,event.beats);
 }
 
 const whiteNames=["C","D","E","F","G","A","B"],whites=["B1"];
@@ -827,17 +844,9 @@ function marker(k,note,finger,type,isBlack,chord){
  const l=document.createElement("div");l.className="label"+(isBlack?" black-label":"")+(type==="preview"?" preview-label":"");l.textContent=noteText(note,chord);l.title=noteText(note,chord)+keyHint(note,chord);k.appendChild(l);
  const f=document.createElement("div");f.className="finger "+(type==="left"?"left-f":type==="preview"?"preview-f":"right-f")+(isBlack?" black-f":"");f.textContent=finger;k.appendChild(f);
 }
-function movement(a,b,aInversion,bInversion){
- const va=resolveVoicing(a,aInversion),vb=resolveVoicing(b,bInversion);
- const dl=midi(vb.l)-midi(va.l),leftDir=dl>0?"a la derecha":dl<0?"a la izquierda":"sin mover";
- const ar=va.r.map(x=>x[0]),br=vb.r.map(x=>x[0]),common=ar.filter(x=>br.includes(x));
- return `<strong>Prepárate:</strong> bajo ${noteText(va.l,a)} → ${noteText(vb.l,b)} (${Math.abs(dl)} semitonos ${leftDir}). 
- Mano derecha: ${common.length?`mantén como referencia ${common.map(n=>noteText(n,b)).join(", ")}.`:"cambia toda la forma del acorde."}`;
-}
-
 let sectionIndex=0,stepIndex=0,timer=null,audioCtx=null,isAutoPlaying=false;
 let playQueue=[],queueIndex=0;
-let pianoSamples=[],pianoLoading=null,pianoReady=false,reverbNode=null;
+let pianoSamples=[],pianoLoading=null,pianoReady=false,reverbNode=null,activeAudioGroup=null;
 const PIANO_BASE="https://tonejs.github.io/audio/salamander/";
 const PIANO_FILES={
  "A1":"A1.mp3","C2":"C2.mp3","D#2":"Ds2.mp3","F#2":"Fs2.mp3","A2":"A2.mp3",
@@ -865,12 +874,10 @@ function render(){
  currentBadge.textContent=`${stepIndex+1}/${s.events.length}`;
  nextBadge.textContent=`${nextPos.step+1}/${nextSection.events.length}`;
  const vc=resolveVoicing(cur,event.inversion),vn=resolveVoicing(next,nextEvent.inversion);
- currentSub.textContent=`MI: ${noteText(vc.l,cur)} (5) · MD: ${vc.r.map(x=>noteText(x[0],cur)+keyHint(x[0],cur)).join("–")} (${vc.r.map(x=>x[1]).join("–")}) · ${vc.inv}`;
- nextSub.textContent=`MI: ${noteText(vn.l,next)} (5) · MD: ${vn.r.map(x=>noteText(x[0],next)+keyHint(x[0],next)).join("–")} (${vn.r.map(x=>x[1]).join("–")}) · ${vn.inv}`;
+ currentSub.textContent=`MI: ${noteText(vc.l,cur)} (5) · MD: ${vc.r.map(x=>noteText(x[0],cur)+keyHint(x[0],cur)).join("–")} (${vc.r.map(x=>x[1]).join("–")}) · Posición MD: ${vc.inv}`;
+ nextSub.textContent=`MI: ${noteText(vn.l,next)} (5) · MD: ${vn.r.map(x=>noteText(x[0],next)+keyHint(x[0],next)).join("–")} (${vn.r.map(x=>x[1]).join("–")}) · Posición MD: ${vn.inv}`;
  keyboard(currentKeyboard,cur,false,next,event.inversion,nextEvent.inversion);
  keyboard(nextKeyboard,next,true,null,nextEvent.inversion);
- document.body.classList.toggle("show-movements",keyboardViewMode==="movement");
- movement.innerHTML=movement(cur,next,event.inversion,nextEvent.inversion);
  sectionName.textContent=s.name;sectionCount.textContent=`${s.events.length} cambios de acorde`;
  [...steps.children].forEach((el,i)=>{el.classList.toggle("current-step",i===stepIndex);el.classList.toggle("next-step",nextPos.section===sectionIndex&&i===nextPos.step)});
  updatePlaybackHighlight();
@@ -897,6 +904,8 @@ function renderFullSong(){
  songSheet.innerHTML="";
  sections.forEach((sectionData,si)=>{
    const section=document.createElement("section");section.className="song-part";
+   section.dataset.section=si;
+   if(si===sectionIndex)section.classList.add("current-song-part");
    const title=document.createElement("h3");title.textContent=sectionData.name;section.appendChild(title);
    sectionData.lines.forEach((lineText,lineIndex)=>{
      const group=sectionData.events.map((event,step)=>({event,step})).filter(item=>item.event.line===lineIndex);
@@ -911,10 +920,11 @@ function renderFullSong(){
        group.filter(item=>item.event.anchor===anchor).forEach(item=>{
          const chordButton=document.createElement("button");chordButton.type="button";chordButton.className="song-chord";
          chordButton.dataset.section=si;chordButton.dataset.step=item.step;
+         if(si===sectionIndex&&item.step===stepIndex)chordButton.classList.add("current-song-chord");
          if(songEditMode&&selectedSyncEvent?.section===si&&selectedSyncEvent?.step===item.step)chordButton.classList.add("selected-edit");
          chordButton.textContent=chordText(item.event.chord);
          chordButton.onclick=()=>{
-           if(songEditMode){selectSyncEvent(si,item.step);playChord(item.event.chord,item.event.inversion)}
+           if(songEditMode){selectSyncEvent(si,item.step);playChord(item.event.chord,item.event.inversion,item.event.beats)}
            else openEventFromSheet(si,item.step);
          };
          slot.appendChild(chordButton);
@@ -961,11 +971,22 @@ function renderFullSong(){
  });
  updateSyncEditor();
 }
+function focusCurrentSongEvent(){
+ const currentSongChord=songSheet.querySelector(`.song-chord[data-section="${sectionIndex}"][data-step="${stepIndex}"]`);
+ const currentSongPart=songSheet.querySelector(`.song-part[data-section="${sectionIndex}"]`);
+ const target=currentSongChord||currentSongPart;
+ if(target)requestAnimationFrame(()=>target.scrollIntoView({behavior:"smooth",block:"center",inline:"nearest"}));
+}
+function updateFullSongPosition(){
+ if(!document.body.classList.contains("show-full"))return;
+ renderFullSong();
+ focusCurrentSongEvent();
+}
 function buildSteps(){
  steps.innerHTML="";const s=currentSection();
  s.events.forEach((event,i)=>{const b=document.createElement("button");b.className="step";b.innerHTML=`${i+1}<small>${chordText(event.chord)}</small>`;b.onclick=()=>{stepIndex=i;render();playCurrent()};steps.appendChild(b)});
 }
-function loadSection(i){sectionIndex=+i;stepIndex=0;stopAuto();buildSteps();render()}
+function loadSection(i){sectionIndex=+i;stepIndex=0;stopAuto();buildSteps();render();updateFullSongPosition()}
 function initSections(){
  sections.forEach((s,i)=>{
    const o=document.createElement("option");
@@ -1027,21 +1048,47 @@ function nearestSample(note){
  const target=midi(note);
  return pianoSamples.reduce((best,sample)=>Math.abs(sample.midi-target)<Math.abs(best.midi-target)?sample:best,pianoSamples[0]);
 }
-function sustainProfile(){
+function sustainProfile(beats=4){
+ const safeBeats=Math.max(.25,Number(beats)||4);
+ const eventDuration=safeBeats*60/Math.max(40,Number(bpm.value)||72);
+ const mode={
+  short:{chord:.56,bass:.64,fade:.18},
+  natural:{chord:.84,bass:.92,fade:.23},
+  long:{chord:1.04,bass:1.08,fade:.28}
+ }[sustainViewMode]||{chord:.84,bass:.92,fade:.23};
  return {
-  short:{bass:1.8,chord:2.4,fade:0.85},
-  natural:{bass:3.1,chord:4.0,fade:1.25},
-  long:{bass:4.4,chord:5.6,fade:1.65}
- }[sustainViewMode]||{bass:3.1,chord:4.0,fade:1.25};
+  chord:Math.max(.18,eventDuration*mode.chord),
+  bass:Math.max(.22,eventDuration*mode.bass),
+  fade:Math.min(.8,Math.max(.08,eventDuration*mode.fade)),
+  release:Math.min(.18,Math.max(.07,eventDuration*.12))
+ };
 }
-function playSampledChord(notes){
- const ctx=ensureAudio(),now=ctx.currentTime+.025,profile=sustainProfile();
+function dampActiveChord(ctx,at,release=.12){
+ if(!activeAudioGroup)return;
+ const {master,sources}=activeAudioGroup;
+ try{
+   if(typeof master.gain.cancelAndHoldAtTime==="function")master.gain.cancelAndHoldAtTime(at);
+   else{
+     const currentLevel=Math.max(.0001,master.gain.value||.0001);
+     master.gain.cancelScheduledValues(at);
+     master.gain.setValueAtTime(currentLevel,at);
+   }
+   master.gain.exponentialRampToValueAtTime(.0001,at+release);
+ }catch{}
+ sources.forEach(source=>{try{source.stop(at+release+.03)}catch{}});
+ activeAudioGroup=null;
+}
+function playSampledChord(notes,beats=4){
+ const ctx=ensureAudio(),now=ctx.currentTime+.025,profile=sustainProfile(beats);
+ dampActiveChord(ctx,now,profile.release);
  const master=ctx.createGain();master.gain.value=.82;
  const compressor=ctx.createDynamicsCompressor();
  compressor.threshold.value=-18;compressor.knee.value=16;compressor.ratio.value=3;
  master.connect(compressor);compressor.connect(ctx.destination);compressor.connect(makeReverb(ctx));
+ const sources=[];
  notes.forEach((note,index)=>{
    const sample=nearestSample(note),source=ctx.createBufferSource(),gain=ctx.createGain();
+   sources.push(source);
    source.buffer=sample.buffer;source.playbackRate.value=Math.pow(2,(midi(note)-sample.midi)/12);
    const start=now+index*.012,level=index===0?.78:.48,duration=index===0?profile.bass:profile.chord;
    gain.gain.setValueAtTime(.0001,start);gain.gain.exponentialRampToValueAtTime(level,start+.018);
@@ -1049,24 +1096,29 @@ function playSampledChord(notes){
    gain.gain.exponentialRampToValueAtTime(.0001,start+duration);
    source.connect(gain);gain.connect(master);source.start(start);source.stop(start+duration+.12);
  });
+ activeAudioGroup={master,sources};
 }
-function playFallback(notes){
- const ctx=ensureAudio(),now=ctx.currentTime,profile=sustainProfile(),duration=profile.chord;
+function playFallback(notes,beats=4){
+ const ctx=ensureAudio(),now=ctx.currentTime,profile=sustainProfile(beats),duration=profile.chord;
+ dampActiveChord(ctx,now,profile.release);
  const master=ctx.createGain();master.gain.setValueAtTime(.0001,now);master.gain.exponentialRampToValueAtTime(.25,now+.03);master.gain.setValueAtTime(.25,now+Math.max(.2,duration-profile.fade));master.gain.exponentialRampToValueAtTime(.0001,now+duration);master.connect(ctx.destination);
- notes.forEach((n,i)=>{const o=ctx.createOscillator(),g=ctx.createGain();o.type=i===0?"sine":"triangle";o.frequency.value=frequency(n);g.gain.value=i===0?.7:.32;o.connect(g);g.connect(master);o.start(now);o.stop(now+duration+.1)});
+ const sources=[];
+ notes.forEach((n,i)=>{const o=ctx.createOscillator(),g=ctx.createGain();sources.push(o);o.type=i===0?"sine":"triangle";o.frequency.value=frequency(n);g.gain.value=i===0?.7:.32;o.connect(g);g.connect(master);o.start(now);o.stop(now+duration+.1)});
+ activeAudioGroup={master,sources};
 }
-async function playChord(chord,inversion=null){
+async function playChord(chord,inversion=null,beats=4){
  ensureAudio();
  const v=resolveVoicing(chord,inversion),notes=[v.l,...v.r.map(x=>x[0])];
  const ready=await loadPiano();
- if(ready)playSampledChord(notes);else playFallback(notes);
+ if(ready)playSampledChord(notes,beats);else playFallback(notes,beats);
 }
 async function playCurrent(){
  const event=currentSection().events[stepIndex];
- return playChord(event.chord,event.inversion);
+ return playChord(event.chord,event.inversion,event.beats);
 }
 function stopAuto(){
  if(timer){clearInterval(timer);timer=null}
+ if(audioCtx&&activeAudioGroup)dampActiveChord(audioCtx,audioCtx.currentTime,.12);
  isAutoPlaying=false;
  playQueue=[];queueIndex=0;
  auto.textContent="▶ Reproducir";
@@ -1101,6 +1153,7 @@ function playQueueItem(){
  sectionSelect.value=sectionIndex;
  buildSteps();
  render();
+ updateFullSongPosition();
  playCurrent();
 }
 
@@ -1117,8 +1170,8 @@ function scheduleNextQueueItem(){
    playQueueItem();scheduleNextQueueItem();
  },60000/+bpm.value*beats);
 }
-prev.onclick=()=>{const p=previousPosition(sectionIndex,stepIndex);sectionIndex=p.section;stepIndex=p.step;sectionSelect.value=sectionIndex;buildSteps();render();playCurrent()};
-next.onclick=()=>{const p=nextPosition(sectionIndex,stepIndex);sectionIndex=p.section;stepIndex=p.step;sectionSelect.value=sectionIndex;buildSteps();render();playCurrent()};
+prev.onclick=()=>{const p=previousPosition(sectionIndex,stepIndex);sectionIndex=p.section;stepIndex=p.step;sectionSelect.value=sectionIndex;buildSteps();render();updateFullSongPosition();playCurrent()};
+next.onclick=()=>{const p=nextPosition(sectionIndex,stepIndex);sectionIndex=p.section;stepIndex=p.step;sectionSelect.value=sectionIndex;buildSteps();render();updateFullSongPosition();playCurrent()};
 sound.onclick=playCurrent;
 auto.onclick=()=>isAutoPlaying?stopAuto():startAuto();
 settingsToggle.onclick=()=>setSettingsOpen(settingsPanel.hidden);
@@ -1143,11 +1196,18 @@ goSectionStart.onclick=()=>{
  stepIndex=0;
  buildSteps();
  render();
+ updateFullSongPosition();
 };
 songEditToggle.onclick=()=>{
  songEditMode=!songEditMode;
  if(!songEditMode){selectedSyncEvent=null;addingSyncChord=null}
+ else setSettingsOpen(false);
  renderFullSong();
+};
+syncEditorCollapse.onclick=()=>{
+ syncEditorCollapsed=!syncEditorCollapsed;
+ savePreference("mis36-editor-collapsed",String(syncEditorCollapsed));
+ updateSyncEditorCollapse();
 };
 syncAdd.onclick=()=>{
  if(addingSyncChord){
@@ -1181,7 +1241,7 @@ syncChord.onchange=()=>{
  if(selectedSyncEvent.section===sectionIndex)buildSteps();
  render();
  renderFullSong();
- playChord(selected.event.chord,selected.event.inversion);
+ playChord(selected.event.chord,selected.event.inversion,selected.event.beats);
 };
 syncInversion.onchange=()=>{
  const selected=selectedSyncData();
@@ -1190,7 +1250,7 @@ syncInversion.onchange=()=>{
  saveSongSync();
  render();
  renderFullSong();
- playChord(selected.event.chord,selected.event.inversion);
+ playChord(selected.event.chord,selected.event.inversion,selected.event.beats);
 };
 syncDelete.onclick=()=>{
  const selected=selectedSyncData();
@@ -1218,7 +1278,15 @@ syncDelete.onclick=()=>{
  renderFullSong();
 };
 notation.onclick=()=>{notationMode=notationMode==="es"?"en":"es";notation.textContent=notationMode==="es"?"Notas: Español":"Notes: English";renderSyncChordOptions();buildSteps();render();renderFullSong()};
-fullViewToggle.onclick=()=>{const showing=document.body.classList.toggle("show-full");fullViewToggle.textContent=showing?"🎹 Vista piano":"☰ Letra y acordes completos";if(showing)window.scrollTo({top:0,behavior:"smooth"})};
+fullViewToggle.onclick=()=>{
+ const showing=document.body.classList.toggle("show-full");
+ fullViewToggle.textContent=showing?"🎹 Vista piano":"☰ Letra y acordes completos";
+ if(showing){
+   setSettingsOpen(false);
+   renderFullSong();
+   focusCurrentSongEvent();
+ }
+};
 bpm.oninput=e=>{bpmOut.textContent=e.target.value;updateSettingsSummary()};
 keyboardMode.value=keyboardViewMode;
 sustainMode.value=sustainViewMode;
