@@ -53,13 +53,18 @@ select{background:#f3f6fa;color:#173354;border:1px solid var(--line)}
 .now-heading{display:grid;grid-template-columns:minmax(120px,1fr) minmax(0,3fr) minmax(120px,1fr);
 align-items:center;gap:12px;text-align:left}
 .now-label{white-space:nowrap;justify-self:start}
-.lyric-stage{grid-column:2;min-width:0;text-align:center}
+.lyric-stage{grid-column:2;min-width:0;text-align:center;position:relative}
 .live-lyric{display:block;color:var(--ink);font-size:clamp(16px,2.2vw,22px);font-weight:750;line-height:1.35}
 .live-lyric.instrumental{color:var(--muted);font-style:italic;font-weight:650}
 .next-live-row{display:block;margin-top:3px;color:#7c8a9f;font-size:clamp(12px,1.35vw,15px);font-weight:650;line-height:1.3}
 .next-live-row[hidden]{display:none}
-.next-live-label{color:#57749a;font-weight:800}
 .now-spacer{grid-column:3}
+.lyric-outgoing{position:absolute;top:0;left:0;width:100%;pointer-events:none;animation:lyricCurrentOut .36s ease-in forwards}
+.live-lyric.lyric-incoming{animation:lyricCurrentIn .36s cubic-bezier(.2,.75,.3,1)}
+.next-live-row.lyric-preview-incoming{animation:lyricPreviewIn .36s ease-out}
+@keyframes lyricCurrentOut{from{opacity:1;transform:translateY(0)}to{opacity:0;transform:translateY(-16px)}}
+@keyframes lyricCurrentIn{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
+@keyframes lyricPreviewIn{0%,42%{opacity:0;transform:translateY(7px)}to{opacity:1;transform:translateY(0)}}
 .content{padding:16px}
 .meta{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:10px}
 .chord-title-row{display:flex;align-items:center;gap:16px;flex-wrap:wrap}
@@ -122,7 +127,7 @@ box-shadow:inset 0 0 0 2px rgba(255,255,255,.72),0 0 0 2px rgba(99,204,232,.16);
 }
 @keyframes playingDotPulse{0%,100%{opacity:.5}50%{opacity:1}}
 @media(prefers-reduced-motion:reduce){
- .step.playing-step,.auto-playing .now-label::before{animation:none}
+ .step.playing-step,.auto-playing .now-label::before,.lyric-outgoing,.live-lyric.lyric-incoming,.next-live-row.lyric-preview-incoming{animation:none}
 }
 .legend{margin-top:16px;padding:14px 16px}
 .legend-grid{display:grid;grid-template-columns:1.1fr 1fr 1.3fr;gap:16px}
@@ -367,9 +372,9 @@ button.song-line-end{padding:3px 8px}
 <section class="card current">
 <h2 class="now-heading">
 <span class="now-label">Ahora suena:</span>
-<span class="lyric-stage">
+<span id="lyricStage" class="lyric-stage">
   <span id="liveLyric" class="live-lyric" aria-live="polite"></span>
-  <span id="nextLyricPreview" class="next-live-row"><span class="next-live-label">Sigue:</span> <span id="nextLiveLyric"></span></span>
+  <span id="nextLyricPreview" class="next-live-row"><span id="nextLiveLyric"></span></span>
 </span>
 <span class="now-spacer" aria-hidden="true"></span>
 </h2>
@@ -455,6 +460,7 @@ const nextBadge=document.getElementById("nextBadge");
 const nextPianoToggle=document.getElementById("nextPianoToggle");
 const nextKeyboardWrap=document.getElementById("nextKeyboardWrap");
 const nextKeyboard=document.getElementById("nextKeyboard");
+const lyricStage=document.getElementById("lyricStage");
 const liveLyric=document.getElementById("liveLyric");
 const nextLyricPreview=document.getElementById("nextLyricPreview");
 const nextLiveLyric=document.getElementById("nextLiveLyric");
@@ -930,15 +936,45 @@ function nextDifferentLyric(si,ei){
  }
  return "";
 }
+let displayedLyric="",lyricTransitionTimer=null;
+function updateLiveLyrics(currentLyric,upcomingLyric){
+ const shouldAnimate=Boolean(displayedLyric&&displayedLyric!==currentLyric&&!(window.matchMedia&&window.matchMedia("(prefers-reduced-motion: reduce)").matches));
+ if(lyricTransitionTimer){clearTimeout(lyricTransitionTimer);lyricTransitionTimer=null}
+ lyricStage.querySelectorAll(".lyric-outgoing").forEach(node=>node.remove());
+ liveLyric.classList.remove("lyric-incoming");
+ nextLyricPreview.classList.remove("lyric-preview-incoming");
+ let outgoing=null;
+ if(shouldAnimate){
+   outgoing=liveLyric.cloneNode(true);
+   outgoing.removeAttribute("id");
+   outgoing.removeAttribute("aria-live");
+   outgoing.setAttribute("aria-hidden","true");
+   outgoing.classList.add("lyric-outgoing");
+   lyricStage.appendChild(outgoing);
+ }
+ liveLyric.textContent=currentLyric;
+ liveLyric.classList.toggle("instrumental",currentLyric==="Introducción instrumental");
+ nextLiveLyric.textContent=upcomingLyric;
+ nextLyricPreview.hidden=!upcomingLyric;
+ if(shouldAnimate){
+   void lyricStage.offsetWidth;
+   liveLyric.classList.add("lyric-incoming");
+   if(upcomingLyric)nextLyricPreview.classList.add("lyric-preview-incoming");
+   lyricTransitionTimer=setTimeout(()=>{
+     outgoing?.remove();
+     liveLyric.classList.remove("lyric-incoming");
+     nextLyricPreview.classList.remove("lyric-preview-incoming");
+     lyricTransitionTimer=null;
+   },420);
+ }
+ displayedLyric=currentLyric;
+}
 function render(){
  const s=currentSection(),event=s.events[stepIndex],nextPos=nextPosition(sectionIndex,stepIndex);
  const nextSection=sections[nextPos.section],nextEvent=nextSection.events[nextPos.step];
  const cur=event.chord,next=nextEvent.chord;
- liveLyric.textContent=event.lyric;
- liveLyric.classList.toggle("instrumental",event.lyric==="Introducción instrumental");
  const upcomingLyric=nextDifferentLyric(sectionIndex,stepIndex);
- nextLiveLyric.textContent=upcomingLyric;
- nextLyricPreview.hidden=!upcomingLyric;
+ updateLiveLyrics(event.lyric,upcomingLyric);
  currentChord.textContent=chordText(cur);nextChord.textContent=chordText(next);
  currentBadge.textContent=`${stepIndex+1}/${s.events.length}`;
  nextBadge.textContent=`${nextPos.step+1}/${nextSection.events.length}`;
