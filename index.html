@@ -42,6 +42,7 @@ background:rgba(255,255,255,.96);box-shadow:0 12px 34px rgba(7,26,51,.24);backdr
 .settings-panel[hidden]{display:none}
 .settings-grid{display:grid;grid-template-columns:repeat(3,minmax(160px,1fr));gap:10px}
 .settings-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+.data-status{align-self:center;color:var(--muted);font-size:13px;font-weight:750}
 button,select,input{font:inherit}
 button,select{border:0;border-radius:11px;padding:10px 14px;font-weight:750}
 button{cursor:pointer}.primary{background:var(--blue);color:#fff}.secondary{background:#e9eff7;color:#173354}
@@ -296,6 +297,10 @@ button.song-line-end{padding:3px 8px}
 
     <div class="settings-actions">
       <button id="notation" class="secondary" type="button">Notas: Español</button>
+      <button id="exportSongSync" class="secondary" type="button">↗ Compartir ajustes</button>
+      <button id="importSongSync" class="secondary" type="button">↧ Importar ajustes</button>
+      <input id="importSongSyncFile" type="file" accept=".json,application/json" hidden>
+      <span id="songDataStatus" class="data-status" aria-live="polite"></span>
     </div>
   </div>
 </div>
@@ -448,6 +453,10 @@ const next=document.getElementById("next");
 const sectionSelect=document.getElementById("sectionSelect");
 const goSectionStart=document.getElementById("goSectionStart");
 const notation=document.getElementById("notation");
+const exportSongSync=document.getElementById("exportSongSync");
+const importSongSync=document.getElementById("importSongSync");
+const importSongSyncFile=document.getElementById("importSongSyncFile");
+const songDataStatus=document.getElementById("songDataStatus");
 const pianoViewButton=document.getElementById("pianoViewButton");
 const lyricsViewButton=document.getElementById("lyricsViewButton");
 const lyricsPlaybackDock=document.getElementById("lyricsPlaybackDock");
@@ -742,7 +751,7 @@ function initializeSongSync(){
    }
  }catch{}
 }
-function saveSongSync(){
+function songSyncSnapshot(){
  const saved={version:4,events:{},deleted:[...deletedSongEvents],added:[]};
  sections.forEach((section,si)=>section.events.forEach((event,position)=>{
    saved.events[syncEventKey(si,event)]={
@@ -755,8 +764,64 @@ function saveSongSync(){
      });
    }
  }));
+ return saved;
+}
+function saveSongSync(){
+ const saved=songSyncSnapshot();
  try{localStorage.setItem(SONG_SYNC_KEY,JSON.stringify(saved));syncSaveStatus.textContent="Guardado automáticamente en este dispositivo."}
  catch{syncSaveStatus.textContent="No fue posible guardar en este dispositivo."}
+}
+function songSyncExportPayload(){
+ return {
+   format:"mis-36-piano-ajustes",
+   version:1,
+   song:"Mis 36",
+   exportedAt:new Date().toISOString(),
+   songSync:songSyncSnapshot()
+ };
+}
+function validatedImportedSongSync(payload){
+ if(!payload||payload.format!=="mis-36-piano-ajustes"||payload.song!=="Mis 36"||payload.version!==1)throw new Error("El archivo no corresponde a los ajustes de Mis 36.");
+ const data=payload.songSync;
+ if(!data||data.version!==4||!data.events||typeof data.events!=="object"||Array.isArray(data.events))throw new Error("La versión del archivo no es compatible.");
+ if(Object.keys(data.events).length>1500||(data.added?.length||0)>500||(data.deleted?.length||0)>1500)throw new Error("El archivo contiene demasiados cambios.");
+ Object.values(data.events).forEach(value=>{
+   if(!value||!voicings[value.chord])throw new Error("El archivo contiene un acorde no reconocido.");
+   if(!voicingVariants[value.chord]?.[value.inversion])throw new Error("El archivo contiene una inversión no reconocida.");
+   if(!Number.isInteger(value.line)||!Number.isInteger(value.anchor)||!Number.isInteger(value.position))throw new Error("El archivo contiene una posición no válida.");
+   if(!Number.isFinite(+value.beats)||+value.beats<=0||+value.beats>32)throw new Error("El archivo contiene una duración no válida.");
+ });
+ return data;
+}
+async function shareSongSync(){
+ saveSongSync();
+ const payload=songSyncExportPayload();
+ const json=JSON.stringify(payload,null,2);
+ const file=new File([json],"mis-36-ajustes.json",{type:"application/json"});
+ songDataStatus.textContent="Preparando archivo…";
+ try{
+   if(navigator.share&&navigator.canShare?.({files:[file]})){
+     await navigator.share({title:"Ajustes de Mis 36",text:"Sincronización, acordes e inversiones de la app Mis 36.",files:[file]});
+     songDataStatus.textContent="Ajustes compartidos.";
+     return;
+   }
+   const url=URL.createObjectURL(file),link=document.createElement("a");
+   link.href=url;link.download=file.name;document.body.appendChild(link);link.click();link.remove();
+   setTimeout(()=>URL.revokeObjectURL(url),1000);
+   songDataStatus.textContent="Archivo descargado.";
+ }catch(error){
+   if(error?.name==="AbortError"){songDataStatus.textContent="No se compartió el archivo.";return}
+   songDataStatus.textContent="No fue posible compartir los ajustes.";
+ }
+}
+async function importSongSyncFromFile(file){
+ if(!file)return;
+ if(file.size>2*1024*1024)throw new Error("El archivo es demasiado grande.");
+ const payload=JSON.parse(await file.text());
+ const imported=validatedImportedSongSync(payload);
+ if(!confirm("¿Reemplazar los ajustes de esta canción por los del archivo?"))return false;
+ localStorage.setItem(SONG_SYNC_KEY,JSON.stringify(imported));
+ return true;
 }
 function selectedSyncData(){
  if(!selectedSyncEvent)return null;
@@ -1476,6 +1541,23 @@ syncDelete.onclick=()=>{
  renderFullSong();
 };
 notation.onclick=()=>{notationMode=notationMode==="es"?"en":"es";notation.textContent=notationMode==="es"?"Notas: Español":"Notes: English";renderSyncChordOptions();buildSteps();render();renderFullSong()};
+exportSongSync.onclick=shareSongSync;
+importSongSync.onclick=()=>importSongSyncFile.click();
+importSongSyncFile.onchange=async()=>{
+ const file=importSongSyncFile.files?.[0];
+ if(!file)return;
+ songDataStatus.textContent="Revisando archivo…";
+ try{
+   const imported=await importSongSyncFromFile(file);
+   if(imported){
+     songDataStatus.textContent="Ajustes importados. Recargando…";
+     setTimeout(()=>location.reload(),500);
+   }else songDataStatus.textContent="Importación cancelada.";
+ }catch(error){
+   songDataStatus.textContent=error instanceof SyntaxError?"El archivo no contiene ajustes válidos.":error.message;
+ }
+ importSongSyncFile.value="";
+};
 pianoViewButton.onclick=()=>setMainView("piano");
 lyricsViewButton.onclick=()=>setMainView("lyrics");
 bpm.oninput=e=>{bpmOut.textContent=e.target.value;updateSettingsSummary()};
