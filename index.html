@@ -193,6 +193,11 @@ background:var(--blue);color:#fff;font-weight:900;margin:auto auto 4px}
 .lyrics-header h2{margin:0;font-size:clamp(26px,3vw,34px);color:#102f57;letter-spacing:-.02em}
 .lyrics-header .song-help{max-width:620px;margin:7px 0 0;font-size:15px;line-height:1.5}
 body:not(.song-editing) .song-editor-actions{display:none}
+.song-editing .toolbar{display:none}
+.song-editing .lyrics-page{max-width:1100px}
+.song-editing .lyrics-header{position:sticky;top:70px;z-index:25;align-items:center;background:rgba(247,250,255,.97);backdrop-filter:blur(12px)}
+.song-editing .song-part.current-song-part{background:transparent;box-shadow:none}
+.song-editing .song-line.current-song-line{background:transparent;border-left-color:transparent}
 .song-sheet{max-width:880px;margin:0 auto;padding:0 0 10px}
 .song-part{padding:27px 6px;border-bottom:1px solid var(--line);scroll-margin-top:92px}
 .song-part:last-child{border-bottom:0}
@@ -215,14 +220,20 @@ button.song-word:disabled{background:transparent;border-color:transparent;cursor
 .song-line-end{color:var(--muted);font-size:13px;font-weight:800}
 button.song-line-end{padding:3px 8px}
 .song-help{margin:0 0 8px;color:var(--muted)}
-.song-editor-actions{display:flex;gap:8px;flex-wrap:wrap}
+.song-editor-actions{display:flex;gap:8px;align-items:end;justify-content:flex-end;flex-wrap:wrap}
+.editor-section-jump{display:grid;gap:4px;color:#526178;font-size:12px;font-weight:800}
+.editor-section-jump select{min-width:160px;padding-block:8px}
+.editor-history{display:flex;gap:5px}
+.editor-history button{padding:9px 11px}
+.editor-finish{background:var(--blue);color:#fff;white-space:nowrap}
 .sync-editor{display:flex;gap:12px;align-items:end;flex-wrap:wrap;padding:12px;border:1px solid #bfd3ed;border-radius:13px;background:#f3f8ff;margin-bottom:16px}
 .sync-editor[hidden]{display:none}
 .sync-editor-summary{flex:1 1 280px;display:flex;align-items:center;justify-content:space-between;gap:10px}
 .sync-instruction{flex:1 1 280px;line-height:1.4}
 .sync-duration{display:grid;gap:5px;color:#526178;font-size:13px;font-weight:800}
 .sync-duration select{min-width:125px}
-.sync-save-status{color:var(--green);font-size:13px;font-weight:800}
+.sync-save-status{display:flex;align-items:center;gap:6px;color:var(--green);font-size:13px;font-weight:800}
+.sync-save-status::before{content:"";width:8px;height:8px;border-radius:50%;background:currentColor}
 .sync-editor-collapse{display:none;white-space:nowrap}
 .show-full.song-editing{padding-bottom:170px}
 .show-full.song-editing .sync-editor{
@@ -231,6 +242,7 @@ button.song-line-end{padding:3px 8px}
  margin:0;background:rgba(243,248,255,.98);box-shadow:0 16px 46px rgba(7,26,51,.24);
  backdrop-filter:blur(10px)
 }
+.show-full.song-editing .song-sheet{padding-top:6px}
 .sync-adding button.song-word:not(:disabled){background:#e3efff;border-color:#4f86c6}
 .sync-adding button.song-line-end:not(:disabled){background:#d7e9ff}
 @media(max-width:900px){
@@ -260,6 +272,13 @@ button.song-line-end{padding:3px 8px}
  .song-part h3{font-size:18px;margin-bottom:17px}
  .song-line{margin-bottom:16px;padding:7px 5px}
  .song-word{font-size:18px}
+ .song-editing .lyrics-header{position:static}
+ .song-editing .song-editor-actions{justify-content:stretch}
+ .song-editing .editor-section-jump{flex:1 1 100%}
+ .song-editing .editor-section-jump select{width:100%}
+ .song-editing .editor-history{flex:1}
+ .song-editing .editor-history button{flex:1}
+ .song-editing .editor-finish{flex:1}
  .practice-selectors{grid-template-columns:1fr}
  .transport{grid-column:1;grid-template-columns:44px minmax(128px,1fr) 44px;width:100%}
  #settingsToggle{grid-column:2;justify-self:end;align-self:stretch}
@@ -409,32 +428,40 @@ button.song-line-end{padding:3px 8px}
 <div class="lyrics-header">
   <div><span id="fullViewEyebrow" class="lyrics-eyebrow">Lectura</span><h2 id="fullViewTitle">Letra y acordes</h2><p id="fullViewHelp" class="song-help">Toca cualquier acorde para abrirlo en el piano y escucharlo.</p></div>
   <div class="song-editor-actions">
-    <button id="songEditToggle" class="secondary" type="button" aria-expanded="false" aria-controls="syncEditor">✎ Editar sincronización</button>
+    <label class="editor-section-jump">
+      <span>Ir a la sección</span>
+      <select id="editorSectionSelect" aria-label="Sección que quieres editar"></select>
+    </label>
+    <div class="editor-history" role="group" aria-label="Historial de edición">
+      <button id="editorUndo" class="secondary" type="button" disabled aria-label="Deshacer último cambio" title="Deshacer">Deshacer</button>
+      <button id="editorRedo" class="secondary" type="button" disabled aria-label="Rehacer último cambio" title="Rehacer">Rehacer</button>
+    </div>
+    <button id="songEditToggle" class="editor-finish" type="button" aria-expanded="false" aria-controls="syncEditor">✓ Terminar</button>
   </div>
 </div>
 <div id="syncEditor" class="sync-editor" hidden>
   <div class="sync-editor-summary">
     <div>
-      <div id="syncInstruction" class="sync-instruction" aria-live="polite">Selecciona un acorde para moverlo o usa “Agregar acorde” para crear uno nuevo.</div>
-      <div id="syncSaveStatus" class="sync-save-status">Los cambios se guardan en este dispositivo.</div>
+      <div id="syncInstruction" class="sync-instruction" aria-live="polite">Selecciona un acorde para moverlo o usa “Añadir” para crear uno nuevo.</div>
+      <div id="syncSaveStatus" class="sync-save-status">Todo guardado automáticamente</div>
     </div>
     <button id="syncEditorCollapse" class="secondary sync-editor-collapse" type="button" aria-expanded="false" aria-controls="syncEditor">Mostrar controles</button>
   </div>
   <label class="sync-duration sync-editor-control">
-    <span>Agregar acorde</span>
-    <select id="syncAddChord" aria-label="Acorde para agregar"></select>
+    <span>Nuevo acorde</span>
+    <select id="syncAddChord" aria-label="Acorde para añadir"></select>
   </label>
-  <button id="syncAdd" class="primary sync-editor-control" type="button">＋ Agregar acorde</button>
+  <button id="syncAdd" class="primary sync-editor-control" type="button">＋ Añadir</button>
   <label class="sync-duration sync-editor-control">
-    <span>Cambiar acorde</span>
+    <span>Acorde seleccionado</span>
     <select id="syncChord" disabled aria-label="Cambiar acorde"></select>
   </label>
   <label class="sync-duration sync-editor-control">
-    <span>Posición MD</span>
+    <span>Posición de la mano</span>
     <select id="syncInversion" disabled aria-label="Posición de la mano derecha"></select>
   </label>
   <label class="sync-duration sync-editor-control">
-    <span>Duración del acorde</span>
+    <span>Duración</span>
     <select id="syncBeats" disabled>
       <option value="0.5">½ tiempo</option>
       <option value="1">1 tiempo</option>
@@ -547,6 +574,9 @@ const resumeLyricsFollow=document.getElementById("resumeLyricsFollow");
 const floatingStop=document.getElementById("floatingStop");
 const songSheet=document.getElementById("songSheet");
 const songEditToggle=document.getElementById("songEditToggle");
+const editorSectionSelect=document.getElementById("editorSectionSelect");
+const editorUndo=document.getElementById("editorUndo");
+const editorRedo=document.getElementById("editorRedo");
 const fullViewEyebrow=document.getElementById("fullViewEyebrow");
 const fullViewTitle=document.getElementById("fullViewTitle");
 const fullViewHelp=document.getElementById("fullViewHelp");
@@ -589,6 +619,7 @@ const NOTE_ES={C:"Do","C#":"Do#",D:"Re","D#":"Re#",E:"Mi","E#":"Mi#",F:"Fa","F#"
 const CHORD_ES={"E":"Mi","F#":"Fa#","F#m":"Fa#m","A":"La","Am":"Lam","C#m":"Do#m","C#":"Do#","G#m":"Sol#m","G#":"Sol#","D":"Re","B":"Si","B/D#":"Si/Re#"};
 let notationMode="es";
 let songEditMode=false,selectedSyncEvent=null,addingSyncChord=null;
+let editorUndoStack=[],editorRedoStack=[];
 function readPreference(key,fallback){try{return localStorage.getItem(key)||fallback}catch{return fallback}}
 function savePreference(key,value){try{localStorage.setItem(key,value)}catch{}}
 notationMode=readPreference("mis36-notation-mode","es");
@@ -868,9 +899,48 @@ function songSyncSnapshot(){
 }
 function saveSongSync(syncCloud=true){
  const saved=songSyncSnapshot();
- try{localStorage.setItem(SONG_SYNC_KEY,JSON.stringify(saved));syncSaveStatus.textContent="Guardado automáticamente en este dispositivo."}
+ try{localStorage.setItem(SONG_SYNC_KEY,JSON.stringify(saved));syncSaveStatus.textContent="Todo guardado automáticamente"}
  catch{syncSaveStatus.textContent="No fue posible guardar en este dispositivo."}
  if(syncCloud)scheduleCloudSave();
+}
+function captureEditorState(){
+ return JSON.stringify({
+   events:sections.map(section=>section.events.map(event=>({...event}))),
+   deleted:[...deletedSongEvents]
+ });
+}
+function updateEditorHistory(){
+ editorUndo.disabled=!songEditMode||editorUndoStack.length===0;
+ editorRedo.disabled=!songEditMode||editorRedoStack.length===0;
+}
+function recordEditorChange(){
+ const snapshot=captureEditorState();
+ if(editorUndoStack.at(-1)!==snapshot)editorUndoStack.push(snapshot);
+ if(editorUndoStack.length>50)editorUndoStack.shift();
+ editorRedoStack=[];
+ updateEditorHistory();
+}
+function restoreEditorState(snapshot){
+ const state=JSON.parse(snapshot);
+ sections.forEach((section,index)=>{
+   section.events=(state.events[index]||[]).map(event=>({...event}));
+ });
+ deletedSongEvents.clear();
+ (state.deleted||[]).forEach(key=>deletedSongEvents.add(key));
+ selectedSyncEvent=null;
+ addingSyncChord=null;
+ stepIndex=Math.min(stepIndex,currentSection().events.length-1);
+ saveSongSync();
+ buildSteps();
+ render();
+ renderFullSong();
+ updateSyncEditor();
+}
+function moveEditorHistory(source,target){
+ if(!source.length)return;
+ target.push(captureEditorState());
+ restoreEditorState(source.pop());
+ updateEditorHistory();
 }
 function songSyncExportPayload(){
  return {
@@ -1122,19 +1192,21 @@ function updateSyncEditor(){
  document.body.classList.toggle("song-editing",songEditMode);
  document.body.classList.toggle("sync-adding",Boolean(songEditMode&&addingSyncChord));
  fullViewEyebrow.textContent=songEditMode?"Edición":"Lectura";
- fullViewTitle.textContent=songEditMode?"Editar sincronización":"Letra y acordes";
+ fullViewTitle.textContent=songEditMode?"Editar acordes":"Letra y acordes";
  fullViewHelp.textContent=songEditMode
-   ?"Selecciona un acorde y colócalo sobre la palabra exacta donde debe entrar."
+   ?"Selecciona un acorde y toca la palabra exacta donde debe entrar."
    :"Toca cualquier acorde para abrirlo en el piano y escucharlo.";
  updateSyncEditorCollapse();
+ if(songEditMode)editorSectionSelect.value=String(sectionIndex);
+ updateEditorHistory();
  songEditToggle.setAttribute("aria-expanded",String(songEditMode));
- songEditToggle.textContent=songEditMode?"✓ Terminar edición":"✎ Editar sincronización";
+ songEditToggle.textContent=songEditMode?"✓ Terminar":"✎ Editar sincronización";
  syncAddChord.disabled=!songEditMode;
  syncAdd.disabled=!songEditMode;
- syncAdd.textContent=addingSyncChord?"Cancelar agregado":"＋ Agregar acorde";
+ syncAdd.textContent=addingSyncChord?"Cancelar":"＋ Añadir";
  const selected=selectedSyncData();
  if(songEditMode&&addingSyncChord){
-   syncInstruction.textContent=`Agregar ${chordText(addingSyncChord)}: toca la palabra o “Fin de línea” donde debe comenzar.`;
+   syncInstruction.textContent=`Añadir ${chordText(addingSyncChord)}: toca la palabra o “Fin de línea” donde debe comenzar.`;
    syncChord.disabled=true;
    syncInversion.disabled=true;
    syncBeats.disabled=true;
@@ -1142,7 +1214,7 @@ function updateSyncEditor(){
    return;
  }
  if(!songEditMode||!selected){
-   syncInstruction.textContent="Selecciona un acorde para moverlo o usa “Agregar acorde” para crear uno nuevo.";
+   syncInstruction.textContent="Selecciona un acorde para moverlo o usa “Añadir” para crear uno nuevo.";
    syncChord.disabled=true;
    syncInversion.disabled=true;
    syncBeats.disabled=true;
@@ -1167,6 +1239,8 @@ function selectSyncEvent(section,step){
 function placeSyncEvent(section,line,wordIndex){
  const selected=selectedSyncData(),targetSection=sections[section];
  if(!selected||!targetSection||selectedSyncEvent.section!==section||!targetSection.lines[line])return;
+ if(selected.event.line===line&&selected.event.anchor===wordIndex)return;
+ recordEditorChange();
  selected.event.line=line;
  selected.event.lyric=targetSection.lines[line];
  selected.event.anchor=wordIndex;
@@ -1176,6 +1250,7 @@ function placeSyncEvent(section,line,wordIndex){
 function addSyncEvent(section,line,wordIndex){
  const targetSection=sections[section];
  if(!addingSyncChord||!targetSection||!targetSection.lines[line]||!voicings[addingSyncChord])return;
+ recordEditorChange();
  const event={
    uid:`custom:${Date.now().toString(36)}:${Math.random().toString(36).slice(2,8)}`,
    chord:addingSyncChord,line,lyric:targetSection.lines[line],anchor:wordIndex,beats:4,
@@ -1497,7 +1572,12 @@ function focusCurrentSongEvent(force=false){
 function setMainView(view,scroll=true){
  const showLyrics=view!=="piano";
  const showEditor=view==="edit";
+ const wasEditing=songEditMode;
  songEditMode=showEditor;
+ if(showEditor&&!wasEditing){
+   editorUndoStack=[];
+   editorRedoStack=[];
+ }
  if(!showEditor){selectedSyncEvent=null;addingSyncChord=null}
  updateSyncEditor();
  document.body.classList.toggle("show-full",showLyrics);
@@ -1523,12 +1603,18 @@ function buildSteps(){
  steps.innerHTML="";const s=currentSection();
  s.events.forEach((event,i)=>{const b=document.createElement("button");b.className="step";if(isLoopPosition(sectionIndex,i))b.classList.add("loop-step");b.innerHTML=`${i+1}<small>${chordText(event.chord)}</small>`;b.onclick=()=>{stopAuto();stepIndex=i;render();playCurrent()};steps.appendChild(b)});
 }
-function loadSection(i){sectionIndex=+i;stepIndex=0;stopAuto();buildSteps();render();updateFullSongPosition()}
+function loadSection(i){
+ sectionIndex=+i;stepIndex=0;
+ sectionSelect.value=String(sectionIndex);
+ editorSectionSelect.value=String(sectionIndex);
+ stopAuto();buildSteps();render();updateFullSongPosition();
+}
 function initSections(){
  sections.forEach((s,i)=>{
    const o=document.createElement("option");
    o.value=i;o.textContent=s.name;
    sectionSelect.appendChild(o);
+   editorSectionSelect.appendChild(o.cloneNode(true));
 
    const label=document.createElement("label");
    label.className="check-row";
@@ -1804,6 +1890,7 @@ selectAllSections.onclick=()=>{
 };
 
 sectionSelect.onchange=e=>loadSection(e.target.value);
+editorSectionSelect.onchange=e=>loadSection(e.target.value);
 
 goSectionStart.onclick=()=>{
  stopAuto();
@@ -1816,6 +1903,8 @@ goSectionStart.onclick=()=>{
 songEditToggle.onclick=()=>{
  setMainView(songEditMode?"lyrics":"edit");
 };
+editorUndo.onclick=()=>moveEditorHistory(editorUndoStack,editorRedoStack);
+editorRedo.onclick=()=>moveEditorHistory(editorRedoStack,editorUndoStack);
 syncEditorCollapse.onclick=()=>{
  syncEditorCollapsed=!syncEditorCollapsed;
  savePreference("mis36-editor-collapsed",String(syncEditorCollapsed));
@@ -1839,14 +1928,16 @@ syncAddChord.onchange=()=>{
 };
 syncBeats.onchange=()=>{
  const selected=selectedSyncData();
- if(!selected)return;
+ if(!selected||selected.event.beats===+syncBeats.value)return;
+ recordEditorChange();
  selected.event.beats=+syncBeats.value;
  saveSongSync();
  updateSyncEditor();
 };
 syncChord.onchange=()=>{
  const selected=selectedSyncData();
- if(!selected||!voicings[syncChord.value])return;
+ if(!selected||!voicings[syncChord.value]||selected.event.chord===syncChord.value)return;
+ recordEditorChange();
  selected.event.chord=syncChord.value;
  selected.event.inversion=defaultInversions[selected.event.chord];
  saveSongSync();
@@ -1857,7 +1948,8 @@ syncChord.onchange=()=>{
 };
 syncInversion.onchange=()=>{
  const selected=selectedSyncData();
- if(!selected||!voicingVariants[selected.event.chord]?.[syncInversion.value])return;
+ if(!selected||!voicingVariants[selected.event.chord]?.[syncInversion.value]||selected.event.inversion===syncInversion.value)return;
+ recordEditorChange();
  selected.event.inversion=syncInversion.value;
  saveSongSync();
  render();
@@ -1873,6 +1965,7 @@ syncDelete.onclick=()=>{
  }
  const chordName=chordText(selected.event.chord);
  if(!confirm(`¿Eliminar el acorde ${chordName} de esta parte de la canción?`))return;
+ recordEditorChange();
  const deletedSection=selectedSyncEvent.section;
  const deletedStep=selectedSyncEvent.step;
  if(!selected.event.uid.startsWith("custom:")){
