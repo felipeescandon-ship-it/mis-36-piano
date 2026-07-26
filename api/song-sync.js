@@ -1,4 +1,4 @@
-import { get, put } from "@vercel/blob";
+import { get, list, put } from "@vercel/blob";
 
 const CURRENT_PATH = "mis36/current.json";
 const HISTORY_PREFIX = "mis36/history/";
@@ -28,7 +28,11 @@ function sameOrigin(request) {
 }
 
 async function readCurrent() {
-  const result = await get(CURRENT_PATH, { access: "private" });
+  const history = await list({ prefix: HISTORY_PREFIX, limit: 1000 });
+  const latest = history.blobs.reduce((selected, blob) => (
+    !selected || blob.pathname > selected.pathname ? blob : selected
+  ), null);
+  const result = await get(latest?.pathname || CURRENT_PATH, { access: "private" });
   if (!result || result.statusCode !== 200 || !result.stream) return null;
   const document = await new Response(result.stream).json();
   return { document };
@@ -127,15 +131,6 @@ export async function PUT(request) {
       addRandomSuffix: false,
       cacheControlMaxAge: 60,
     });
-
-    const options = {
-      access: "private",
-      contentType: "application/json",
-      addRandomSuffix: false,
-      allowOverwrite: true,
-      cacheControlMaxAge: 60,
-    };
-    await put(CURRENT_PATH, body, options);
 
     return json(document);
   } catch (error) {
