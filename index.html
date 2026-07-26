@@ -297,7 +297,7 @@ button.song-line-end{padding:3px 8px}
 
     <div class="settings-actions">
       <button id="notation" class="secondary" type="button">Notas: Español</button>
-      <button id="exportSongSync" class="secondary" type="button">↗ Compartir ajustes</button>
+      <button id="exportSongSync" class="secondary" type="button">↓ Exportar ajustes</button>
       <button id="importSongSync" class="secondary" type="button">↧ Importar ajustes</button>
       <input id="importSongSyncFile" type="file" accept=".json,application/json" hidden>
       <span id="songDataStatus" class="data-status" aria-live="polite"></span>
@@ -793,25 +793,30 @@ function validatedImportedSongSync(payload){
  });
  return data;
 }
-async function shareSongSync(){
+async function exportSongSyncFile(){
  saveSongSync();
  const payload=songSyncExportPayload();
  const json=JSON.stringify(payload,null,2);
- const file=new File([json],"mis-36-ajustes.json",{type:"application/json"});
+ const filename="mis-36-ajustes.json";
  songDataStatus.textContent="Preparando archivo…";
  try{
-   if(navigator.share&&navigator.canShare?.({files:[file]})){
-     await navigator.share({title:"Ajustes de Mis 36",text:"Sincronización, acordes e inversiones de la app Mis 36.",files:[file]});
-     songDataStatus.textContent="Ajustes compartidos.";
-     return;
-   }
-   const url=URL.createObjectURL(file),link=document.createElement("a");
-   link.href=url;link.download=file.name;document.body.appendChild(link);link.click();link.remove();
-   setTimeout(()=>URL.revokeObjectURL(url),1000);
-   songDataStatus.textContent="Archivo descargado.";
+   const blob=new Blob([json],{type:"application/json;charset=utf-8"});
+   const url=URL.createObjectURL(blob),link=document.createElement("a");
+   link.href=url;link.download=filename;link.style.display="none";
+   document.body.appendChild(link);link.click();
+   requestAnimationFrame(()=>link.remove());
+   setTimeout(()=>URL.revokeObjectURL(url),30000);
+   songDataStatus.textContent=`Descargado: ${filename}`;
  }catch(error){
-   if(error?.name==="AbortError"){songDataStatus.textContent="No se compartió el archivo.";return}
-   songDataStatus.textContent="No fue posible compartir los ajustes.";
+   try{
+     const file=new File([json],filename,{type:"application/json"});
+     if(!navigator.share||!navigator.canShare?.({files:[file]}))throw error;
+     await navigator.share({title:"Ajustes de Mis 36",files:[file]});
+     songDataStatus.textContent="Ajustes compartidos.";
+   }catch(shareError){
+     if(shareError?.name==="AbortError"){songDataStatus.textContent="Exportación cancelada.";return}
+     songDataStatus.textContent="No fue posible exportar los ajustes.";
+   }
  }
 }
 async function importSongSyncFromFile(file){
@@ -1541,7 +1546,7 @@ syncDelete.onclick=()=>{
  renderFullSong();
 };
 notation.onclick=()=>{notationMode=notationMode==="es"?"en":"es";notation.textContent=notationMode==="es"?"Notas: Español":"Notes: English";renderSyncChordOptions();buildSteps();render();renderFullSong()};
-exportSongSync.onclick=shareSongSync;
+exportSongSync.onclick=exportSongSyncFile;
 importSongSync.onclick=()=>importSongSyncFile.click();
 importSongSyncFile.onchange=async()=>{
  const file=importSongSyncFile.files?.[0];
