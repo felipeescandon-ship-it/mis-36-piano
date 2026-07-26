@@ -65,7 +65,7 @@ select{background:#f3f6fa;color:#173354;border:1px solid var(--line)}
 background:var(--blue);color:#fff;font-weight:900}
 .next .badge{background:var(--amber)}
 .keyboard-wrap{overflow-x:auto;padding:7px 0}
-.keyboard{--w:clamp(34px,4.1vw,50px);position:relative;display:flex;height:181px;min-width:calc(var(--w)*22);user-select:none}
+.keyboard{--w:clamp(34px,4.1vw,50px);position:relative;display:flex;height:181px;min-width:calc(var(--w)*23);user-select:none}
 .white{width:var(--w);height:172px;background:#fff;border:1px solid #222;border-left:0;position:relative;flex:0 0 var(--w)}
 .white:first-child{border-left:1px solid #222}
 .black{position:absolute;top:0;width:calc(var(--w)*.62);height:104px;background:#111;border-radius:0 0 4px 4px;
@@ -85,6 +85,9 @@ display:grid;place-items:center;color:#fff;font-weight:900;z-index:7;border:2px 
 #nextKeyboardWrap[hidden]{display:none}
 .white.upcoming::after{content:"";position:absolute;inset:0;background:rgba(157,168,183,.28);box-shadow:inset 0 -12px 20px rgba(82,94,110,.08);z-index:5;pointer-events:none}
 .black.upcoming{background:#b9c1cc;box-shadow:inset 0 0 0 2px rgba(255,255,255,.72)}
+.white.held-note::before{content:"";position:absolute;inset:4px;border:3px solid #63cce8;border-radius:5px;
+box-shadow:inset 0 0 0 2px rgba(255,255,255,.72),0 0 0 2px rgba(99,204,232,.16);z-index:5;pointer-events:none}
+.black.held-note{box-shadow:inset 0 0 0 3px #7ddaf0,0 0 0 2px rgba(99,204,232,.28)}
 .gray{background:#8b96a6}
 .seq{margin-top:16px}
 .section-title{display:flex;justify-content:space-between;gap:12px;align-items:center;margin-bottom:10px}
@@ -122,6 +125,7 @@ display:grid;place-items:center;color:#fff;font-weight:900;z-index:7;border:2px 
 .legend-block:last-child{border-right:0}
 .key{display:flex;gap:8px;align-items:center;margin:7px 0}
 .swatch{width:17px;height:17px;border-radius:4px}.green{background:var(--green)}.blue{background:var(--blue)}.amber{background:var(--amber)}
+.held-swatch{background:var(--blue);border:3px solid #7ddaf0}
 .digits{display:flex;gap:14px;flex-wrap:wrap;justify-content:center}
 .digit{text-align:center;font-size:12px}.circle{width:31px;height:31px;border-radius:50%;display:grid;place-items:center;
 background:var(--blue);color:#fff;font-weight:900;margin:auto auto 4px}
@@ -372,7 +376,8 @@ button.song-line-end{padding:3px 8px}
 <div class="legend-block">
 <div class="key"><span class="swatch green"></span>Mano izquierda: bajo, dedo 5</div>
 <div class="key"><span class="swatch blue"></span>Mano derecha: acorde sonando</div>
-<div class="key"><span class="swatch gray"></span>Sombra gris: acorde que viene</div>
+<div class="key"><span class="swatch gray"></span>Sombra gris: próxima posición; todavía no se toca</div>
+<div class="key"><span class="swatch held-swatch"></span>Contorno celeste: mantén ese dedo</div>
 </div>
 <div class="legend-block">
 <div class="key"><span class="circle" style="background:var(--green)">5</span>Meñique de la mano izquierda</div>
@@ -793,9 +798,10 @@ function addSyncEvent(section,line,wordIndex){
 
 const whiteNames=["C","D","E","F","G","A","B"],whites=["B1"];
 for(let o=2;o<=4;o++)for(const n of whiteNames)whites.push(n+o);
+whites.push("C5");
 const blackAfter={C:"C#",D:"D#",F:"F#",G:"G#",A:"A#"};
 const blacks=[];
-whites.forEach((w,i)=>{const n=w.slice(0,-1),o=w.slice(-1);if(blackAfter[n])blacks.push({note:blackAfter[n]+o,position:i+1})});
+whites.forEach((w,i)=>{const n=w.slice(0,-1),o=w.slice(-1);if(i<whites.length-1&&blackAfter[n])blacks.push({note:blackAfter[n]+o,position:i+1})});
 
 function baseNote(note){return note.match(/^([A-G]#?)/)[1]}
 function noteText(note,chord=null){const physical=baseNote(note),spell=chord&&voicings[chord]?.spell,n=spell?.[note]||spell?.[physical]||physical;return notationMode==="es"?NOTE_ES[n]:n}
@@ -853,12 +859,17 @@ function keyboard(el,chord,preview,nextChord=null,inversion=null,nextInversion=n
 }
 function renderUpcoming(el,currentChord,nextChord,currentInversion,nextInversion){
  const current=resolveVoicing(currentChord,currentInversion),upcoming=resolveVoicing(nextChord,nextInversion);
- const currentNotes=new Set([current.l,...current.r.map(x=>x[0])]);
- const upcomingNotes=[upcoming.l,...upcoming.r.map(x=>x[0])];
- upcomingNotes.forEach(note=>{
-   if(currentNotes.has(note))return;
-   const key=[...el.children].find(child=>child.dataset.note===note);
-   if(key)key.classList.add("upcoming");
+ const keyFor=note=>[...el.children].find(child=>child.dataset.note===note);
+ if(upcoming.l!==current.l)keyFor(upcoming.l)?.classList.add("upcoming");
+ const currentRight=new Map(current.r.map(([note,finger])=>[note,String(finger)]));
+ upcoming.r.forEach(([note,finger])=>{
+   const key=keyFor(note);
+   if(!key)return;
+   if(currentRight.has(note)){
+     if(currentRight.get(note)===String(finger))key.classList.add("held-note");
+     return;
+   }
+   key.classList.add("upcoming");
  });
 }
 function marker(k,note,finger,type,isBlack,chord){
