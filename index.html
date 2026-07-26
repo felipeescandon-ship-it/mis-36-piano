@@ -317,8 +317,9 @@ button.song-line-end{padding:3px 8px}
 
 <div class="view-switch-bar">
   <div class="view-switch" role="group" aria-label="Cambiar vista">
-    <button id="pianoViewButton" type="button" aria-pressed="true">🎹 Piano</button>
+    <button id="pianoViewButton" type="button" aria-pressed="true">🎹 Tocar</button>
     <button id="lyricsViewButton" type="button" aria-pressed="false">♪ Letra</button>
+    <button id="editViewButton" type="button" aria-pressed="false">✎ Editar</button>
   </div>
 </div>
 
@@ -474,6 +475,7 @@ const cloudUseRemote=document.getElementById("cloudUseRemote");
 const cloudStatus=document.getElementById("cloudStatus");
 const pianoViewButton=document.getElementById("pianoViewButton");
 const lyricsViewButton=document.getElementById("lyricsViewButton");
+const editViewButton=document.getElementById("editViewButton");
 const lyricsPlaybackDock=document.getElementById("lyricsPlaybackDock");
 const resumeLyricsFollow=document.getElementById("resumeLyricsFollow");
 const floatingStop=document.getElementById("floatingStop");
@@ -1400,10 +1402,14 @@ function focusCurrentSongEvent(force=false){
  if(target)requestAnimationFrame(()=>target.scrollIntoView({behavior:"smooth",block:"center",inline:"nearest"}));
 }
 function setMainView(view,scroll=true){
- const showLyrics=view==="lyrics";
+ const showLyrics=view!=="piano";
+ const showEditor=view==="edit";
+ songEditMode=showEditor;
+ if(!showEditor){selectedSyncEvent=null;addingSyncChord=null}
  document.body.classList.toggle("show-full",showLyrics);
  pianoViewButton.setAttribute("aria-pressed",String(!showLyrics));
- lyricsViewButton.setAttribute("aria-pressed",String(showLyrics));
+ lyricsViewButton.setAttribute("aria-pressed",String(view==="lyrics"));
+ editViewButton.setAttribute("aria-pressed",String(showEditor));
  if(showLyrics){
    setSettingsOpen(false);
    if(isAutoPlaying)lyricsFollowPlayback=true;
@@ -1714,10 +1720,7 @@ goSectionStart.onclick=()=>{
  updateFullSongPosition();
 };
 songEditToggle.onclick=()=>{
- songEditMode=!songEditMode;
- if(!songEditMode){selectedSyncEvent=null;addingSyncChord=null}
- else setSettingsOpen(false);
- renderFullSong();
+ setMainView(songEditMode?"lyrics":"edit");
 };
 syncEditorCollapse.onclick=()=>{
  syncEditorCollapsed=!syncEditorCollapsed;
@@ -1818,6 +1821,7 @@ importSongSyncFile.onchange=async()=>{
 };
 pianoViewButton.onclick=()=>setMainView("piano");
 lyricsViewButton.onclick=()=>setMainView("lyrics");
+editViewButton.onclick=()=>setMainView("edit");
 bpm.oninput=e=>{bpmOut.textContent=e.target.value;updateSettingsSummary()};
 keyboardMode.value=keyboardViewMode;
 sustainMode.value=sustainViewMode;
