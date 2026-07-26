@@ -31,6 +31,13 @@ border-radius:17px;padding:12px;margin:16px 0;box-shadow:var(--shadow)}
 .view-switch{display:inline-flex;gap:3px;padding:4px;border:1px solid #b8c8dc;border-radius:13px;background:rgba(238,243,249,.96);box-shadow:0 8px 22px rgba(18,40,75,.14);backdrop-filter:blur(10px);pointer-events:auto}
 .view-switch button{min-width:112px;padding:8px 13px;background:transparent;color:#526178;border-radius:9px}
 .view-switch button[aria-pressed="true"]{background:var(--blue);color:#fff;box-shadow:0 4px 12px rgba(21,95,192,.24)}
+.lyrics-playback-dock{position:fixed;right:max(18px,env(safe-area-inset-right));bottom:max(18px,env(safe-area-inset-bottom));
+z-index:90;display:flex;gap:8px;padding:7px;border:1px solid rgba(15,43,78,.16);border-radius:15px;
+background:rgba(255,255,255,.96);box-shadow:0 12px 34px rgba(7,26,51,.24);backdrop-filter:blur(10px)}
+.lyrics-playback-dock[hidden]{display:none}
+.lyrics-playback-dock button{min-height:48px;padding:10px 16px}
+.lyrics-stop{background:#a92d2d;color:#fff}
+.lyrics-follow{background:#e6f0fc;color:#143f76}
 .settings-panel{border-top:1px solid var(--line);padding-top:12px}
 .settings-panel[hidden]{display:none}
 .settings-grid{display:grid;grid-template-columns:repeat(3,minmax(160px,1fr));gap:10px}
@@ -146,6 +153,7 @@ background:var(--blue);color:#fff;font-weight:900;margin:auto auto 4px}
 
 .full-view{display:none;margin-bottom:16px}
 .show-full .full-view{display:block}
+.show-full.auto-playing .full-view{padding-bottom:82px}
 .show-full .stack,.show-full .seq,.show-full .legend{display:none}
 .song-sheet{max-width:860px;margin:0 auto;padding:6px 0 18px}
 .song-part{padding:18px 0;border-bottom:1px solid var(--line)}
@@ -203,6 +211,8 @@ button.song-line-end{padding:3px 8px}
  .view-switch-bar{top:6px}
  .view-switch{width:100%}
  .view-switch button{flex:1;min-width:0}
+ .lyrics-playback-dock{left:12px;right:12px;bottom:max(12px,env(safe-area-inset-bottom));justify-content:stretch}
+ .lyrics-playback-dock button{flex:1}
  .chord-title-row{gap:10px}
  .chord-notes{font-size:18px;padding-left:10px}
  .now-heading{grid-template-columns:1fr;gap:5px}
@@ -295,6 +305,11 @@ button.song-line-end{padding:3px 8px}
     <button id="pianoViewButton" type="button" aria-pressed="true">🎹 Piano</button>
     <button id="lyricsViewButton" type="button" aria-pressed="false">♪ Letra</button>
   </div>
+</div>
+
+<div id="lyricsPlaybackDock" class="lyrics-playback-dock" role="group" aria-label="Controles de reproducción en la letra" hidden>
+  <button id="resumeLyricsFollow" class="lyrics-follow" type="button" hidden>⌖ Seguir letra</button>
+  <button id="floatingStop" class="lyrics-stop" type="button">■ Detener</button>
 </div>
 
 <div id="customPanel" class="card" style="display:none;margin-bottom:16px">
@@ -435,6 +450,9 @@ const goSectionStart=document.getElementById("goSectionStart");
 const notation=document.getElementById("notation");
 const pianoViewButton=document.getElementById("pianoViewButton");
 const lyricsViewButton=document.getElementById("lyricsViewButton");
+const lyricsPlaybackDock=document.getElementById("lyricsPlaybackDock");
+const resumeLyricsFollow=document.getElementById("resumeLyricsFollow");
+const floatingStop=document.getElementById("floatingStop");
 const fullView=document.getElementById("fullView");
 const songSheet=document.getElementById("songSheet");
 const songEditToggle=document.getElementById("songEditToggle");
@@ -901,7 +919,7 @@ function marker(k,note,finger,type,isBlack,chord){
  const l=document.createElement("div");l.className="label"+(isBlack?" black-label":"")+(type==="preview"?" preview-label":"");l.textContent=noteText(note,chord);l.title=noteText(note,chord)+keyHint(note,chord);k.appendChild(l);
  const f=document.createElement("div");f.className="finger "+(type==="left"?"left-f":type==="preview"?"preview-f":"right-f")+(isBlack?" black-f":"");f.textContent=finger;k.appendChild(f);
 }
-let sectionIndex=0,stepIndex=0,timer=null,audioCtx=null,isAutoPlaying=false;
+let sectionIndex=0,stepIndex=0,timer=null,audioCtx=null,isAutoPlaying=false,lyricsFollowPlayback=true;
 let playQueue=[],queueIndex=0;
 let pianoSamples=[],pianoLoading=null,pianoReady=false,reverbNode=null,activeAudioGroup=null;
 const PIANO_BASE="https://tonejs.github.io/audio/salamander/";
@@ -991,6 +1009,7 @@ function render(){
 }
 function updatePlaybackHighlight(){
  document.body.classList.toggle("auto-playing",isAutoPlaying);
+ updateLyricsPlaybackDock();
  [...steps.children].forEach((el,i)=>{
    const isPlaying=isAutoPlaying&&i===stepIndex;
    el.classList.toggle("playing-step",isPlaying);
@@ -1078,7 +1097,19 @@ function renderFullSong(){
  });
  updateSyncEditor();
 }
-function focusCurrentSongEvent(){
+function updateLyricsPlaybackDock(){
+ const showDock=isAutoPlaying&&document.body.classList.contains("show-full");
+ lyricsPlaybackDock.hidden=!showDock;
+ resumeLyricsFollow.hidden=lyricsFollowPlayback;
+}
+function pauseLyricsFollowFromUser(){
+ if(isAutoPlaying&&document.body.classList.contains("show-full")&&lyricsFollowPlayback){
+   lyricsFollowPlayback=false;
+   updateLyricsPlaybackDock();
+ }
+}
+function focusCurrentSongEvent(force=false){
+ if(isAutoPlaying&&!lyricsFollowPlayback&&!force)return;
  const currentSongChord=songSheet.querySelector(`.song-chord[data-section="${sectionIndex}"][data-step="${stepIndex}"]`);
  const currentSongPart=songSheet.querySelector(`.song-part[data-section="${sectionIndex}"]`);
  const target=currentSongChord||currentSongPart;
@@ -1091,11 +1122,13 @@ function setMainView(view,scroll=true){
  lyricsViewButton.setAttribute("aria-pressed",String(showLyrics));
  if(showLyrics){
    setSettingsOpen(false);
+   if(isAutoPlaying)lyricsFollowPlayback=true;
    renderFullSong();
    focusCurrentSongEvent();
  }else if(scroll){
    window.scrollTo({top:0,behavior:"smooth"});
  }
+ updateLyricsPlaybackDock();
 }
 function updateFullSongPosition(){
  if(!document.body.classList.contains("show-full"))return;
@@ -1309,6 +1342,7 @@ async function startAuto(){
  stopAuto();
  const audioRunning=await resumeAudio();
  if(!audioRunning)return;
+ lyricsFollowPlayback=true;
  loadPiano();
  playQueue=buildPlayQueue();
  if(!playQueue.length){auto.textContent="Selecciona una sección";setTimeout(()=>auto.textContent="▶ Reproducir",1400);return}
@@ -1326,8 +1360,16 @@ prev.onclick=()=>{const p=previousPosition(sectionIndex,stepIndex);sectionIndex=
 next.onclick=()=>{const p=nextPosition(sectionIndex,stepIndex);sectionIndex=p.section;stepIndex=p.step;sectionSelect.value=sectionIndex;buildSteps();render();updateFullSongPosition();playCurrent()};
 sound.onclick=playCurrent;
 auto.onclick=()=>isAutoPlaying?stopAuto():startAuto();
+floatingStop.onclick=stopAuto;
+resumeLyricsFollow.onclick=()=>{
+ lyricsFollowPlayback=true;
+ updateLyricsPlaybackDock();
+ focusCurrentSongEvent(true);
+};
 settingsToggle.onclick=()=>setSettingsOpen(settingsPanel.hidden);
 document.addEventListener(window.PointerEvent?"pointerdown":"touchstart",unlockAudioFromGesture,{capture:true,passive:true});
+window.addEventListener("touchmove",pauseLyricsFollowFromUser,{passive:true});
+window.addEventListener("wheel",pauseLyricsFollowFromUser,{passive:true});
 document.addEventListener("visibilitychange",()=>{
  if(!document.hidden&&audioCtx&&audioCtx.state!=="running")setAudioStatus("Toca un control para reactivar el audio");
 });
