@@ -882,13 +882,19 @@ function scheduleCloudSave(){
  setCloudStatus("Nube: cambios pendientes…","warning");
  cloudSaveTimer=setTimeout(()=>saveCloudSongSync(false),2500);
 }
+async function cloudFetch(resource,options={}){
+ const controller=new AbortController();
+ const timeout=setTimeout(()=>controller.abort(),12000);
+ try{return await fetch(resource,{...options,signal:controller.signal})}
+ finally{clearTimeout(timeout)}
+}
 async function saveCloudSongSync(force=false){
  if(cloudRequestRunning)return false;
  cloudRequestRunning=true;
  cloudSyncNow.disabled=true;
  setCloudStatus("Nube: guardando…","warning");
  try{
-   const response=await fetch("/api/song-sync",{
+   const response=await cloudFetch("/api/song-sync",{
      method:"PUT",
      headers:{"Content-Type":"application/json"},
      body:JSON.stringify({songSync:songSyncSnapshot(),baseRevision:cloudRevision||null,force})
@@ -933,7 +939,7 @@ async function loadCloudSongSync(forceRefresh=false){
  cloudSyncNow.disabled=true;
  setCloudStatus("Nube: comprobando…");
  try{
-   const response=await fetch("/api/song-sync",{cache:"no-store",headers:{"Accept":"application/json"}});
+   const response=await cloudFetch("/api/song-sync",{cache:"no-store",headers:{"Accept":"application/json"}});
    const result=await response.json().catch(()=>({}));
    if(response.status===503){
      setCloudStatus("Nube pendiente de activar · copia local segura","warning");

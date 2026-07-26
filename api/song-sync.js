@@ -63,23 +63,30 @@ function validateSongSync(data) {
   return data;
 }
 
-export default async function handler(request) {
-  if (!process.env.BLOB_READ_WRITE_TOKEN && !process.env.BLOB_STORE_ID) {
+function cloudIsConfigured() {
+  return Boolean(process.env.BLOB_READ_WRITE_TOKEN || process.env.BLOB_STORE_ID);
+}
+
+export async function GET() {
+  if (!cloudIsConfigured()) {
     return json({ error: "cloud_not_configured" }, 503);
   }
 
-  if (request.method === "GET") {
-    try {
-      const current = await readCurrent();
-      if (!current) return json({ empty: true }, 404);
-      return json(current.document);
-    } catch (error) {
-      console.error("Cloud read failed", error);
-      return json({ error: "cloud_read_failed" }, 500);
-    }
+  try {
+    const current = await readCurrent();
+    if (!current) return json({ empty: true }, 404);
+    return json(current.document);
+  } catch (error) {
+    console.error("Cloud read failed", error);
+    return json({ error: "cloud_read_failed" }, 500);
+  }
+}
+
+export async function PUT(request) {
+  if (!cloudIsConfigured()) {
+    return json({ error: "cloud_not_configured" }, 503);
   }
 
-  if (request.method !== "PUT") return json({ error: "method_not_allowed" }, 405);
   if (!sameOrigin(request)) return json({ error: "cross_origin_write_blocked" }, 403);
 
   const contentLength = Number(request.headers.get("content-length") || 0);
