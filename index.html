@@ -109,7 +109,6 @@ display:grid;place-items:center;color:#fff;font-weight:900;z-index:7;border:2px 
 .white.held-note::before{content:"";position:absolute;inset:4px;border:3px solid #63cce8;border-radius:5px;
 box-shadow:inset 0 0 0 2px rgba(255,255,255,.72),0 0 0 2px rgba(99,204,232,.16);z-index:5;pointer-events:none}
 .black.held-note{box-shadow:inset 0 0 0 3px #7ddaf0,0 0 0 2px rgba(99,204,232,.28)}
-.gray{background:#8b96a6}
 .seq{margin-top:16px}
 .section-title{display:flex;justify-content:space-between;gap:12px;align-items:center;margin-bottom:10px}
 .steps{display:flex;gap:8px;overflow-x:auto;padding:2px 2px 10px}
@@ -206,7 +205,7 @@ button.song-line-end{padding:3px 8px}
  .show-full.song-editing.sync-editor-collapsed{padding-bottom:110px}
 }
 @media(max-width:600px){
- .song-sheet{padding-inline:2px}.song-lyric{font-size:17px}.song-part{padding:15px 0}
+ .song-sheet{padding-inline:2px}.song-part{padding:15px 0}
  .song-word{font-size:17px}
  .transport{grid-column:1/-1}.transport button{flex:1 1 auto}
  #settingsToggle{grid-column:1/-1}
@@ -472,7 +471,6 @@ const lyricsViewButton=document.getElementById("lyricsViewButton");
 const lyricsPlaybackDock=document.getElementById("lyricsPlaybackDock");
 const resumeLyricsFollow=document.getElementById("resumeLyricsFollow");
 const floatingStop=document.getElementById("floatingStop");
-const fullView=document.getElementById("fullView");
 const songSheet=document.getElementById("songSheet");
 const songEditToggle=document.getElementById("songEditToggle");
 const syncEditor=document.getElementById("syncEditor");
@@ -703,6 +701,7 @@ const CLOUD_DIRTY_KEY="mis36-cloud-dirty";
 const hadLocalSongSync=Boolean(readPreference(SONG_SYNC_KEY,""));
 let cloudRevision=readPreference(CLOUD_REVISION_KEY,"");
 let cloudSaveTimer=null,cloudRequestRunning=false,cloudRemoteDocument=null;
+let cloudChangeGeneration=0,cloudSaveQueued=false;
 const deletedSongEvents=new Set();
 function lyricWords(text){return text.trim().split(/\s+/).filter(Boolean)}
 function syncEventKey(section,event){return `${section}:${event.uid}`}
@@ -800,12 +799,31 @@ function validatedImportedSongSync(payload){
  if(!payload||payload.format!=="mis-36-piano-ajustes"||payload.song!=="Mis 36"||payload.version!==1)throw new Error("El archivo no corresponde a los ajustes de Mis 36.");
  const data=payload.songSync;
  if(!data||data.version!==4||!data.events||typeof data.events!=="object"||Array.isArray(data.events))throw new Error("La versión del archivo no es compatible.");
- if(Object.keys(data.events).length>1500||(data.added?.length||0)>500||(data.deleted?.length||0)>1500)throw new Error("El archivo contiene demasiados cambios.");
- Object.values(data.events).forEach(value=>{
+ if(!Array.isArray(data.added)||!Array.isArray(data.deleted))throw new Error("El archivo contiene listas de cambios no válidas.");
+ if(Object.keys(data.events).length>1500||data.added.length>500||data.deleted.length>1500)throw new Error("El archivo contiene demasiados cambios.");
+ Object.entries(data.events).forEach(([key,value])=>{
+   if(typeof key!=="string"||key.length>100||!/^\d+:(?:\d+:\d+|custom:[\w:-]+)$/.test(key))throw new Error("El archivo contiene un identificador no válido.");
+   const section=+key.split(":",1)[0];
+   if(!sections[section])throw new Error("El archivo contiene una sección no válida.");
    if(!value||!voicings[value.chord])throw new Error("El archivo contiene un acorde no reconocido.");
    if(!voicingVariants[value.chord]?.[value.inversion])throw new Error("El archivo contiene una inversión no reconocida.");
    if(!Number.isInteger(value.line)||!Number.isInteger(value.anchor)||!Number.isInteger(value.position))throw new Error("El archivo contiene una posición no válida.");
+   if(value.line<0||value.line>=sections[section].lines.length||value.anchor<0||value.anchor>200||value.position<0||value.position>1500)throw new Error("El archivo contiene una posición fuera de rango.");
    if(!Number.isFinite(+value.beats)||+value.beats<=0||+value.beats>32)throw new Error("El archivo contiene una duración no válida.");
+ });
+ data.deleted.forEach(key=>{
+   if(typeof key!=="string"||key.length>100||!/^\d+:\d+:\d+$/.test(key)||!sections[+key.split(":",1)[0]])throw new Error("El archivo contiene un evento eliminado no válido.");
+ });
+ const addedIds=new Set();
+ data.added.forEach(value=>{
+   if(!value||!Number.isInteger(value.section)||!sections[value.section])throw new Error("El archivo contiene una sección agregada no válida.");
+   if(typeof value.uid!=="string"||!value.uid.startsWith("custom:")||value.uid.length>100)throw new Error("El archivo contiene un identificador agregado no válido.");
+   const eventKey=`${value.section}:${value.uid}`;
+   if(addedIds.has(eventKey)||!data.events[eventKey])throw new Error("El archivo contiene un evento agregado incoherente.");
+   addedIds.add(eventKey);
+   if(!voicings[value.chord]||!voicingVariants[value.chord]?.[value.inversion])throw new Error("El archivo contiene un acorde agregado no válido.");
+   if(!Number.isInteger(value.line)||value.line<0||value.line>=sections[value.section].lines.length||!Number.isInteger(value.anchor)||value.anchor<0||value.anchor>200)throw new Error("El archivo contiene una posición agregada no válida.");
+   if(!Number.isFinite(+value.beats)||+value.beats<=0||+value.beats>32)throw new Error("El archivo contiene una duración agregada no válida.");
  });
  return data;
 }
@@ -877,6 +895,7 @@ function applyCloudDocument(documentValue){
  setTimeout(()=>location.reload(),350);
 }
 function scheduleCloudSave(){
+ cloudChangeGeneration++;
  localStorage.setItem(CLOUD_DIRTY_KEY,"1");
  if(cloudSaveTimer)clearTimeout(cloudSaveTimer);
  setCloudStatus("Nube: cambios pendientes…","warning");
@@ -889,18 +908,26 @@ async function cloudFetch(resource,options={}){
  finally{clearTimeout(timeout)}
 }
 async function saveCloudSongSync(force=false){
- if(cloudRequestRunning)return false;
+ if(cloudRequestRunning){
+   cloudSaveQueued=true;
+   return false;
+ }
+ const savingGeneration=cloudChangeGeneration;
+ const savingSnapshot=songSyncSnapshot();
+ let savedSuccessfully=false;
  cloudRequestRunning=true;
+ cloudSaveQueued=false;
  cloudSyncNow.disabled=true;
  setCloudStatus("Nube: guardando…","warning");
  try{
    const response=await cloudFetch("/api/song-sync",{
      method:"PUT",
      headers:{"Content-Type":"application/json"},
-     body:JSON.stringify({songSync:songSyncSnapshot(),baseRevision:cloudRevision||null,force})
+     body:JSON.stringify({songSync:savingSnapshot,baseRevision:cloudRevision||null,force})
    });
    const result=await response.json().catch(()=>({}));
    if(response.status===409){
+     cloudSaveQueued=false;
      setCloudStatus("Nube: hay otra versión. Elige cuál conservar.","warning");
      showCloudChoice(true);
      await loadCloudSongSync(true);
@@ -920,9 +947,15 @@ async function saveCloudSongSync(force=false){
    cloudRevision=documentValue.revision;
    cloudRemoteDocument=documentValue;
    localStorage.setItem(CLOUD_REVISION_KEY,cloudRevision);
-   localStorage.removeItem(CLOUD_DIRTY_KEY);
    showCloudChoice(false);
-   setCloudStatus("Nube: sincronizada","ready");
+   savedSuccessfully=true;
+   if(savingGeneration===cloudChangeGeneration&&!cloudSaveQueued){
+     localStorage.removeItem(CLOUD_DIRTY_KEY);
+     setCloudStatus("Nube: sincronizada","ready");
+   }else{
+     localStorage.setItem(CLOUD_DIRTY_KEY,"1");
+     setCloudStatus("Nube: cambios pendientes…","warning");
+   }
    return true;
  }catch(error){
    console.warn("Cloud save unavailable",error);
@@ -931,6 +964,11 @@ async function saveCloudSongSync(force=false){
  }finally{
    cloudRequestRunning=false;
    cloudSyncNow.disabled=false;
+   if(savedSuccessfully&&(savingGeneration!==cloudChangeGeneration||cloudSaveQueued)){
+     cloudSaveQueued=false;
+     if(cloudSaveTimer)clearTimeout(cloudSaveTimer);
+     cloudSaveTimer=setTimeout(()=>saveCloudSongSync(false),250);
+   }
  }
 }
 async function loadCloudSongSync(forceRefresh=false){
@@ -981,6 +1019,11 @@ async function loadCloudSongSync(forceRefresh=false){
  }finally{
    cloudRequestRunning=false;
    cloudSyncNow.disabled=false;
+   if(cloudSaveQueued&&cloudUseLocal.hidden){
+     cloudSaveQueued=false;
+     if(cloudSaveTimer)clearTimeout(cloudSaveTimer);
+     cloudSaveTimer=setTimeout(()=>saveCloudSongSync(false),250);
+   }
  }
 }
 function selectedSyncData(){
@@ -1141,7 +1184,7 @@ function renderUpcoming(el,currentChord,nextChord,currentInversion,nextInversion
  });
 }
 function marker(k,note,finger,type,isBlack,chord){
- const l=document.createElement("div");l.className="label"+(isBlack?" black-label":"")+(type==="preview"?" preview-label":"");l.textContent=noteText(note,chord);l.title=noteText(note,chord)+keyHint(note,chord);k.appendChild(l);
+ const l=document.createElement("div");l.className="label"+(isBlack?" black-label":"");l.textContent=noteText(note,chord);l.title=noteText(note,chord)+keyHint(note,chord);k.appendChild(l);
  const f=document.createElement("div");f.className="finger "+(type==="left"?"left-f":type==="preview"?"preview-f":"right-f")+(isBlack?" black-f":"");f.textContent=finger;k.appendChild(f);
 }
 let sectionIndex=0,stepIndex=0,timer=null,audioCtx=null,isAutoPlaying=false,lyricsFollowPlayback=true;
@@ -1362,7 +1405,7 @@ function updateFullSongPosition(){
 }
 function buildSteps(){
  steps.innerHTML="";const s=currentSection();
- s.events.forEach((event,i)=>{const b=document.createElement("button");b.className="step";b.innerHTML=`${i+1}<small>${chordText(event.chord)}</small>`;b.onclick=()=>{stepIndex=i;render();playCurrent()};steps.appendChild(b)});
+ s.events.forEach((event,i)=>{const b=document.createElement("button");b.className="step";b.innerHTML=`${i+1}<small>${chordText(event.chord)}</small>`;b.onclick=()=>{stopAuto();stepIndex=i;render();playCurrent()};steps.appendChild(b)});
 }
 function loadSection(i){sectionIndex=+i;stepIndex=0;stopAuto();buildSteps();render();updateFullSongPosition()}
 function initSections(){
@@ -1442,7 +1485,7 @@ async function loadPiano(){
    setAudioStatus("Piano real: listo","ready");return true;
  }).catch(error=>{
    console.warn("Piano muestreado no disponible; se usa respaldo.",error);
-   pianoReady=false;setAudioStatus("Sonido básico de respaldo");return false;
+   pianoReady=false;pianoLoading=null;setAudioStatus("Sonido básico de respaldo · toca para reintentar");return false;
  });
  return pianoLoading;
 }
@@ -1581,8 +1624,8 @@ function scheduleNextQueueItem(){
    playQueueItem();scheduleNextQueueItem();
  },60000/+bpm.value*beats);
 }
-prev.onclick=()=>{const p=previousPosition(sectionIndex,stepIndex);sectionIndex=p.section;stepIndex=p.step;sectionSelect.value=sectionIndex;buildSteps();render();updateFullSongPosition();playCurrent()};
-next.onclick=()=>{const p=nextPosition(sectionIndex,stepIndex);sectionIndex=p.section;stepIndex=p.step;sectionSelect.value=sectionIndex;buildSteps();render();updateFullSongPosition();playCurrent()};
+prev.onclick=()=>{stopAuto();const p=previousPosition(sectionIndex,stepIndex);sectionIndex=p.section;stepIndex=p.step;sectionSelect.value=sectionIndex;buildSteps();render();updateFullSongPosition();playCurrent()};
+next.onclick=()=>{stopAuto();const p=nextPosition(sectionIndex,stepIndex);sectionIndex=p.section;stepIndex=p.step;sectionSelect.value=sectionIndex;buildSteps();render();updateFullSongPosition();playCurrent()};
 sound.onclick=playCurrent;
 auto.onclick=()=>isAutoPlaying?stopAuto():startAuto();
 floatingStop.onclick=stopAuto;

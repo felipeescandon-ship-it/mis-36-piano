@@ -4,6 +4,7 @@ const CURRENT_PATH = "mis36/current.json";
 const HISTORY_PREFIX = "mis36/history/";
 const ALLOWED_INVERSIONS = new Set(["root", "first", "second"]);
 const ALLOWED_CHORDS = new Set(["E", "F#", "F#m", "A", "Am", "C#m", "C#", "G#m", "G#", "D", "B", "B/D#"]);
+const SECTION_LINE_COUNTS = [2, 8, 4, 7, 4, 4, 6, 2, 4, 7];
 class ValidationError extends Error {}
 
 function json(value, status = 200) {
@@ -28,10 +29,15 @@ function sameOrigin(request) {
 }
 
 async function readCurrent() {
-  const history = await list({ prefix: HISTORY_PREFIX, limit: 1000 });
-  const latest = history.blobs.reduce((selected, blob) => (
-    !selected || blob.pathname > selected.pathname ? blob : selected
-  ), null);
+  let cursor;
+  let latest = null;
+  do {
+    const history = await list({ prefix: HISTORY_PREFIX, limit: 1000, cursor });
+    latest = history.blobs.reduce((selected, blob) => (
+      !selected || blob.pathname > selected.pathname ? blob : selected
+    ), latest);
+    cursor = history.hasMore ? history.cursor : undefined;
+  } while (cursor);
   const result = await get(latest?.pathname || CURRENT_PATH, { access: "private" });
   if (!result || result.statusCode !== 200 || !result.stream) return null;
   const document = await new Response(result.stream).json();
@@ -48,18 +54,32 @@ function validateSongSync(data) {
   if (!Array.isArray(data.added) || data.added.length > 500) throw new ValidationError("Lista de agregados no válida.");
 
   for (const [key, value] of eventEntries) {
-    if (typeof key !== "string" || key.length > 100 || !value || !ALLOWED_CHORDS.has(value.chord)) throw new ValidationError("Acorde no reconocido.");
+    if (typeof key !== "string" || key.length > 100 || !/^\d+:(?:\d+:\d+|custom:[\w:-]+)$/.test(key)) throw new ValidationError("Identificador de evento no válido.");
+    const section = Number(key.split(":", 1)[0]);
+    if (!Number.isInteger(section) || section < 0 || section >= SECTION_LINE_COUNTS.length) throw new ValidationError("Sección de evento no válida.");
+    if (!value || !ALLOWED_CHORDS.has(value.chord)) throw new ValidationError("Acorde no reconocido.");
     if (!ALLOWED_INVERSIONS.has(value.inversion)) throw new ValidationError("Inversión no reconocida.");
     if (![value.line, value.anchor, value.position].every(Number.isInteger)) throw new ValidationError("Posición no válida.");
-    if (![value.line, value.anchor, value.position].every(number => number >= 0 && number <= 2000)) throw new ValidationError("Posición fuera de rango.");
+    if (value.line < 0 || value.line >= SECTION_LINE_COUNTS[section] || value.anchor < 0 || value.anchor > 200 || value.position < 0 || value.position > 1500) throw new ValidationError("Posición fuera de rango.");
     if (!Number.isFinite(+value.beats) || +value.beats <= 0 || +value.beats > 32) throw new ValidationError("Duración no válida.");
   }
 
+  for (const key of data.deleted) {
+    if (typeof key !== "string" || key.length > 100 || !/^\d+:\d+:\d+$/.test(key)) throw new ValidationError("Evento eliminado no válido.");
+    const section = Number(key.split(":", 1)[0]);
+    if (section < 0 || section >= SECTION_LINE_COUNTS.length) throw new ValidationError("Sección eliminada no válida.");
+  }
+
+  const addedIds = new Set();
   for (const value of data.added) {
-    if (!value || !Number.isInteger(value.section) || value.section < 0 || value.section > 100) throw new ValidationError("Sección agregada no válida.");
+    if (!value || !Number.isInteger(value.section) || value.section < 0 || value.section >= SECTION_LINE_COUNTS.length) throw new ValidationError("Sección agregada no válida.");
     if (typeof value.uid !== "string" || !value.uid.startsWith("custom:") || value.uid.length > 100) throw new ValidationError("Identificador agregado no válido.");
+    const eventKey = `${value.section}:${value.uid}`;
+    if (addedIds.has(eventKey) || !data.events[eventKey]) throw new ValidationError("Evento agregado incoherente.");
+    addedIds.add(eventKey);
     if (!ALLOWED_CHORDS.has(value.chord) || !ALLOWED_INVERSIONS.has(value.inversion)) throw new ValidationError("Acorde agregado no válido.");
     if (!Number.isInteger(value.line) || !Number.isInteger(value.anchor)) throw new ValidationError("Posición agregada no válida.");
+    if (value.line < 0 || value.line >= SECTION_LINE_COUNTS[value.section] || value.anchor < 0 || value.anchor > 200) throw new ValidationError("Posición agregada fuera de rango.");
     if (!Number.isFinite(+value.beats) || +value.beats <= 0 || +value.beats > 32) throw new ValidationError("Duración agregada no válida.");
   }
 
