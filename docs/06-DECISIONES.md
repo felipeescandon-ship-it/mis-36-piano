@@ -167,6 +167,25 @@ Consecuencia: Entrega 1 no introduce escrituras musicales al ajustar velocidad.
 Responsables: Felipe y pianista.
 Fecha: 27 de julio de 2026.
 
+### D-017 · Los acordes de Letra son anotaciones tipográficas
+
+En la vista heredada de Letra, el símbolo principal se muestra azul y con mayor
+peso; el separador y las notas del voicing permanecen en un nivel gris secundario.
+Los acordes inactivos no usan tarjeta, borde ni fondo permanente. El acorde actual
+puede recibir un fondo azul suave y una barra lateral.
+
+La letra se organiza en fragmentos musicales adaptables. El ancho de una anotación
+no vuelve a separar cada palabra en una columna independiente; cuando falta espacio,
+el fragmento completo se reajusta antes de producir superposición. La apariencia
+compacta no reduce el objetivo táctil mínimo de 44 × 44 px.
+
+Consecuencia: `Mi | Mi-Sol#-Si` conserva jerarquía musical, continuidad de lectura
+y accesibilidad sin convertir la hoja en un tablero de tarjetas. Esta decisión no
+forma parte de E1.4 ni conecta el motor nuevo.
+
+Responsables: Felipe, comité de diseño, UX musical y accesibilidad.
+Fecha: 27 de julio de 2026.
+
 ## Decisiones que requieren prototipo
 
 ### D-P02 · Rango y estrategia de muestras de piano

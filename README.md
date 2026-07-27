@@ -19,9 +19,12 @@ plataforma capaz de:
 - Repositorio: <https://github.com/felipeescandon-ship-it/mis-36-piano>
 - Aplicación actual: `index.html`
 - API actual: `api/song-sync.js`
-- Plataforma multicanción: **Entrega 1 en curso; timeline y máquina sin integración visible**
+- Plataforma multicanción: **E1.1 y E1.2 integradas en `main`; E1.3 es el
+  siguiente paso**
 - Letra heredada: puede mostrar u ocultar las notas de la mano derecha junto a cada
-  acorde, respetando su inversión y la notación española o inglesa.
+  acorde, respetando su inversión y la notación española o inglesa. Utiliza
+  anotaciones tipográficas como `Mi | Mi-Sol#-Si`, con el acorde principal azul y
+  la letra distribuida en fragmentos musicales adaptables.
 
 ## Documentación
 

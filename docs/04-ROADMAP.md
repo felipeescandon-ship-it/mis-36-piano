@@ -22,8 +22,9 @@ acordes ilimitados. Por eso:
 |---|---|
 | Experiencia actual Tocar / Letra / Editar / Práctica | **Completada en producción** |
 | Especificación multicanción | **Completada** |
-| Arquitectura y contratos | **Documentados; prototipo pendiente** |
-| Implementación multicanción | **No iniciada** |
+| Arquitectura y contratos | **Entrega 0 integrada; validación física pendiente** |
+| Motor multicanción | **E1.1 y E1.2 integradas; E1.3 es el siguiente paso** |
+| Bibliotecas y constructor | **No iniciados** |
 | Migración de producción | **No iniciada** |
 
 ## Ahora · fundación
@@ -100,9 +101,11 @@ Avance verificado:
 - [ ] E1.5 · lectura nueva detrás de bandera;
 - [ ] E1.6 · aceptación Safari/iPad.
 
-Mejora independiente previa a E1.3: la vista Letra heredada permite mostrar u
-ocultar las notas de la mano derecha junto a cada acorde. Esto no activa el motor
-nuevo ni cambia el alcance pendiente de E1.4.
+Mejora independiente previa a E1.3, integrada en producción mediante el PR #3: la
+vista Letra heredada permite mostrar u ocultar las notas de la mano derecha junto a
+cada acorde. Las presenta como anotaciones tipográficas, conserva objetivos
+táctiles de 44 px y mantiene la letra en fragmentos musicales adaptables. Esto no
+activa el motor nuevo ni cambia el alcance pendiente de E1.4.
 
 La especificación completa, contratos, invariantes, riesgos y criterios están en
 [`07-ENTREGA-1-MOTOR-UNIVERSAL.md`](07-ENTREGA-1-MOTOR-UNIVERSAL.md).

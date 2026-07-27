@@ -1,7 +1,7 @@
 # Índice de documentación
 
 Actualizado: 27 de julio de 2026
-Estado: Entrega 0 integrada; Entrega 1 implementada hasta E1.2; E1.3 preparada.
+Estado: Entrega 0, E1.1 y E1.2 integradas en `main`; E1.3 preparada.
 
 ## Propósito
 

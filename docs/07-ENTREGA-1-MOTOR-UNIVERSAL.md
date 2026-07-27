@@ -1,7 +1,7 @@
 # Entrega 1 · motor universal
 
 Actualizado: 27 de julio de 2026
-Estado: E1.1 y E1.2 implementadas; E1.3–E1.6 pendientes.
+Estado: E1.1 y E1.2 integradas en `main`; E1.3–E1.6 pendientes.
 
 ## Resumen
 
@@ -40,8 +40,10 @@ nuevo:
 - permite ocultar o volver a mostrar las notas y conserva esa preferencia en el
   dispositivo;
 - actualiza la información de Ahora, Siguiente y la previsualización del acorde;
-- mantiene tarjetas horizontales compactas, con el acorde principal destacado, y
-  aprovecha un ancho mayor de la hoja para conservar unidas las frases;
+- utiliza anotaciones tipográficas sin tarjeta permanente: acorde principal azul,
+  separador y notas secundarios, y fondo suave únicamente para el acorde actual;
+- agrupa la letra en fragmentos musicales adaptables para conservar separación
+  natural entre palabras, evitar colisiones y mantener objetivos táctiles de 44 px;
 - mantiene el editor compacto, mostrando allí únicamente el símbolo del acorde.
 
 Esta mejora no constituye E1.4: continúa leyendo los eventos y voicings heredados,

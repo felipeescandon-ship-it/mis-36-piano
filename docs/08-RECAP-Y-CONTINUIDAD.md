@@ -1,8 +1,8 @@
 # Recap y continuidad · inicio de E1.3
 
 Actualizado: 27 de julio de 2026  
-Estado: Entrega 0 integrada; E1.1 y E1.2 implementadas; E1.3 analizada y pendiente
-de implementación.
+Estado: Entrega 0, E1.1 y E1.2 integradas en producción; E1.3 analizada y
+pendiente de implementación.
 
 ## Propósito
 
@@ -15,14 +15,14 @@ ni confundir trabajo terminado con trabajo planificado. Debe leerse junto con
 
 - Repositorio local:
   `/Users/felipeescandon/Documents/Codex/2026-07-24/referenced-chatgpt-conversation-this-is-untrusted-2/work/mis-36-piano-review`
-- Rama activa: `agent/entrega-1-timeline-maquina`
-- PR borrador: <https://github.com/felipeescandon-ship-it/mis-36-piano/pull/3>
-- Vista previa:
-  <https://mis-36-piano-git-agent-ent-31fc7f-felipeescandon-1438s-projects.vercel.app>
-- Producción protegida: <https://mis-36-piano.vercel.app/>
+- Rama base actual: `main`
+- PR integrado: <https://github.com/felipeescandon-ship-it/mis-36-piano/pull/3>
+- Commit de fusión: `3579b263c1e37dfa5282776da1551f5257afe794`
+- Producción: <https://mis-36-piano.vercel.app/>
 
-La vista previa corresponde a la rama del PR. Producción no fue sustituida por esta
-rama.
+El PR #3 fue fusionado el 27 de julio de 2026 y el despliegue de Vercel terminó
+correctamente. Para E1.3 debe crearse una rama nueva desde `main`; no se reutiliza
+la rama ni el PR ya cerrados.
 
 ## Restricciones que siguen vigentes
 
@@ -112,6 +112,8 @@ Commits:
 
 - `bafd149` · `Mostrar notas de acordes en Letra`
 - `228143a` · `Compactar acordes en Letra`
+- `28bb924` · `Refinar acordes y letra`
+- `3579b26` · fusión del PR #3 en `main`
 
 Validación visual realizada:
 
@@ -122,10 +124,19 @@ Validación visual realizada:
 - notas componentes de 14 px y objetivos táctiles de 44 px en todos los tamaños
   comprobados;
 - estado actual único mediante `aria-current` y ausencia de la antigua flecha `↵`;
-- la revisión tipográfica actual sigue pendiente de commit, push y validación en
-  la vista previa de Vercel;
+- acorde principal `#155FC0`, notas `#526178`, separador `#667085` e indicadores
+  con contraste WCAG AA;
+- 34 pruebas aprobadas y despliegue de Vercel correcto después de la fusión;
 - advertencia local de `/api/song-sync` esperable al usar un servidor de archivos
   estáticos y no relacionada con la interfaz.
+
+Validación manual todavía pendiente:
+
+- Safari en iPad físico, vertical y horizontal;
+- zoom o ampliación de texto al 200 %;
+- VoiceOver y teclado externo;
+- comprobar el acorde visible más largo sin desplazamiento horizontal;
+- validar IndexedDB `shadow` de Entrega 0 en Safari real.
 
 ## Estado exacto de E1.3
 
@@ -225,27 +236,122 @@ npm test
 
 Estado al cerrar esta sesión:
 
-- 33 pruebas;
-- 33 aprobadas;
+- 34 pruebas;
+- 34 aprobadas;
 - 0 fallidas;
 - sintaxis del script heredado válida;
 - `git diff --check` aprobado;
-- árbol de trabajo limpio antes de crear este recap.
+- `main` sincronizada con el commit de fusión `3579b26`;
+- producción desplegada sin escrituras multicanción.
+
+## Mapa completo de pendientes
+
+### Inmediato · aceptación física pendiente
+
+1. Probar en Safari/iPad real el adaptador IndexedDB `shadow` de Entrega 0.
+2. Revisar la vista Letra publicada en orientación vertical y horizontal.
+3. Probar ampliación al 200 %, VoiceOver, teclado externo, foco y acordes largos.
+4. Registrar resultados sin confundir emulación de viewport con aceptación física.
+
+Estas comprobaciones no autorizan escrituras `piano-library/` ni cambian el orden de
+E1.3.
+
+### Entrega 1 · terminar el motor universal
+
+1. **E1.3 · audio:** implementar `audio-runtime.js`, `piano-samples.js` y
+   `fallback-synth.js` con tiempo absoluto, fallback, estados, cancelación por
+   generación y pruebas aisladas.
+2. **E1.4 · vistas:** adaptar Tocar, Letra y Práctica para consumir una única
+   máquina observable, sin reconstruir la hoja completa en cada avance.
+3. **E1.5 · bandera:** agregar una bandera interna separada de `pianoLibrary`,
+   apagada por defecto, para leer “Mis 36” migrada solo en memoria.
+4. **E1.6 · aceptación:** ejecutar Safari/iPad real, equivalencia musical y ensayo
+   de reversión antes de declarar completa la Entrega 1.
+
+Cada unidad debe tener pruebas, commit, PR y reversión independientes. E1.3 no puede
+conectar todavía `index.html`.
+
+### Entrega 2 · constructor y biblioteca de acordes
+
+- Resolver D-P02: rango de muestras, muestra más cercana y transposición máxima.
+- Confirmar Q-01: cualidades exactas de P0.
+- Resolver Q-02: diferencia visual entre posición global y exclusiva de canción.
+- Implementar fundamentales, cualidades, bajo alternativo e inversiones.
+- Permitir agregar o quitar notas, elegir mano, octava y digitación.
+- Duplicar antes de editar y versionar voicings para no cambiar canciones por
+  sorpresa.
+- Añadir vista previa visual y sonora, guardado y archivado.
+
+### Entrega 3 · biblioteca local de canciones
+
+- Crear biblioteca sobre IndexedDB, todavía sin nube v2.
+- Crear, abrir, duplicar, archivar y restaurar canciones.
+- Editar metadatos, secciones, líneas, eventos, anclas y duraciones.
+- Persistir canción activa.
+- Importar y exportar el JSON propio con rechazo atómico de archivos inválidos.
+- Verificar al menos diez canciones de prueba sin modificar código.
+
+### Entrega 4 · migración de “Mis 36” en sombra
+
+- Cumplir todas las condiciones previas de
+  `03-MIGRACION-Y-REVERSIÓN.md`.
+- Identificar commit de producción y verificar API heredada.
+- Comparar exportación local con documento remoto.
+- Crear respaldo remoto inmutable y registrar SHA-256 del origen.
+- Ejecutar migración idempotente local y después remota bajo `piano-library/`.
+- Leer nuevamente, comparar canónicamente y marcar `verified`.
+- Ensayar reversión sin borrar ni sobrescribir `mis36/`.
+
+No ejecutar esta entrega antes de completar las Entregas 0–3 y el plan de QA.
+
+### Entrega 5 · sincronización por recurso
+
+- Catálogo remoto y revisiones separadas de canción, acorde y voicing.
+- Cola local idempotente, reintentos y funcionamiento sin conexión.
+- Conflictos por recurso mediante `baseRevision`.
+- Historial, restauración y estados separados de dispositivo, pendiente, nube y
+  conflicto.
+- Confirmar que un dispositivo nuevo nunca publique datos predeterminados.
+
+### Entregas 6 y 7 · activación y evolución
+
+- Activar la biblioteca nueva solo después de verificar la migración.
+- Crear la segunda canción real.
+- Mantener el lector heredado y la reversión durante el periodo que se acuerde
+  mediante Q-08.
+- Resolver política de archivo/eliminación, importadores posteriores y portadas.
+- Después: transposición, pedagogía, animaciones, identidad visual, cuentas y
+  colaboración si se aprueban.
+
+### Preguntas abiertas que deben conservarse
+
+- Q-01 · cualidades exactas de acordes en P0.
+- Q-02 · posición de biblioteca frente a posición exclusiva.
+- Q-03 · retención antes de eliminación definitiva.
+- Q-04 · formato posterior al JSON propio.
+- Q-05 · portadas en P0.
+- Q-06 · tempo por sección.
+- Q-07 · actualización de voicings usados por varias canciones.
+- Q-08 · convivencia de lector heredado y biblioteca nueva.
 
 ## Orden recomendado para la próxima sesión
 
 1. Leer `README.md` y todos los documentos de `docs/`.
-2. Confirmar rama, PR y árbol de trabajo.
+2. Confirmar que `main` contiene `3579b26`, ejecutar `npm test` y revisar el árbol
+   de trabajo.
 3. Releer las secciones **Reloj y planificador**, **Audio**, **Paso 3** y
    **Criterios de aceptación** de `07-ENTREGA-1-MOTOR-UNIVERSAL.md`.
-4. Implementar únicamente los tres módulos de E1.3.
-5. Crear dobles de `AudioContext`, fuentes, ganancias, osciladores, carga y aborto;
+4. Crear una rama nueva, por ejemplo `agent/entrega-1-audio`, desde `main`.
+5. Antes de modificar código, resumir el plan y confirmar que no habrá conexión con
+   `index.html` ni escrituras multicanción.
+6. Implementar únicamente los tres módulos de E1.3.
+7. Crear dobles de `AudioContext`, fuentes, ganancias, osciladores, carga y aborto;
    las pruebas no deben depender de audio ni tiempo reales.
-6. Ejecutar todas las pruebas y confirmar que `index.html`, la API, las banderas y
+8. Ejecutar todas las pruebas y confirmar que `index.html`, la API, las banderas y
    `mis36/` no cambiaron.
-7. Actualizar roadmap y documentación solo cuando E1.3 cumpla fallback,
+9. Actualizar roadmap y documentación solo cuando E1.3 cumpla fallback,
    cancelación y bloqueo.
-8. Crear un commit separado, subirlo al mismo PR y validar Vercel.
+10. Crear un PR nuevo para E1.3 y validar Vercel antes de fusionar.
 
 ## Texto sugerido para iniciar el próximo chat
 
@@ -255,22 +361,21 @@ Continúa el proyecto “Mis 36 · Piano”.
 Repositorio local:
 /Users/felipeescandon/Documents/Codex/2026-07-24/referenced-chatgpt-conversation-this-is-untrusted-2/work/mis-36-piano-review
 
-Rama:
-agent/entrega-1-timeline-maquina
-
-PR:
-https://github.com/felipeescandon-ship-it/mis-36-piano/pull/3
+Base:
+main, commit de fusión 3579b263c1e37dfa5282776da1551f5257afe794
 
 Lee README.md y todos los documentos de docs/. Usa
 docs/08-RECAP-Y-CONTINUIDAD.md como punto de continuidad.
 
-Entrega 0, E1.1 y E1.2 están completadas. La mejora visual heredada de Letra
-también está completada. E1.3 fue analizada, pero todavía no implementada.
+Entrega 0, E1.1 y E1.2 están integradas en producción mediante el PR #3. La mejora
+visual heredada de Letra también está publicada: acorde principal azul, notas
+secundarias y frases adaptables. E1.3 fue analizada, pero todavía no implementada.
 
 Implementa únicamente E1.3: adaptador de audio aislado, muestras, fallback,
 programación absoluta, cancelación por generación y estado bloqueado. No conectes
 todavía el motor nuevo a index.html, no escribas datos multicanción en producción
-y conserva intactos la aplicación publicada, la API y mis36/.
+y conserva intactos la aplicación publicada, la API y mis36/. Crea una rama y un
+PR nuevos desde main; no reutilices el PR #3.
 
 Antes de modificar código, resume el plan concreto y confirma las restricciones.
 ```
