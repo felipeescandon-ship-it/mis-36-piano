@@ -95,10 +95,17 @@ Esta mejora no constituye E1.4 y no utiliza todavía el motor nuevo.
 
 - botón para mostrar u ocultar las notas de la mano derecha;
 - preferencia conservada en el dispositivo;
-- formato compacto como `Mi | Mi-Sol#-Si`;
-- acorde principal a 24 px y notas componentes a 12 px en escritorio;
-- hoja de hasta 1320 px y menor distancia vertical entre líneas;
-- adaptación móvil sin desbordamiento;
+- formato tipográfico como `Mi | Mi-Sol#-Si`, sin tarjeta permanente;
+- acorde principal azul a 19 px, notas componentes gris azuladas a 14 px y letra
+  adaptable entre 21 y 26 px;
+- letra distribuida en fragmentos musicales con separación natural entre palabras;
+- estado actual con fondo azul suave y barra lateral; siguiente con indicador discreto;
+- área táctil mínima de 44 × 44 px y nombre accesible con acorde, notas y palabra
+  de entrada;
+- acordes terminales sin la flecha `↵` y con una marca visual ligada al final de
+  la frase;
+- hoja de hasta 1320 px, menor distancia vertical entre líneas y adaptación móvil
+  sin desbordamiento;
 - editor heredado conserva únicamente el símbolo del acorde.
 
 Commits:
@@ -108,9 +115,15 @@ Commits:
 
 Validación visual realizada:
 
-- escritorio a 1440 px: tarjeta de 38 px de alto y hoja de 1320 px;
-- móvil a 390 px: 86 tarjetas y 48 filas sin desbordamiento;
-- vista previa de Vercel verificada directamente;
+- iPad horizontal a 1180 px: 86 acordes, sin colisiones ni desbordamiento;
+- iPad vertical a 820 px: sin colisiones ni desbordamiento;
+- móvil a 390 px y reflujo estrecho a 320 px: sin elementos recortados ni
+  desplazamiento horizontal;
+- notas componentes de 14 px y objetivos táctiles de 44 px en todos los tamaños
+  comprobados;
+- estado actual único mediante `aria-current` y ausencia de la antigua flecha `↵`;
+- la revisión tipográfica actual sigue pendiente de commit, push y validación en
+  la vista previa de Vercel;
 - advertencia local de `/api/song-sync` esperable al usar un servidor de archivos
   estáticos y no relacionada con la interfaz.
 
@@ -261,4 +274,3 @@ y conserva intactos la aplicación publicada, la API y mis36/.
 
 Antes de modificar código, resume el plan concreto y confirma las restricciones.
 ```
-
