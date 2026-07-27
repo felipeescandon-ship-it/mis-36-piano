@@ -37,6 +37,7 @@ Documentos principales:
 5. [Calidad y criterios de aceptación](docs/05-CALIDAD-Y-ACEPTACION.md)
 6. [Decisiones y preguntas abiertas](docs/06-DECISIONES.md)
 7. [Entrega 1 · motor universal](docs/07-ENTREGA-1-MOTOR-UNIVERSAL.md)
+8. [Recap y continuidad para E1.3](docs/08-RECAP-Y-CONTINUIDAD.md)
 
 ## Reglas de seguridad
 
