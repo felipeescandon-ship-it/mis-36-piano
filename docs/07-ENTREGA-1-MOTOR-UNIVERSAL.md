@@ -35,11 +35,13 @@ La vista heredada de Letra incorpora una ayuda visual independiente del motor
 nuevo:
 
 - muestra por defecto cada acorde junto a las notas de su posición de mano derecha,
-  por ejemplo `Mi | Mi – Sol# – Si`;
+  por ejemplo `Mi | Mi-Sol#-Si`;
 - respeta la inversión guardada y la notación española o inglesa;
 - permite ocultar o volver a mostrar las notas y conserva esa preferencia en el
   dispositivo;
 - actualiza la información de Ahora, Siguiente y la previsualización del acorde;
+- mantiene tarjetas horizontales compactas, con el acorde principal destacado, y
+  aprovecha un ancho mayor de la hoja para conservar unidas las frases;
 - mantiene el editor compacto, mostrando allí únicamente el símbolo del acorde.
 
 Esta mejora no constituye E1.4: continúa leyendo los eventos y voicings heredados,

@@ -200,7 +200,8 @@ background:var(--blue);color:#fff;font-weight:900;margin:auto auto 4px}
 .show-full:not(.song-editing) .full-view{padding-bottom:92px}
 .show-full .stack,.show-full .seq,.show-full .legend,.show-full .practice-guide,.show-full #customPanel{display:none!important}
 .show-full:not(.song-editing) .toolbar{display:none}
-.lyrics-page{max-width:960px;margin:0 auto;background:#fff;border:1px solid var(--line);border-radius:22px;overflow:hidden;box-shadow:var(--shadow);padding:0 30px 28px}
+.show-full:not(.song-editing) .app{max-width:1480px}
+.lyrics-page{max-width:1400px;margin:0 auto;background:#fff;border:1px solid var(--line);border-radius:22px;overflow:hidden;box-shadow:var(--shadow);padding:0 30px 28px}
 .lyrics-header{display:flex;align-items:flex-start;justify-content:space-between;gap:18px;margin:0 -30px 6px;padding:22px 30px 20px;border-bottom:1px solid var(--line);background:linear-gradient(135deg,#f5f9ff,#fff)}
 .lyrics-eyebrow{display:block;margin-bottom:5px;color:var(--blue);font-size:11px;font-weight:900;letter-spacing:.14em;text-transform:uppercase}
 .lyrics-header h2{margin:0;font-size:clamp(26px,3vw,34px);color:#102f57;letter-spacing:-.02em}
@@ -215,26 +216,27 @@ body:not(.song-editing) .song-editor-actions{display:none}
 .song-editing .lyrics-header{position:sticky;top:70px;z-index:25;align-items:center;background:rgba(247,250,255,.97);backdrop-filter:blur(12px)}
 .song-editing .song-part.current-song-part{background:transparent;box-shadow:none}
 .song-editing .song-line.current-song-line{background:transparent;border-left-color:transparent}
-.song-sheet{max-width:880px;margin:0 auto;padding:0 0 10px}
+.song-sheet{max-width:1320px;margin:0 auto;padding:0 0 10px}
 .song-part{padding:27px 6px;border-bottom:1px solid var(--line);scroll-margin-top:92px}
 .song-part:last-child{border-bottom:0}
 .song-part h3{display:flex;align-items:center;gap:10px;margin:0 0 21px;color:#123e72;font-size:20px}
 .song-part h3::after{content:"";height:1px;flex:1;background:linear-gradient(90deg,#cdd9e8,transparent)}
 .song-part.current-song-part{margin-inline:-12px;padding-inline:18px;background:#f8fbff;border-radius:16px;box-shadow:inset 4px 0 0 var(--blue);scroll-margin-top:92px}
-.song-line{margin:0 0 21px;padding:8px 10px;line-height:1.55;border-radius:11px;border-left:3px solid transparent;transition:background .2s ease,border-color .2s ease}
+.song-line{margin:0 0 12px;padding:5px 10px;line-height:1.55;border-radius:11px;border-left:3px solid transparent;transition:background .2s ease,border-color .2s ease}
 .song-line.current-song-line{background:#eef6ff;border-left-color:#78aee8}
-.song-chord{display:inline-flex;align-items:baseline;gap:4px;max-width:100%;padding:4px 9px;border-radius:7px;background:#fff7e5;color:#824700;border:1px solid #dcae60;font-weight:900;font-size:14px;line-height:1.25;text-align:left;box-shadow:0 2px 5px rgba(130,71,0,.06)}
+.song-chord{display:inline-flex;align-items:baseline;gap:5px;max-width:100%;min-height:38px;padding:3px 8px;border-radius:7px;background:#fff7e5;color:#824700;border:1px solid #dcae60;font-weight:900;font-size:14px;line-height:1;text-align:left;box-shadow:none}
 .song-chord-name,.song-chord-notes{white-space:nowrap}
-.song-chord-separator{opacity:.6}
-.song-chord-notes{font-size:11px;font-weight:800;opacity:.88}
+.song-chord-name{font-size:24px;font-weight:950;letter-spacing:-.03em}
+.song-chord-separator{font-size:16px;font-weight:800;opacity:.52}
+.song-chord-notes{font-size:12px;font-weight:750;letter-spacing:-.02em;opacity:.88}
 .song-editing .song-chord{display:inline-block}
 .song-chord.current-song-chord{background:var(--blue);color:#fff;border-color:var(--blue);outline:4px solid var(--blueSoft);scroll-margin:120px}
 .song-chord.next-song-chord{outline:3px solid #f3bb47;outline-offset:2px}
 .song-chord.loop-song-chord{box-shadow:0 0 0 3px #c4b5fd}
 .song-chord.selected-edit{background:var(--blue);color:#fff;border-color:var(--blue);outline:3px solid var(--blueSoft)}
-.song-word-row{display:flex;gap:8px 6px;flex-wrap:wrap;align-items:flex-end}
-.song-word-cell{display:grid;grid-template-rows:minmax(31px,auto) auto;justify-items:start}
-.song-anchor-slot{min-height:31px;display:flex;gap:4px;align-items:end;flex-wrap:wrap}
+.song-word-row{display:flex;gap:6px clamp(14px,2.6vw,42px);flex-wrap:wrap;align-items:flex-end}
+.song-word-cell{display:grid;grid-template-rows:minmax(38px,auto) auto;justify-items:center}
+.song-anchor-slot{min-height:38px;display:flex;gap:4px;align-items:end;justify-content:center;flex-wrap:wrap}
 .song-word{font-size:20px;color:var(--ink);padding:2px 1px;border-radius:6px}
 button.song-word{background:#f1f5fa;border:1px dashed #9eabc0;cursor:pointer}
 button.song-word:disabled{background:transparent;border-color:transparent;cursor:default;opacity:1}
@@ -332,8 +334,13 @@ button.song-line-end{padding:3px 8px}
  .song-sheet{padding-inline:0}.song-part{padding:22px 2px}
  .song-part.current-song-part{margin-inline:-8px;padding-inline:10px}
  .song-part h3{font-size:18px;margin-bottom:17px}
- .song-line{margin-bottom:16px;padding:7px 5px}
- .song-chord{padding:5px 7px}
+ .song-line{margin-bottom:10px;padding:5px}
+ .song-word-row{column-gap:10px}
+ .song-word-cell{grid-template-rows:minmax(34px,auto) auto}
+ .song-anchor-slot{min-height:34px}
+ .song-chord{min-height:34px;padding:3px 6px;gap:4px}
+ .song-chord-name{font-size:19px}
+ .song-chord-separator{font-size:13px}
  .song-chord-notes{font-size:10px}
  .song-word{font-size:18px}
  .song-editing .lyrics-header{position:static}
@@ -1649,7 +1656,7 @@ function renderLyricsChordLabel(button,event){
  }
  const name=document.createElement("span");name.className="song-chord-name";name.textContent=chordName;
  const separator=document.createElement("span");separator.className="song-chord-separator";separator.textContent="|";separator.setAttribute("aria-hidden","true");
- const notes=document.createElement("span");notes.className="song-chord-notes";notes.textContent=lyricsChordNotes(event).join(" – ");
+ const notes=document.createElement("span");notes.className="song-chord-notes";notes.textContent=lyricsChordNotes(event).join("-");
  notes.setAttribute("aria-hidden","true");
  button.replaceChildren(name,separator,notes);
 }
