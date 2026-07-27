@@ -20,6 +20,8 @@ plataforma capaz de:
 - Aplicación actual: `index.html`
 - API actual: `api/song-sync.js`
 - Plataforma multicanción: **Entrega 1 en curso; timeline y máquina sin integración visible**
+- Letra heredada: puede mostrar u ocultar las notas de la mano derecha junto a cada
+  acorde, respetando su inversión y la notación española o inglesa.
 
 ## Documentación
 

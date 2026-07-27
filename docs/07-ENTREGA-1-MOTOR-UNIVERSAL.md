@@ -29,6 +29,24 @@ Safari/iPad.
 E1.1 y E1.2 son módulos sin `window`, DOM, `localStorage`, red ni `AudioContext`.
 Permanecen desconectados de `index.html` y no alteran la aplicación publicada.
 
+### Mejora de Letra previa a E1.3
+
+La vista heredada de Letra incorpora una ayuda visual independiente del motor
+nuevo:
+
+- muestra por defecto cada acorde junto a las notas de su posición de mano derecha,
+  por ejemplo `Mi | Mi – Sol# – Si`;
+- respeta la inversión guardada y la notación española o inglesa;
+- permite ocultar o volver a mostrar las notas y conserva esa preferencia en el
+  dispositivo;
+- actualiza la información de Ahora, Siguiente y la previsualización del acorde;
+- mantiene el editor compacto, mostrando allí únicamente el símbolo del acorde.
+
+Esta mejora no constituye E1.4: continúa leyendo los eventos y voicings heredados,
+no importa la máquina nueva, no habilita la biblioteca y no realiza escrituras
+multicanción locales ni remotas. Su reversión consiste en retirar el control y el
+renderizado adicional de `index.html`; los datos de `mis36/` no cambian.
+
 ## Problema
 
 La aplicación vigente reproduce correctamente una canción, pero el comportamiento

@@ -205,6 +205,10 @@ background:var(--blue);color:#fff;font-weight:900;margin:auto auto 4px}
 .lyrics-eyebrow{display:block;margin-bottom:5px;color:var(--blue);font-size:11px;font-weight:900;letter-spacing:.14em;text-transform:uppercase}
 .lyrics-header h2{margin:0;font-size:clamp(26px,3vw,34px);color:#102f57;letter-spacing:-.02em}
 .lyrics-header .song-help{max-width:620px;margin:7px 0 0;font-size:15px;line-height:1.5}
+.lyrics-view-actions{display:flex;align-items:center;justify-content:flex-end;flex-wrap:wrap;gap:8px}
+.lyrics-notes-toggle{white-space:nowrap}
+.lyrics-notes-toggle[aria-pressed="true"]{background:#e7f1ff;color:#143f76;border-color:#8bb9ec}
+.song-editing .lyrics-view-actions{display:none}
 body:not(.song-editing) .song-editor-actions{display:none}
 .song-editing .toolbar{display:none}
 .song-editing .lyrics-page{max-width:1100px}
@@ -219,7 +223,11 @@ body:not(.song-editing) .song-editor-actions{display:none}
 .song-part.current-song-part{margin-inline:-12px;padding-inline:18px;background:#f8fbff;border-radius:16px;box-shadow:inset 4px 0 0 var(--blue);scroll-margin-top:92px}
 .song-line{margin:0 0 21px;padding:8px 10px;line-height:1.55;border-radius:11px;border-left:3px solid transparent;transition:background .2s ease,border-color .2s ease}
 .song-line.current-song-line{background:#eef6ff;border-left-color:#78aee8}
-.song-chord{padding:4px 9px;border-radius:7px;background:#fff7e5;color:#824700;border:1px solid #dcae60;font-weight:900;font-size:14px;box-shadow:0 2px 5px rgba(130,71,0,.06)}
+.song-chord{display:inline-flex;align-items:baseline;gap:4px;max-width:100%;padding:4px 9px;border-radius:7px;background:#fff7e5;color:#824700;border:1px solid #dcae60;font-weight:900;font-size:14px;line-height:1.25;text-align:left;box-shadow:0 2px 5px rgba(130,71,0,.06)}
+.song-chord-name,.song-chord-notes{white-space:nowrap}
+.song-chord-separator{opacity:.6}
+.song-chord-notes{font-size:11px;font-weight:800;opacity:.88}
+.song-editing .song-chord{display:inline-block}
 .song-chord.current-song-chord{background:var(--blue);color:#fff;border-color:var(--blue);outline:4px solid var(--blueSoft);scroll-margin:120px}
 .song-chord.next-song-chord{outline:3px solid #f3bb47;outline-offset:2px}
 .song-chord.loop-song-chord{box-shadow:0 0 0 3px #c4b5fd}
@@ -319,10 +327,14 @@ button.song-line-end{padding:3px 8px}
  .lyrics-header{display:grid;margin:0 -16px 4px;padding:18px 16px 16px}
  .lyrics-header h2{font-size:26px}
  .lyrics-header .song-help{font-size:14px}
+ .lyrics-view-actions{justify-content:stretch}
+ .lyrics-notes-toggle{width:100%}
  .song-sheet{padding-inline:0}.song-part{padding:22px 2px}
  .song-part.current-song-part{margin-inline:-8px;padding-inline:10px}
  .song-part h3{font-size:18px;margin-bottom:17px}
  .song-line{margin-bottom:16px;padding:7px 5px}
+ .song-chord{padding:5px 7px}
+ .song-chord-notes{font-size:10px}
  .song-word{font-size:18px}
  .song-editing .lyrics-header{position:static}
  .song-editing .song-editor-actions{justify-content:stretch}
@@ -492,6 +504,9 @@ button.song-line-end{padding:3px 8px}
 <div class="lyrics-page">
 <div class="lyrics-header">
   <div><span id="fullViewEyebrow" class="lyrics-eyebrow">Interpretación</span><h2 id="fullViewTitle">Letra y acordes</h2><p id="fullViewHelp" class="song-help">Toca un acorde para verlo sin interrumpir la canción.</p></div>
+  <div class="lyrics-view-actions">
+    <button id="lyricsNotesToggle" class="secondary lyrics-notes-toggle" type="button" aria-pressed="true">Ocultar notas</button>
+  </div>
   <div class="song-editor-actions">
     <label class="editor-section-jump">
       <span>Ir a la sección</span>
@@ -715,6 +730,7 @@ const editorRedo=document.getElementById("editorRedo");
 const fullViewEyebrow=document.getElementById("fullViewEyebrow");
 const fullViewTitle=document.getElementById("fullViewTitle");
 const fullViewHelp=document.getElementById("fullViewHelp");
+const lyricsNotesToggle=document.getElementById("lyricsNotesToggle");
 const lyricsCue=document.getElementById("lyricsCue");
 const lyricsCurrentChord=document.getElementById("lyricsCurrentChord");
 const lyricsCurrentDetail=document.getElementById("lyricsCurrentDetail");
@@ -789,12 +805,20 @@ if(!["current","preview"].includes(keyboardViewMode))keyboardViewMode="preview";
 let sustainViewMode=readPreference("mis36-sustain-mode","natural");
 let showNextPiano=readPreference("mis36-show-next-piano","false")==="true";
 let syncEditorCollapsed=readPreference("mis36-editor-collapsed","true")!=="false";
+let showLyricsChordNotes=readPreference("mis36-lyrics-show-chord-notes","true")!=="false";
 function updateNotationToggle(){
  const spanish=notationMode==="es";
  const action=spanish?"Usar nombres de notas en inglés":"Usar nombres de notas en español";
  notation.textContent=spanish?"Do · Re":"C · D";
  notation.setAttribute("aria-label",action);
  notation.title=action;
+}
+function updateLyricsNotesToggle(){
+ lyricsNotesToggle.setAttribute("aria-pressed",String(showLyricsChordNotes));
+ lyricsNotesToggle.textContent=showLyricsChordNotes?"Ocultar notas":"Mostrar notas";
+ lyricsNotesToggle.setAttribute("aria-label",showLyricsChordNotes
+   ?"Ocultar las notas que componen cada acorde"
+   :"Mostrar las notas que componen cada acorde");
 }
 function updateSettingsSummary(){
  const sustainLabel=sustainMode.options[sustainMode.selectedIndex]?.text||"Sustain natural";
@@ -1610,7 +1634,24 @@ function nextDifferentLyric(si,ei){
 }
 function lyricsCueDetail(event){
  const voicing=resolveVoicing(event.chord,event.inversion);
- return `Posición MD: ${voicing.inv} · Bajo: ${noteText(voicing.l,event.chord)}`;
+ const notes=lyricsChordNotes(event);
+ const noteDetail=showLyricsChordNotes?`Notas MD: ${notes.join(" – ")} · `:"";
+ return `${noteDetail}Posición MD: ${voicing.inv} · Bajo: ${noteText(voicing.l,event.chord)}`;
+}
+function lyricsChordNotes(event){
+ return resolveVoicing(event.chord,event.inversion).r.map(([note])=>noteText(note,event.chord));
+}
+function renderLyricsChordLabel(button,event){
+ const chordName=chordText(event.chord);
+ if(songEditMode||!showLyricsChordNotes){
+   button.textContent=chordName;
+   return;
+ }
+ const name=document.createElement("span");name.className="song-chord-name";name.textContent=chordName;
+ const separator=document.createElement("span");separator.className="song-chord-separator";separator.textContent="|";separator.setAttribute("aria-hidden","true");
+ const notes=document.createElement("span");notes.className="song-chord-notes";notes.textContent=lyricsChordNotes(event).join(" – ");
+ notes.setAttribute("aria-hidden","true");
+ button.replaceChildren(name,separator,notes);
 }
 function updateLyricsCue(){
  const event=sections[sectionIndex]?.events[stepIndex];
@@ -1816,10 +1857,13 @@ function renderFullSong(){
          if(si===upcoming.section&&item.step===upcoming.step)chordButton.classList.add("next-song-chord");
          if(isLoopPosition(si,item.step))chordButton.classList.add("loop-song-chord");
          if(songEditMode&&selectedSyncEvent?.section===si&&selectedSyncEvent?.step===item.step)chordButton.classList.add("selected-edit");
-         chordButton.textContent=chordText(item.event.chord);
+         const chordNotes=lyricsChordNotes(item.event);
+         renderLyricsChordLabel(chordButton,item.event);
          chordButton.setAttribute("aria-label",songEditMode
            ?`Seleccionar ${chordText(item.event.chord)} en ${sectionData.name}, línea ${lineIndex+1}`
-           :`Ver ${chordText(item.event.chord)} en ${sectionData.name}, línea ${lineIndex+1}`);
+           :showLyricsChordNotes
+             ?`Ver ${chordText(item.event.chord)}, notas de mano derecha: ${chordNotes.join(", ")}, en ${sectionData.name}, línea ${lineIndex+1}`
+             :`Ver ${chordText(item.event.chord)} en ${sectionData.name}, línea ${lineIndex+1}`);
          chordButton.onclick=()=>{
            if(songEditMode){selectSyncEvent(si,item.step);playChord(item.event.chord,item.event.inversion,item.event.beats)}
            else showLyricsChordPreview(si,item.step,chordButton);
@@ -2547,6 +2591,17 @@ importSongSyncFile.onchange=async()=>{
 pianoViewButton.onclick=()=>setMainView("piano");
 lyricsViewButton.onclick=()=>setMainView("lyrics");
 openEditor.onclick=()=>setMainView("edit");
+lyricsNotesToggle.onclick=()=>{
+ showLyricsChordNotes=!showLyricsChordNotes;
+ savePreference("mis36-lyrics-show-chord-notes",String(showLyricsChordNotes));
+ updateLyricsNotesToggle();
+ renderFullSong();
+ updateLyricsCue();
+ if(lyricsPreviewPosition){
+   const previewEvent=sections[lyricsPreviewPosition.section]?.events[lyricsPreviewPosition.step];
+   if(previewEvent)lyricsPreviewDetail.textContent=lyricsCueDetail(previewEvent);
+ }
+};
 bpm.oninput=e=>{bpmOut.textContent=e.target.value;updateSettingsSummary()};
 keyboardMode.value=keyboardViewMode;
 sustainMode.value=sustainViewMode;
@@ -2559,7 +2614,7 @@ nextPianoToggle.onclick=()=>{
 };
 nextKeyboardWrap.addEventListener("scroll",()=>syncPianoScroll(nextKeyboardWrap,currentKeyboardWrap),{passive:true});
 currentKeyboardWrap.addEventListener("scroll",()=>syncPianoScroll(currentKeyboardWrap,nextKeyboardWrap),{passive:true});
-updateNotationToggle();renderSyncChordOptions();renderSyncInversionOptions("E");initializeSongSync();updateSettingsSummary();updateNextPianoVisibility();initSections();buildSteps();render();renderFullSong();updateSessionSummary();updateTransportControls();loadCloudSongSync();
+updateNotationToggle();updateLyricsNotesToggle();renderSyncChordOptions();renderSyncInversionOptions("E");initializeSongSync();updateSettingsSummary();updateNextPianoVisibility();initSections();buildSteps();render();renderFullSong();updateSessionSummary();updateTransportControls();loadCloudSongSync();
 </script>
 </body>
 </html>

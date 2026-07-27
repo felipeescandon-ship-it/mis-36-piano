@@ -100,6 +100,10 @@ Avance verificado:
 - [ ] E1.5 · lectura nueva detrás de bandera;
 - [ ] E1.6 · aceptación Safari/iPad.
 
+Mejora independiente previa a E1.3: la vista Letra heredada permite mostrar u
+ocultar las notas de la mano derecha junto a cada acorde. Esto no activa el motor
+nuevo ni cambia el alcance pendiente de E1.4.
+
 La especificación completa, contratos, invariantes, riesgos y criterios están en
 [`07-ENTREGA-1-MOTOR-UNIVERSAL.md`](07-ENTREGA-1-MOTOR-UNIVERSAL.md).
 
