@@ -19,7 +19,9 @@ plataforma capaz de:
 - Repositorio: <https://github.com/felipeescandon-ship-it/mis-36-piano>
 - Aplicación actual: `index.html`
 - API actual: `api/song-sync.js`
-- Plataforma multicanción: **Entrega 0 en sombra; sin activación ni escritura remota**
+- Plataforma multicanción: **Entrega 1 en curso; timeline y máquina sin integración visible**
+- Letra heredada: puede mostrar u ocultar las notas de la mano derecha junto a cada
+  acorde, respetando su inversión y la notación española o inglesa.
 
 ## Documentación
 
@@ -34,6 +36,8 @@ Documentos principales:
 4. [Roadmap](docs/04-ROADMAP.md)
 5. [Calidad y criterios de aceptación](docs/05-CALIDAD-Y-ACEPTACION.md)
 6. [Decisiones y preguntas abiertas](docs/06-DECISIONES.md)
+7. [Entrega 1 · motor universal](docs/07-ENTREGA-1-MOTOR-UNIVERSAL.md)
+8. [Recap y continuidad para E1.3](docs/08-RECAP-Y-CONTINUIDAD.md)
 
 ## Reglas de seguridad
 

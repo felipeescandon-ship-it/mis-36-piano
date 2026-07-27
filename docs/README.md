@@ -1,7 +1,7 @@
 # Índice de documentación
 
 Actualizado: 27 de julio de 2026
-Estado: dirección de producto aprobada; Entrega 0 implementada en sombra y sin activación.
+Estado: Entrega 0 integrada; Entrega 1 implementada hasta E1.2; E1.3 preparada.
 
 ## Propósito
 
@@ -19,6 +19,8 @@ biblioteca multicanción o modificar la persistencia.
 | [04 · Roadmap](04-ROADMAP.md) | ¿En qué orden se construye y qué queda para después? |
 | [05 · Calidad y aceptación](05-CALIDAD-Y-ACEPTACION.md) | ¿Qué debe pasar para considerar terminada cada entrega? |
 | [06 · Decisiones](06-DECISIONES.md) | ¿Qué decisiones ya están tomadas y cuáles siguen abiertas? |
+| [07 · Entrega 1 · motor universal](07-ENTREGA-1-MOTOR-UNIVERSAL.md) | ¿Cómo se construirá, probará y revertirá el reproductor universal? |
+| [08 · Recap y continuidad](08-RECAP-Y-CONTINUIDAD.md) | ¿Cuál es el estado exacto y desde dónde continúa E1.3 en otro chat? |
 
 ## Jerarquía de fuentes
 

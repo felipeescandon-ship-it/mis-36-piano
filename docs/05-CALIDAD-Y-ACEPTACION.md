@@ -139,6 +139,21 @@ Dadas dos canciones de fixture, cuando se alternan, entonces:
 - no quedan timers ni resaltados de la canción anterior;
 - “Mis 36” conserva su secuencia musical.
 
+Además:
+
+- un reloj falso completa 1.000 pulsos sin deriva acumulada;
+- pausa y reanudación conservan evento y pulso con tolerancia de 0,05 pulsos;
+- detener o cambiar de canción invalida audio y callbacks en un máximo de 150 ms;
+- una carga inválida no reemplaza el documento válido anterior;
+- volver desde segundo plano no reproduce eventos vencidos;
+- un contexto suspendido queda bloqueado hasta un gesto explícito;
+- Letra no reemplaza su contenedor durante el avance normal;
+- VoiceOver recibe como máximo un anuncio por cambio musical;
+- apagar la bandera recupera el flujo heredado sin modificar datos.
+
+Los escenarios, fixtures y matriz detallada están en
+[`07-ENTREGA-1-MOTOR-UNIVERSAL.md`](07-ENTREGA-1-MOTOR-UNIVERSAL.md).
+
 ### Entrega 2 · acordes
 
 Dado un acorde que no existe en la biblioteca, cuando el usuario lo construye y
