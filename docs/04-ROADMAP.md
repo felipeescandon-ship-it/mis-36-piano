@@ -30,7 +30,7 @@ acordes ilimitados. Por eso:
 
 ### Entrega 0 · contratos y prototipo
 
-Estado: **documentación completada; prototipo no iniciado**
+Estado: **prototipo en sombra completado; validación manual de navegador pendiente**
 
 Objetivo: demostrar que el modelo nuevo representa “Mis 36” sin cambiar la
 aplicación pública.
@@ -44,6 +44,19 @@ Incluye:
 - prueba de IndexedDB;
 - decisión sobre empaquetado y módulos;
 - bandera de biblioteca desactivada.
+
+Implementado en la rama de fundación:
+
+- contratos estrictos y compartibles mediante módulos ES nativos;
+- fixture de la revisión heredada verificada `d21083ad-cf4a-486b-8661-494778a2a83d`;
+- migración con huella SHA-256, IDs deterministas y registro `shadow`;
+- comparación canónica de las 81 entradas activas, 5 eliminaciones heredadas y
+  2 duraciones personalizadas;
+- adaptador IndexedDB aislado, sin cola ni escritura remota;
+- pruebas automáticas de validación, equivalencia, idempotencia y persistencia.
+
+Pendiente antes de cerrar formalmente la entrega: ejecutar el adaptador IndexedDB
+en Safari/iPad real y registrar el resultado.
 
 Responsables:
 

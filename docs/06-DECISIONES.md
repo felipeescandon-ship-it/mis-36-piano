@@ -84,20 +84,21 @@ No se agregan cuentas, permisos ni colaboración en tiempo real.
 Consecuencia: el modelo debe permitir una futura propiedad de recursos, pero P0
 mantiene la experiencia simple y sin contraseña.
 
-## Decisiones que requieren prototipo
+### D-010 · Módulos ES nativos para la fundación
 
-### D-P01 · Herramienta de construcción y módulos
+El prototipo de Entrega 0 utiliza módulos ES nativos y el ejecutor de pruebas
+incluido en Node. No incorpora un empaquetador mientras los contratos, migradores y
+adaptadores puedan compartirse directamente entre navegador y API.
+
+Consecuencia: la aplicación publicada conserva su despliegue actual y el nuevo
+código permanece aislado. Antes de integrar la interfaz se prueba la carga modular
+en la versión objetivo de Safari; solo se agrega transformación o empaquetado si
+esa prueba demuestra una necesidad concreta.
 
 Responsable: Felipe.
-Bloquea: implementación sostenida después de Entrega 0.
+Fecha: 27 de julio de 2026.
 
-Comparar una estructura modular con la mínima herramienta de construcción que:
-
-- funcione en Vercel;
-- genere JavaScript compatible con Safari objetivo;
-- permita compartir validadores entre cliente y API;
-- incorpore pruebas;
-- no complique innecesariamente el despliegue.
+## Decisiones que requieren prototipo
 
 ### D-P02 · Rango y estrategia de muestras de piano
 

@@ -19,7 +19,7 @@ plataforma capaz de:
 - Repositorio: <https://github.com/felipeescandon-ship-it/mis-36-piano>
 - Aplicación actual: `index.html`
 - API actual: `api/song-sync.js`
-- Plataforma multicanción: **documentada; implementación no iniciada**
+- Plataforma multicanción: **Entrega 0 en sombra; sin activación ni escritura remota**
 
 ## Documentación
 
@@ -58,3 +58,15 @@ La aplicación es intencionalmente pequeña:
 Esta estructura sigue funcionando para una canción, pero no debe ampliarse agregando
 más canciones o más listas cerradas dentro de `index.html`. La migración documentada
 separa el motor, los datos y la persistencia antes de abrir la biblioteca al usuario.
+
+## Prototipo de Entrega 0
+
+Los contratos, el migrador heredado, la comparación canónica y la persistencia local
+en estado `shadow` viven en `src/`. No están importados por `index.html` ni por la API
+publicada y las dos banderas de biblioteca permanecen desactivadas.
+
+Para ejecutar las verificaciones:
+
+```sh
+npm test
+```

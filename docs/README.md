@@ -1,7 +1,7 @@
 # Índice de documentación
 
 Actualizado: 27 de julio de 2026
-Estado: dirección de producto aprobada; implementación pendiente.
+Estado: dirección de producto aprobada; Entrega 0 implementada en sombra y sin activación.
 
 ## Propósito
 
