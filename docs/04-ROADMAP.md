@@ -68,7 +68,7 @@ Dependencia: ninguna escritura en la nube nueva.
 
 ### Entrega 1 · motor universal
 
-Estado: **no iniciada**
+Estado: **E1.1 y E1.2 implementadas; audio e integración visual pendientes**
 
 Objetivo: cargar una canción como dato y ejecutar la experiencia actual sin
 referencias especiales a “Mis 36”.
@@ -81,6 +81,27 @@ Incluye:
 - renderizado parcial de Letra;
 - Tocar, Letra y Práctica consumiendo el mismo estado;
 - pruebas de regresión de “Mis 36”.
+
+Plan de ejecución aprobado:
+
+1. línea de tiempo pura y segundo fixture de contraste;
+2. máquina de estados con reloj falso;
+3. adaptador de audio programado por tiempo absoluto;
+4. adaptadores de Tocar, Letra y Práctica;
+5. lectura nueva detrás de bandera interna;
+6. Safari/iPad y ensayo de reversión.
+
+Avance verificado:
+
+- [x] E1.1 · documento inmutable, índices, fixture B y timeline puro;
+- [x] E1.2 · máquina de estados, reloj falso, pausa, tempo, práctica y generación;
+- [ ] E1.3 · adaptador de audio;
+- [ ] E1.4 · adaptadores de Tocar, Letra y Práctica;
+- [ ] E1.5 · lectura nueva detrás de bandera;
+- [ ] E1.6 · aceptación Safari/iPad.
+
+La especificación completa, contratos, invariantes, riesgos y criterios están en
+[`07-ENTREGA-1-MOTOR-UNIVERSAL.md`](07-ENTREGA-1-MOTOR-UNIVERSAL.md).
 
 Responsables:
 

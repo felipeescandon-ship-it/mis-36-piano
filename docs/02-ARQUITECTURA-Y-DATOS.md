@@ -317,19 +317,41 @@ Esto es infraestructura de la plataforma, no una mejora decorativa. El contrato 
 motor será:
 
 ```text
-load(song)
-play(fromEvent?)
+load(playbackDocument)
+unload()
+select(eventId)
+play({ fromEventId?, range? })
 pause()
 resume()
 stop()
 seek(eventId)
+setTempo(bpm)
+startPractice(options)
+handleVisibility(hidden)
 subscribe(playbackState)
+getSnapshot()
+destroy()
 ```
 
-El estado observable contiene canción, sección, evento, siguiente evento, tiempo
-musical y condición del audio. Safari puede suspender el contexto, pero al
-reanudarlo el motor recalcula desde estado musical; no encadena temporizadores
-vencidos.
+El documento de ejecución agrega canción, acordes y revisiones fijadas de voicing.
+No es un nuevo formato persistido. El estado observable contiene canción y revisión,
+evento por ID, siguiente evento, pulso interno, tempo, modo, generación y condición
+del audio.
+
+`AudioContext.currentTime` es la referencia mientras el contexto está activo. Los
+timers solamente despiertan al planificador; no acumulan el tiempo musical. Cada
+reproducción tiene una generación, de modo que una carga, búsqueda, detención o
+cambio de canción invalida callbacks y audio anteriores.
+
+Cuando la pestaña queda oculta, el motor conserva evento y pulso y entra en pausa de
+sistema. Safari puede suspender el contexto; al volver se solicita un gesto si es
+necesario y nunca se encadenan eventos vencidos.
+
+La hoja de Letra se construye una vez por canción y mantiene mapas de nodos por ID.
+El avance solamente modifica evento, línea y sección anteriores, actuales y
+siguientes. La especificación normativa del motor, su máquina de estados, plan de
+implementación y reversión están en
+[`07-ENTREGA-1-MOTOR-UNIVERSAL.md`](07-ENTREGA-1-MOTOR-UNIVERSAL.md).
 
 ## Validación
 

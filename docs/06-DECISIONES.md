@@ -98,6 +98,75 @@ esa prueba demuestra una necesidad concreta.
 Responsable: Felipe.
 Fecha: 27 de julio de 2026.
 
+### D-011 · Un único motor observable
+
+Tocar, Letra y Práctica consumen snapshots inmutables de una única máquina de
+reproducción. Las vistas no mantienen colas ni posiciones musicales independientes.
+
+Consecuencia: cualquier divergencia entre vistas se considera un defecto del
+adaptador, no se resuelve duplicando estado.
+
+Responsable: Felipe.
+Fecha: 27 de julio de 2026.
+
+### D-012 · Tiempo absoluto con reloj inyectable
+
+`AudioContext.currentTime` es la referencia musical en navegador. Timers y
+`requestAnimationFrame` despiertan planificación o renderizado, pero no calculan el
+progreso acumulando retrasos. En pruebas se inyecta un reloj falso.
+
+Consecuencia: pausa, cambio de tempo y pruebas largas pueden verificarse sin esperar
+tiempo real ni acumular deriva.
+
+Responsable: Felipe.
+Fecha: 27 de julio de 2026.
+
+### D-013 · Segundo plano produce pausa de sistema
+
+Cuando el documento se oculta, el motor captura evento y pulso y detiene el avance.
+Al volver, Safari solicita gesto si el contexto está suspendido. No se promete audio
+continuo con la pantalla bloqueada en Entrega 1.
+
+Consecuencia: no se reproducen acordes vencidos en ráfaga y la recuperación es
+predecible entre dispositivos.
+
+Responsables: Felipe y Fernando.
+Fecha: 27 de julio de 2026.
+
+### D-014 · Cambio de canción atómico y generacional
+
+Un agregado nuevo se valida antes de reemplazar el actual. Cada carga incrementa una
+generación que invalida callbacks, fuentes de audio y operaciones asíncronas
+anteriores.
+
+Consecuencia: un documento inválido no elimina el válido y una canción anterior no
+puede reaparecer después del cambio.
+
+Responsable: Felipe.
+Fecha: 27 de julio de 2026.
+
+### D-015 · Letra conserva nodos durante reproducción
+
+La hoja se construye una vez por canción. El avance modifica únicamente nodos
+anteriores, actuales y siguientes mediante IDs estables.
+
+Consecuencia: se conserva foco, se reduce trabajo de DOM y VoiceOver no recibe una
+hoja completa en cada cambio.
+
+Responsables: Felipe y Fernando.
+Fecha: 27 de julio de 2026.
+
+### D-016 · Tempo editable como override de sesión
+
+El tempo del documento es el valor inicial. Cambiar el control durante una sesión
+reancla la posición musical y reprograma el futuro, sin modificar la canción ni el
+orden de eventos.
+
+Consecuencia: Entrega 1 no introduce escrituras musicales al ajustar velocidad.
+
+Responsables: Felipe y pianista.
+Fecha: 27 de julio de 2026.
+
 ## Decisiones que requieren prototipo
 
 ### D-P02 · Rango y estrategia de muestras de piano

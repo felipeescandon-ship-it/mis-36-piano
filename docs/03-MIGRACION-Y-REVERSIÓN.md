@@ -59,6 +59,11 @@ La migración no sobrescribe `mis36/`. Escribe recursos nuevos bajo
 Salida: el nuevo código puede representar “Mis 36”, pero producción sigue leyendo
 el formato heredado.
 
+Durante la Entrega 1, el agregado migrado solo puede cargarse en memoria detrás de
+una bandera interna. No se avanza a conversión IndexedDB activa ni a escritura
+remota. La reversión consiste en apagar el motor nuevo; no transforma ni restaura
+datos.
+
 ### Fase 2 · Conversión local en sombra
 
 1. Leer datos predeterminados y aplicar ajustes `songSync`.
