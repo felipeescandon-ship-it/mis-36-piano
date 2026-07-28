@@ -187,12 +187,7 @@ class PianoSamples {
   }
 
   _midiFromPitchClassOctave(pitchClass, octave) {
-    const pitchToSemitone = {
-      'C': 0, 'D': 2, 'E': 4, 'F': 5, 'G': 7, 'A': 9, 'B': 11,
-    };
-    const base = pitchToSemitone[pitchClass.charAt(0)] || 0;
-    const accidental = (pitchClass.match(/#/g) || []).length - (pitchClass.match(/b/g) || []).length;
-    return (octave + 1) * 12 + base + accidental;
+    return (octave + 1) * 12 + pitchClass;
   }
 
   _findNearestSample(midi) {

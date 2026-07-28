@@ -157,7 +157,7 @@ test('1. schedules buffer sources at absolute AudioContext time', async () => {
   const fallbackSynth = new FallbackSynth(audioContext);
   const runtime = new AudioRuntime({ audioContext, pianoSamples, fallbackSynth });
 
-  const voicing = { notes: [{ pitchClass: 'C', octave: 4 }] };
+  const voicing = { notes: [{ pitchClass: 0, octave: 4 }] };
   const generation = runtime.nextGeneration();
   runtime.playVoicing(voicing, 2.0, 1.0, generation);
 
@@ -175,9 +175,9 @@ test('2. accepts voicing with pitchClass and octave', () => {
 
   const voicing = {
     notes: [
-      { pitchClass: 'C', octave: 4 },
-      { pitchClass: 'E', octave: 4 },
-      { pitchClass: 'G', octave: 4 },
+      { pitchClass: 0, octave: 4 },
+      { pitchClass: 4, octave: 4 },
+      { pitchClass: 7, octave: 4 },
     ],
   };
 
@@ -222,7 +222,7 @@ test('4. sample error triggers fallback', () => {
 
   const runtime = new AudioRuntime({ audioContext, pianoSamples, fallbackSynth });
 
-  const voicing = { notes: [{ pitchClass: 'C', octave: 4 }] };
+  const voicing = { notes: [{ pitchClass: 0, octave: 4 }] };
   const generation = runtime.nextGeneration();
   runtime.playVoicing(voicing, 1.0, 1.0, generation);
 
@@ -249,7 +249,7 @@ test('5. both samples and fallback fail', () => {
 
   const runtime = new AudioRuntime({ audioContext, pianoSamples, fallbackSynth });
 
-  const voicing = { notes: [{ pitchClass: 'C', octave: 4 }] };
+  const voicing = { notes: [{ pitchClass: 0, octave: 4 }] };
   const generation = runtime.nextGeneration();
   runtime.playVoicing(voicing, 1.0, 1.0, generation);
 
@@ -267,7 +267,7 @@ test('6. detects suspended AudioContext and reports blocked state', async () => 
   const fallbackSynth = new FallbackSynth(audioContext);
   const runtime = new AudioRuntime({ audioContext, pianoSamples, fallbackSynth });
 
-  const voicing = { notes: [{ pitchClass: 'C', octave: 4 }] };
+  const voicing = { notes: [{ pitchClass: 0, octave: 4 }] };
   const generation = runtime.nextGeneration();
   runtime.playVoicing(voicing, 1.0, 1.0, generation);
 
@@ -295,7 +295,7 @@ test('7. cancels only sources from specified generation', () => {
   const fallbackSynth = new FallbackSynth(audioContext);
   const runtime = new AudioRuntime({ audioContext, pianoSamples, fallbackSynth });
 
-  const voicing = { notes: [{ pitchClass: 'C', octave: 4 }] };
+  const voicing = { notes: [{ pitchClass: 0, octave: 4 }] };
   const gen1 = runtime.nextGeneration();
   runtime.playVoicing(voicing, 1.0, 1.0, gen1);
 
@@ -376,9 +376,9 @@ test('bonus: modules integrate correctly', () => {
 
   const voicing = {
     notes: [
-      { pitchClass: 'C', octave: 4 },
-      { pitchClass: 'E', octave: 4 },
-      { pitchClass: 'G', octave: 4 },
+      { pitchClass: 0, octave: 4 },
+      { pitchClass: 4, octave: 4 },
+      { pitchClass: 7, octave: 4 },
     ],
   };
 

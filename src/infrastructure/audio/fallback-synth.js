@@ -90,16 +90,8 @@ class FallbackSynth {
   }
 
   _frequencyFromPitchClassOctave(pitchClass, octave) {
-    const pitchToSemitone = {
-      'C': 0, 'D': 2, 'E': 4, 'F': 5, 'G': 7, 'A': 9, 'B': 11,
-    };
-
-    const base = pitchToSemitone[pitchClass.charAt(0)];
-    if (base === undefined) return null;
-
-    const accidental = (pitchClass.match(/#/g) || []).length - (pitchClass.match(/b/g) || []).length;
-    const midi = (octave + 1) * 12 + base + accidental;
-
+    if (!Number.isInteger(pitchClass) || pitchClass < 0 || pitchClass > 11) return null;
+    const midi = (octave + 1) * 12 + pitchClass;
     // A4 = 440 Hz = MIDI 69
     return 440 * Math.pow(2, (midi - 69) / 12);
   }
