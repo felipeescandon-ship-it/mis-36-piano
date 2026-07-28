@@ -6,6 +6,7 @@ test("Entrega 0 mantiene desactivadas la biblioteca y sus escrituras remotas", (
   assert.deepEqual(features, {
     pianoLibrary: false,
     pianoLibraryCloudWrites: false,
+    pianoUniversalEngine: false,
   });
   assert.equal(Object.isFrozen(features), true);
 });
