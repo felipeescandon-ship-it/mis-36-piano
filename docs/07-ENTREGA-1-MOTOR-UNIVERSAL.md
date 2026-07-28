@@ -1,7 +1,7 @@
 # Entrega 1 · motor universal
 
-Actualizado: 27 de julio de 2026
-Estado: E1.1 y E1.2 integradas en `main`; E1.3–E1.6 pendientes.
+Actualizado: 28 de julio de 2026
+Estado: E1.1–E1.5 integradas en `main`; falta solo E1.6 (aceptación física).
 
 ## Resumen
 
@@ -21,13 +21,18 @@ Safari/iPad.
 |---|---|---|
 | E1.1 · timeline y fixture B | Completada | rangos por ID, 81 eventos, 320 pulsos y contraste 96 BPM/3-4 |
 | E1.2 · máquina y reloj falso | Completada | pausa, tempo, 1.000 pulsos, práctica, suspensión y cambio atómico |
-| E1.3 · audio | Pendiente | no se ha extraído ni programado audio |
-| E1.4 · vistas | Pendiente | ninguna vista importa todavía el motor |
-| E1.5 · bandera | Pendiente | el lector público continúa heredado |
-| E1.6 · aceptación | Pendiente | requiere Safari/iPad real |
+| E1.3 · audio | Completada | AudioRuntime, PianoSamples, FallbackSynth; fallback, bloqueo, cancelación por generación (PR #4) |
+| E1.4 · vistas | Completada | selectors.js (view-models Tocar/Práctica/Letra) + playback-engine.js (conecta motor y audio) (PR #5) |
+| E1.5 · bandera | Completada (prueba interna) | bandera `pianoUniversalEngine` apagada; 81/81 eventos y 320 pulsos de "Mis 36" reproducidos por el motor coinciden con la vista canónica independiente (PR #5) |
+| E1.6 · aceptación | Pendiente | requiere Safari/iPad real; no ejecutable de forma autónoma |
 
 E1.1 y E1.2 son módulos sin `window`, DOM, `localStorage`, red ni `AudioContext`.
 Permanecen desconectados de `index.html` y no alteran la aplicación publicada.
+E1.3-E1.5 tampoco alteran `index.html`: la conexión visual real detrás de la
+bandera `pianoUniversalEngine` no se ha construido todavía (fue una decisión de
+alcance explícita, dado el riesgo de tocar por primera vez el archivo de
+producción) y sigue pendiente de una unidad futura, separada y revisada con
+cuidado.
 
 ### Mejora de Letra previa a E1.3
 
