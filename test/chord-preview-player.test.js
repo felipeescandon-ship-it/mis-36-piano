@@ -4,15 +4,19 @@ import { createChordPreviewPlayer } from "../src/application/chord-constructor/c
 
 const mockAudio = () => {
   let playing = null;
+  let lastCall = null;
   return {
     playVoicing(voicing, at, duration, generation) {
       playing = { voicing, at, duration, generation };
+      lastCall = playing;
     },
     stopGeneration(generation) {
       if (playing && playing.generation === generation) {
         playing = null;
       }
     },
+    /** Última llamada recibida, aunque después se haya detenido. */
+    lastCall: () => lastCall,
     state: "ready",
   };
 };
@@ -44,8 +48,13 @@ describe("Chord Preview Player", () => {
 
     const state = player.state();
     assert.strictEqual(state.isPlaying, true);
-    assert.strictEqual(state.generation, null); // Generation created internally
     assert.strictEqual(state.voicingId, "v1");
+
+    // Al reproducir se crea un identificador de generación y es el mismo que
+    // recibe el runtime de audio: es el asa con la que luego se detiene ese
+    // sonido y no otro.
+    assert.notStrictEqual(state.generation, null);
+    assert.strictEqual(state.generation, audio.lastCall().generation);
   });
 
   it("stops playback and clears state", () => {

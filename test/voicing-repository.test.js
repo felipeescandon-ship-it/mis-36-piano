@@ -5,66 +5,9 @@ import { createChordFactory } from "../src/application/chord-constructor/chord-f
 import {
   createVoicingRepository,
 } from "../src/infrastructure/voicing-repository.js";
+import { createMockDatabase } from "./fixtures/mock-indexed-db.js";
 
-const mockDatabase = () => {
-  const stores = {
-    voicings: new Map(),
-  };
-
-  return {
-    transaction(storeNames, mode) {
-      const objectStores = {};
-      for (const storeName of storeNames) {
-        const store = stores[storeName];
-        objectStores[storeName] = {
-          put(value, key) {
-            store.set(key, value);
-            return { onsuccess: null, onerror: null };
-          },
-          get(key) {
-            const result = store.get(key);
-            return {
-              set result(val) {
-                this._result = val;
-              },
-              get result() {
-                return this._result || result;
-              },
-              onsuccess: null,
-              onerror: null,
-            };
-          },
-          getAll() {
-            const result = Array.from(store.values());
-            return {
-              set result(val) {
-                this._result = val;
-              },
-              get result() {
-                return this._result || result;
-              },
-              onsuccess: null,
-              onerror: null,
-            };
-          },
-          delete(key) {
-            store.delete(key);
-            return { onsuccess: null, onerror: null };
-          },
-        };
-      }
-
-      return {
-        objectStore(name) {
-          return objectStores[name];
-        },
-        oncomplete: null,
-        onerror: null,
-        onabort: null,
-      };
-    },
-  };
-};
+const mockDatabase = () => createMockDatabase("voicings");
 
 describe("Voicing Repository", () => {
   it("saves and retrieves voicing by ID", async () => {
@@ -187,11 +130,16 @@ describe("Voicing Repository", () => {
     await repo.saveVoicing(db, voicing1);
     const retrieved1 = await repo.getVoicing(db, voicing1.id);
 
-    // Create new revision (simulating edit)
+    // Create new revision (simulating edit).
+    // La marca de tiempo se deriva de voicing1 en lugar de leer el reloj: la
+    // prueba entera corre en menos de un milisegundo, así que dos llamadas
+    // seguidas a new Date().toISOString() devuelven la misma cadena y la
+    // comparación de abajo pasaría o fallaría según se cruce o no un borde de
+    // milisegundo.
     const voicing2 = {
       ...voicing1,
       revision: "new-revision",
-      updatedAt: new Date().toISOString(),
+      updatedAt: new Date(Date.parse(voicing1.updatedAt) + 1000).toISOString(),
     };
 
     await repo.saveVoicing(db, voicing2);

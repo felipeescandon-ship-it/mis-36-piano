@@ -7,66 +7,9 @@ import { createVoicingRepository } from "../src/infrastructure/voicing-repositor
 import { createChordPreviewPlayer } from "../src/application/chord-constructor/chord-preview-player.js";
 import { validateChord, validateVoicing } from "../src/domain/validation.js";
 
-const mockDatabase = () => {
-  const stores = {
-    chords: new Map(),
-    voicings: new Map(),
-  };
+import { createMockDatabase } from "./fixtures/mock-indexed-db.js";
 
-  return {
-    transaction(storeNames, mode) {
-      const objectStores = {};
-      for (const storeName of storeNames) {
-        const store = stores[storeName];
-        objectStores[storeName] = {
-          put(value, key) {
-            store.set(key, value);
-            return { onsuccess: null, onerror: null };
-          },
-          get(key) {
-            const result = store.get(key);
-            return {
-              set result(val) {
-                this._result = val;
-              },
-              get result() {
-                return this._result || result;
-              },
-              onsuccess: null,
-              onerror: null,
-            };
-          },
-          getAll() {
-            const result = Array.from(store.values());
-            return {
-              set result(val) {
-                this._result = val;
-              },
-              get result() {
-                return this._result || result;
-              },
-              onsuccess: null,
-              onerror: null,
-            };
-          },
-          delete(key) {
-            store.delete(key);
-            return { onsuccess: null, onerror: null };
-          },
-        };
-      }
-
-      return {
-        objectStore(name) {
-          return objectStores[name];
-        },
-        oncomplete: null,
-        onerror: null,
-        onabort: null,
-      };
-    },
-  };
-};
+const mockDatabase = () => createMockDatabase("chords", "voicings");
 
 const mockAudio = () => {
   const played = [];
