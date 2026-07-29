@@ -1,5 +1,3 @@
-import { randomUUID } from "node:crypto";
-
 const PITCH_CLASS_TO_SPANISH = {
   0: "Do",
   1: "Do#",
@@ -18,8 +16,8 @@ const PITCH_CLASS_TO_SPANISH = {
 export function createChordFactory() {
   return {
     createChord(builderState) {
-      const id = randomUUID();
-      const revision = randomUUID();
+      const id = crypto.randomUUID();
+      const revision = crypto.randomUUID();
 
       const rootName = PITCH_CLASS_TO_SPANISH[builderState.root.pitchClass];
       const bassName = builderState.bass
@@ -48,8 +46,8 @@ export function createChordFactory() {
     },
 
     createVoicing(chordId, builderState, scope, name) {
-      const id = randomUUID();
-      const revision = randomUUID();
+      const id = crypto.randomUUID();
+      const revision = crypto.randomUUID();
       const now = new Date().toISOString();
 
       return {

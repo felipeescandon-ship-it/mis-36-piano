@@ -1,5 +1,3 @@
-import { randomUUID } from "node:crypto";
-
 export function createChordPreviewPlayer(audio) {
   let currentGeneration = null;
   let currentVoicingId = null;
@@ -13,7 +11,7 @@ export function createChordPreviewPlayer(audio) {
       }
 
       // Generate new voicing ID
-      currentGeneration = randomUUID();
+      currentGeneration = crypto.randomUUID();
       currentVoicingId = voicing.id;
       isPlaying = true;
 
