@@ -36,8 +36,13 @@ test("las anotaciones son tipográficas, táctiles y la letra conserva un flujo 
   // verso: cada celda se ensancha hasta caber la etiqueta que lleva encima.
   // El tamaño de la letra en cambio se mantiene en su valor original: está
   // elegido para leerse desde un atril y no debe seguir a la etiqueta.
+  //
+  // Los colores sí conservan los originales. Reducir el tamaño ya recorta el
+  // margen de contraste, así que aclararlos además dejaba el separador en
+  // 3,1:1, por debajo del mínimo AA de 4,5:1.
   assert.match(html, /\.song-chord-name\{color:#155fc0;font-size:17px/);
-  assert.match(html, /\.song-chord-notes\{color:#667085;font-size:12\.5px/);
+  assert.match(html, /\.song-chord-notes\{color:#526178;font-size:12\.5px/);
+  assert.match(html, /\.song-chord-separator\{color:#667085/);
   assert.match(html, /\.song-word\{[^}]+font-size:clamp\(21px,1\.7vw,26px\)/);
   assert.match(html, /\.song-part h3\{[^}]+font-size:18px/);
   assert.match(html, /\.song-lyric-run\{[^}]+flex-wrap:wrap/);
