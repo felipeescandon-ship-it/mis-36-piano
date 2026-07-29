@@ -1,0 +1,28 @@
+name: pruebas
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    # La suite completa tarda menos de un segundo. Un límite corto convierte
+    # cualquier prueba que se cuelgue en un fallo visible en lugar de en una
+    # espera silenciosa: así se comportaban los repositorios de la Entrega 2,
+    # que dejaban promesas pendientes para siempre y nadie lo advertía porque
+    # el archivo no fallaba, simplemente no terminaba.
+    timeout-minutes: 5
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24.x
+          cache: npm
+
+      - run: npm ci
+
+      - run: npm test
