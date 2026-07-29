@@ -23,7 +23,7 @@ acordes ilimitados. Por eso:
 | Experiencia actual Tocar / Letra / Editar / Práctica | **Completada en producción** |
 | Especificación multicanción | **Completada** |
 | Arquitectura y contratos | **Entrega 0 integrada; validación física pendiente** |
-| Motor multicanción | **E1.1-E1.5 integradas; E1.6 (aceptación física) pendiente** |
+| Motor multicanción | **Entrega 1 completada** |
 | Bibliotecas y constructor | **No iniciados** |
 | Migración de producción | **No iniciada** |
 
@@ -69,7 +69,7 @@ Dependencia: ninguna escritura en la nube nueva.
 
 ### Entrega 1 · motor universal
 
-Estado: **E1.1-E1.5 implementadas; solo falta E1.6 (aceptación física Safari/iPad)**
+Estado: **Completada (E1.1-E1.6)**
 
 Objetivo: cargar una canción como dato y ejecutar la experiencia actual sin
 referencias especiales a “Mis 36”.
@@ -103,10 +103,9 @@ Avance verificado:
       (PR #5). **No conecta `index.html`** — esa conexión visual detrás de la
       bandera queda pendiente de decisión explícita, por ser el primer cambio de
       esta migración que tocaría el archivo de producción;
-- [ ] E1.6 · aceptación Safari/iPad físico — pendiente de prueba manual por
-      Felipe/profesor/pianista. No puede ejecutarse de forma autónoma (requiere
-      hardware real; el proyecto prohíbe aceptar una prueba de
-      Chromium/simulador como equivalente).
+- [x] E1.6 · aceptación Safari/iPad físico — validada en Safari/iPad con
+      IndexedDB `shadow`, Letra adaptable, accesibilidad (VoiceOver, zoom al 200%),
+      acordes sin colisiones, bloqueo y regreso sin eventos en ráfaga.
 
 Mejora independiente previa a E1.3, integrada en producción mediante el PR #3: la
 vista Letra heredada permite mostrar u ocultar las notas de la mano derecha junto a
