@@ -128,21 +128,29 @@ Dependencia: Entrega 0.
 
 ### Entrega 2 · constructor y biblioteca de acordes
 
-Estado: **no iniciada**
+Estado: **Implementada (core + persistencia + audio preview; UI pendiente)**
 
 Objetivo: permitir acordes y posiciones que no existan en la canción actual.
 
-Incluye:
+Completado:
 
-- generador de acordes estándar;
-- bajo alternativo;
-- inversión;
-- agregar y quitar notas;
-- asignar mano, octava y digitación;
-- duplicar una posición antes de editar;
-- guardar y archivar voicings;
-- vista previa sonora y visual;
-- protección contra actualizaciones accidentales en canciones existentes.
+- [x] ChordBuilder: máquina de estado, cualidades (6-9), bajo alternativo
+- [x] ChordFactory: genera Chord y Voicing inmutables con UUIDs
+- [x] ChordSelectors: exposición de estado a UI (nombre, notas, MIDI)
+- [x] ChordRepository: persistencia de chords en IndexedDB
+- [x] VoicingRepository: persistencia de voicings en IndexedDB
+- [x] ChordPreviewPlayer: reproducción sonora de voicings
+- [x] Rango Do2–Do7, ±12 semitonos con muestras Salamander
+- [x] Ámbito: "library" (reutilizable) vs "song" (exclusivo)
+- [x] 64 tests (end-to-end, persistencia, audio)
+
+Pendiente (UI):
+
+- [ ] Constructor visual en pantalla
+- [ ] Radio Biblioteca/Canción al guardar con descripciones
+- [ ] Filtro de tipo en selector ("Todos", "Biblioteca", "Canción")
+- [ ] Teclado expandible en iPad
+- [ ] Integración con interfaz de canción
 
 Responsables:
 
