@@ -1,6 +1,6 @@
 # Roadmap · de “Mis 36” a plataforma multicanción
 
-Actualizado: 27 de julio de 2026
+Actualizado: 29 de julio de 2026
 Formato: Ahora / Siguiente / Después. Las entregas expresan dependencias, no fechas
 prometidas.
 
@@ -24,8 +24,24 @@ acordes ilimitados. Por eso:
 | Especificación multicanción | **Completada** |
 | Arquitectura y contratos | **Entrega 0 integrada; validación física pendiente** |
 | Motor multicanción | **Entrega 1 completada** |
-| Bibliotecas y constructor | **No iniciados** |
-| Migración de producción | **No iniciada** |
+| Constructor de acordes | **Entrega 2 integrada salvo interfaz (issue #11)** |
+| Biblioteca de canciones | **No iniciada (Entrega 3)** |
+| Migración de producción | **No iniciada (Entrega 4)** |
+| Integración continua | **Activa desde la PR #9; falta hacerla obligatoria (issue #15)** |
+
+Nada de lo que vive en `src/` se ejecuta todavía en producción: `index.html` no
+lo importa y las banderas siguen apagadas. Es la brecha que recoge el issue #16.
+
+## Cuestiones abiertas
+
+| Issue | Bloquea | Decide |
+|---|---|---|
+| #11 · los wireframes de E2 son un índice, no una especificación | los 5 puntos de interfaz de E2 | Javier |
+| #12 · el rango Do2–Do7 choca con el registro de bajo Si1–La2 | validación de notas | pianista |
+| #13 · la validación acepta notas sin muestra de audio | depende de #12 | — |
+| #14 · ¿las notas del acorde salen visibles por defecto? | acabado de la vista Letra | profesor y Fernando |
+| #15 · marcar el check `test` como obligatorio | protección de `main` | administración del repositorio |
+| #16 · `src/` está probado pero no se ejecuta | toda la migración | decisión de producto |
 
 ## Ahora · fundación
 
@@ -128,7 +144,8 @@ Dependencia: Entrega 0.
 
 ### Entrega 2 · constructor y biblioteca de acordes
 
-Estado: **Implementada (core + persistencia + audio preview; UI pendiente)**
+Estado: **Integrada en `main` (PR #7): núcleo, persistencia y audio. La interfaz
+está bloqueada por el issue #11.**
 
 Objetivo: permitir acordes y posiciones que no existan en la canción actual.
 
@@ -140,9 +157,29 @@ Completado:
 - [x] ChordRepository: persistencia de chords en IndexedDB
 - [x] VoicingRepository: persistencia de voicings en IndexedDB
 - [x] ChordPreviewPlayer: reproducción sonora de voicings
-- [x] Rango Do2–Do7, ±12 semitonos con muestras Salamander
-- [x] Ámbito: "library" (reutilizable) vs "song" (exclusivo)
-- [x] 64 tests (end-to-end, persistencia, audio)
+- [x] Ámbito: "library" (reutilizable) vs "song" (exclusivo), validado en
+      `validateVoicing`
+- [x] 61 pruebas propias, dentro de una suite de 135 que ahora sí termina
+
+No completado, pese a haberse dado por hecho:
+
+- [ ] **Rango Do2–Do7, ±12 semitonos.** No está implementado. `validateNote`
+      acepta octavas 0 a 8 (MIDI 12–131) y las muestras de piano solo cubren
+      MIDI 21–96. Además Do2 (MIDI 36) dejaría fuera el registro de bajo
+      Si1–La2 que documenta `index.html`. Issues #12 y #13.
+
+Corrección de julio de 2026 (PR #7): la suite de esta entrega **no llegaba a
+terminar**. El doble de prueba de IndexedDB, duplicado en tres archivos,
+declaraba `onsuccess` y `oncomplete` sin invocarlos nunca, de modo que cada
+`await` de los repositorios quedaba pendiente para siempre. Los archivos no
+fallaban: se quedaban callados, y como los dos primeros imprimían verde en
+menos de 100 ms, la entrega se dio por verificada con "64 tests" que nadie vio
+completar. Al repararlo afloraron dos pruebas más que el bloqueo ocultaba y un
+`import` de `node:crypto` en código de navegador, que habría roto la entrega al
+conectarla a `index.html`.
+
+Desde la PR #9 existe integración continua, de modo que este modo de fallo ya
+no puede repetirse en silencio.
 
 Pendiente (UI):
 
