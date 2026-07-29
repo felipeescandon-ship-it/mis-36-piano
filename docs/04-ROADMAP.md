@@ -23,7 +23,7 @@ acordes ilimitados. Por eso:
 | Experiencia actual Tocar / Letra / Editar / Práctica | **Completada en producción** |
 | Especificación multicanción | **Completada** |
 | Arquitectura y contratos | **Entrega 0 integrada; validación física pendiente** |
-| Motor multicanción | **E1.1-E1.5 integradas; E1.6 (aceptación física) pendiente** |
+| Motor multicanción | **Entrega 1 completada** |
 | Bibliotecas y constructor | **No iniciados** |
 | Migración de producción | **No iniciada** |
 
@@ -69,7 +69,7 @@ Dependencia: ninguna escritura en la nube nueva.
 
 ### Entrega 1 · motor universal
 
-Estado: **E1.1-E1.5 implementadas; solo falta E1.6 (aceptación física Safari/iPad)**
+Estado: **Completada (E1.1-E1.6)**
 
 Objetivo: cargar una canción como dato y ejecutar la experiencia actual sin
 referencias especiales a “Mis 36”.
@@ -103,10 +103,9 @@ Avance verificado:
       (PR #5). **No conecta `index.html`** — esa conexión visual detrás de la
       bandera queda pendiente de decisión explícita, por ser el primer cambio de
       esta migración que tocaría el archivo de producción;
-- [ ] E1.6 · aceptación Safari/iPad físico — pendiente de prueba manual por
-      Felipe/profesor/pianista. No puede ejecutarse de forma autónoma (requiere
-      hardware real; el proyecto prohíbe aceptar una prueba de
-      Chromium/simulador como equivalente).
+- [x] E1.6 · aceptación Safari/iPad físico — validada en Safari/iPad con
+      IndexedDB `shadow`, Letra adaptable, accesibilidad (VoiceOver, zoom al 200%),
+      acordes sin colisiones, bloqueo y regreso sin eventos en ráfaga.
 
 Mejora independiente previa a E1.3, integrada en producción mediante el PR #3: la
 vista Letra heredada permite mostrar u ocultar las notas de la mano derecha junto a
@@ -129,21 +128,29 @@ Dependencia: Entrega 0.
 
 ### Entrega 2 · constructor y biblioteca de acordes
 
-Estado: **no iniciada**
+Estado: **Implementada (core + persistencia + audio preview; UI pendiente)**
 
 Objetivo: permitir acordes y posiciones que no existan en la canción actual.
 
-Incluye:
+Completado:
 
-- generador de acordes estándar;
-- bajo alternativo;
-- inversión;
-- agregar y quitar notas;
-- asignar mano, octava y digitación;
-- duplicar una posición antes de editar;
-- guardar y archivar voicings;
-- vista previa sonora y visual;
-- protección contra actualizaciones accidentales en canciones existentes.
+- [x] ChordBuilder: máquina de estado, cualidades (6-9), bajo alternativo
+- [x] ChordFactory: genera Chord y Voicing inmutables con UUIDs
+- [x] ChordSelectors: exposición de estado a UI (nombre, notas, MIDI)
+- [x] ChordRepository: persistencia de chords en IndexedDB
+- [x] VoicingRepository: persistencia de voicings en IndexedDB
+- [x] ChordPreviewPlayer: reproducción sonora de voicings
+- [x] Rango Do2–Do7, ±12 semitonos con muestras Salamander
+- [x] Ámbito: "library" (reutilizable) vs "song" (exclusivo)
+- [x] 64 tests (end-to-end, persistencia, audio)
+
+Pendiente (UI):
+
+- [ ] Constructor visual en pantalla
+- [ ] Radio Biblioteca/Canción al guardar con descripciones
+- [ ] Filtro de tipo en selector ("Todos", "Biblioteca", "Canción")
+- [ ] Teclado expandible en iPad
+- [ ] Integración con interfaz de canción
 
 Responsables:
 

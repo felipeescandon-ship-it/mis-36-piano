@@ -1,8 +1,8 @@
 # Recap y continuidad · inicio de E1.3
 
-Actualizado: 27 de julio de 2026  
-Estado: Entrega 0, E1.1 y E1.2 integradas en producción; E1.3 analizada y
-pendiente de implementación.
+Actualizado: 28 de julio de 2026  
+Estado: Entrega 0 y Entrega 1 completadas en producción; E2 (constructor de
+acordes) pendiente de implementación.
 
 ## Propósito
 
