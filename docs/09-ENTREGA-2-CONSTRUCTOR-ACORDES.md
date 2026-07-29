@@ -133,24 +133,91 @@ Canción (exclusiva):
 - Pianista: ¿Transposición ±12 es suficiente o necesita más?
 - Felipe: ¿Es aceptable la calidad de Salamander + transposición para P0?
 
+## Feedback del equipo (28 julio 2026)
+
+### ✅ Acuerdos
+- Cualidades 6–9 (Mayor, menor, 7, maj7, m7, sus4 ± dim, m7b5, aug) cubren >90%
+- Rango Do2–Do7 + ±12 semitonos es suficiente
+- Flujo base (acorde → posición → preview → guardar) es intuitivo
+- Muestras + fallback synth es apropiado para P0
+
+### ⚠️ Aclaraciones antes de código
+
+**1. Inversiones (Profesor)**
+- E2 permite construirlas pero sin etiquetar explícitamente ("1ª inversión")
+- Decisión: Esperar a E3 para selector de inversión automática
+- Impacto P0: Bajo; usuario construye la posición manualmente
+
+**2. Biblioteca vs Canción (Fernando + Javier)**
+- Etiqueta gris sola es insuficiente
+- Cambios: 
+  - Radio button en confirmación de guardado (no toggle misterioso)
+  - Fondo sutil gris (5% de opacidad) en filas de voicing Biblioteca
+  - Filtro de tipo en selector ("Todos", "Biblioteca", "Canción")
+
+**3. Previsualización en iPad (Javier)**
+- Teclado visual debe ser expandible (botón "Mostrar diagrama")
+- No forzar scroll infinito
+- Botón Play (pequeño icono) para previsualización sonora
+
+**4. Estados de error/transición (Fernando)**
+- Cancelar → se descarta sin auto-borrador (decidido)
+- Duplicar voicing → sí permitido, confirmación mínima
+- Editar voicing Biblioteca → confirmación: "Afectará X canciones"
+- Fallback a synth → silencioso (no requiere indicador)
+
+### 📋 Wireframe guardado (Fernando + Javier)
+
+```
+┌─ Guardar voicing ──────────────┐
+│                                │
+│ Nombre: [Do Mayor, 2º inv.]   │
+│ (editable, autocompletado)    │
+│                                │
+│ Tipo:                          │
+│ ○ Biblioteca                   │
+│   "Reutilizable. Cambios      │
+│    afectarán otras canciones" │
+│ ◉ Canción                      │
+│   "Solo en esta canción"       │
+│                                │
+│ [Cancelar]  [Guardar]          │
+└────────────────────────────────┘
+```
+
 ## Fuera de E2
 
 - No incluye transposición de canción completa (E7)
 - No soporta portadas ni metadatos de voicing (Q-05 aplica a E3)
 - No sincroniza con nube aún (E5)
 - No conecta la UI de construcción a `index.html` aún
-- No incluye validación de "cordura" (ej: advertencia si mano izquierda tiene 5 notas)
+- No incluye validación de "cordura" (ej: advertencia si mano izquierda tiene 5 notas; pasa a E3)
+
+## Criteria previos (antes de código)
+
+**No proceder sin validación de:**
+
+- [ ] Wireframe de guardado (radio Biblioteca/Canción con descripciones)
+- [ ] Definición de donde aparece fondo gris en filas de Biblioteca
+- [ ] Filtro de selector ("Todos", "Biblioteca", "Canción")
+- [ ] Decisión sobre auto-borrador vs pérdida al cancelar
+- [ ] Definición de "Mostrar diagrama" expandible para iPad
+
+Una vez aclarados, desbloquea implementación.
 
 ## Criterios de aceptación
 
 1. Constructor crea voicings con nota, octava, mano y digitación opcional.
 2. Previsualización sonora usa muestras + fallback sin bloquear.
-3. Guardar crea voicing inmutable; editar es versión separada.
-4. Biblioteca y canción son distinguibles en selector.
+3. Guardar muestra radio de tipo (Biblioteca/Canción) con confirmación.
+4. Biblioteca y canción son distinguibles: fondo + filtro en selector.
 5. Rango Do2–Do7 cubre posiciones reales sin transposición excesiva.
 6. 6–9 cualidades de acorde cubren >90% del uso real.
-7. 50+ pruebas de construcción, previsualización y guardado.
-8. No requiere modelo de análisis armónico, reconocimiento de gesto ni IA.
+7. Inversiones permitidas pero sin etiquetar (E3 agrega selector automático).
+8. Previsualización de teclado es expandible en iPad.
+9. 50+ pruebas de construcción, previsualización y guardado.
+10. No requiere modelo de análisis armónico, reconocimiento de gesto ni IA.
+11. Estados faltantes definidos (cancelar, duplicar, editar biblioteca).
 
 ## Dependencias
 
