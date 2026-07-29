@@ -31,8 +31,13 @@ test("las anotaciones son tipográficas, táctiles y la letra conserva un flujo 
   assert.match(html, /\.lyrics-page\{max-width:1400px/);
   assert.match(html, /\.song-sheet\{max-width:1320px/);
   assert.match(html, /\.song-chord\{[^}]+min-height:44px[^}]+background:transparent/);
-  assert.match(html, /\.song-chord-name\{color:#155fc0;font-size:19px/);
-  assert.match(html, /\.song-chord-notes\{color:#526178;font-size:14px/);
+  // La etiqueta del acorde se estrechó a propósito (19→17 px el nombre,
+  // 14→12,5 px las notas) porque su ancho es lo que separa las palabras del
+  // verso: cada celda se ensancha hasta caber la etiqueta que lleva encima.
+  // El tamaño de la letra en cambio se mantiene en su valor original: está
+  // elegido para leerse desde un atril y no debe seguir a la etiqueta.
+  assert.match(html, /\.song-chord-name\{color:#155fc0;font-size:17px/);
+  assert.match(html, /\.song-chord-notes\{color:#667085;font-size:12\.5px/);
   assert.match(html, /\.song-word\{[^}]+font-size:clamp\(21px,1\.7vw,26px\)/);
   assert.match(html, /\.song-part h3\{[^}]+font-size:18px/);
   assert.match(html, /\.song-lyric-run\{[^}]+flex-wrap:wrap/);
