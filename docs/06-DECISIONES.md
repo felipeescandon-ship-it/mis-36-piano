@@ -3,19 +3,19 @@
 Actualizado: 27 de julio de 2026
 Estado: decisiones aceptadas y preguntas que deben resolverse antes de su entrega.
 
-## Participantes y responsabilidades
+## Quién decide
 
-| Rol | Responsabilidad principal |
-|---|---|
-| Profesor de piano | pedagogía, digitación, inversiones y aprendizaje |
-| Pianista | comodidad, anticipación, fluidez y ejecución real |
-| Experto en UX musical | mínima fricción mientras se toca y canta |
-| Felipe · front-end | arquitectura, implementación, audio y persistencia |
-| Javier · diseño | identidad, jerarquía visual y sensación orgánica |
-| Fernando · UX | flujos, clics, seguridad, estados y accesibilidad |
+Felipe, en todo. El proyecto lo lleva una sola persona.
 
-El comité asesora. Las decisiones de alcance y publicación corresponden al
-responsable del producto.
+Los documentos anteriores repartían las decisiones entre un comité asesor —diseño,
+UX, un profesor de piano, un pianista— que no existe. Esa ficción tuvo un coste
+concreto: varias decisiones tomadas quedaron registradas como «pendientes de
+validación» de alguien que nunca iba a responder, y el roadmap las trataba como
+bloqueos externos.
+
+Lo que sí conviene conservar es **qué tipo de criterio** necesita cada decisión
+—musical, de interfaz, de producto—, porque eso indica qué hay que comprobar antes
+de darla por buena. Las preguntas abiertas de más abajo lo indican en esa columna.
 
 ## Decisiones aceptadas
 
@@ -130,7 +130,6 @@ continuo con la pantalla bloqueada en Entrega 1.
 Consecuencia: no se reproducen acordes vencidos en ráfaga y la recuperación es
 predecible entre dispositivos.
 
-Responsables: Felipe y Fernando.
 Fecha: 27 de julio de 2026.
 
 ### D-014 · Cambio de canción atómico y generacional
@@ -153,7 +152,6 @@ anteriores, actuales y siguientes mediante IDs estables.
 Consecuencia: se conserva foco, se reduce trabajo de DOM y VoiceOver no recibe una
 hoja completa en cada cambio.
 
-Responsables: Felipe y Fernando.
 Fecha: 27 de julio de 2026.
 
 ### D-016 · Tempo editable como override de sesión
@@ -164,7 +162,6 @@ orden de eventos.
 
 Consecuencia: Entrega 1 no introduce escrituras musicales al ajustar velocidad.
 
-Responsables: Felipe y pianista.
 Fecha: 27 de julio de 2026.
 
 ### D-017 · Los acordes de Letra son anotaciones tipográficas
@@ -183,14 +180,11 @@ Consecuencia: `Mi | Mi-Sol#-Si` conserva jerarquía musical, continuidad de lect
 y accesibilidad sin convertir la hoja en un tablero de tarjetas. Esta decisión no
 forma parte de E1.4 ni conecta el motor nuevo.
 
-Responsables: Felipe, comité de diseño, UX musical y accesibilidad.
 Fecha: 27 de julio de 2026.
 
 ## Decisiones que requieren prototipo
 
 ### D-P02 · Rango y estrategia de muestras de piano
-
-Responsables: Felipe y pianista.
 Bloquea: aceptación completa del constructor.
 
 Definir registro permitido, muestra más cercana, transposición máxima aceptable y
@@ -198,16 +192,25 @@ conducta cuando una nota no tiene muestra.
 
 ## Preguntas abiertas
 
-| ID | Pregunta | Responsable | Bloquea |
+| ID | Pregunta | Criterio que la decide | Bloquea |
 |---|---|---|---|
-| Q-01 | ¿Qué cualidades exactas entran en P0 además del mínimo propuesto? | Profesor + pianista | Constructor final |
-| Q-02 | ¿Cómo se distingue visualmente “posición de biblioteca” de “posición exclusiva de canción”? | Fernando + Javier | Diseño de acordes |
-| Q-03 | ¿Cuánto tiempo permanece una canción archivada antes de permitir borrado definitivo? | Producto | Eliminación |
-| Q-04 | ¿Qué formato se importa después del JSON propio: texto de acordes, ChordPro u otro? | Producto + ingeniería | P1, no P0 |
-| Q-05 | ¿Se guardan portadas o solo metadatos textuales en P0? | Javier + producto | No bloqueante |
-| Q-06 | ¿Una canción puede fijar tempo por sección en P0? | Pianista + profesor | Modelo si se aprueba |
-| Q-07 | ¿Cómo se comunica la actualización de un voicing usado por varias canciones? | Fernando | Sincronización |
-| Q-08 | ¿Cuál es el periodo de convivencia de v1 y v2 después de activar producción? | Producto + ingeniería | Activación |
+| Q-03 | ¿Cuánto tiempo permanece una canción archivada antes de permitir borrado definitivo? | producto | Eliminación |
+| Q-04 | ¿Qué formato se importa después del JSON propio: texto de acordes, ChordPro u otro? | producto e ingeniería | P1, no P0 |
+| Q-05 | ¿Se guardan portadas o solo metadatos textuales en P0? | producto | No bloqueante |
+| Q-06 | ¿Una canción puede fijar tempo por sección en P0? | musical | Modelo si se aprueba |
+| Q-07 | ¿Cómo se comunica la actualización de un voicing usado por varias canciones? | interfaz | Sincronización |
+| Q-08 | ¿Cuál es el periodo de convivencia de v1 y v2 después de activar producción? | producto e ingeniería | Activación |
+
+### Cerradas al retirar el comité
+
+Q-01 y Q-02 figuraban como abiertas porque esperaban la validación de personas que no
+existen. Sus respuestas ya estaban tomadas y aplicadas en el código:
+
+- **Q-01 · cualidades de P0.** Resueltas: seis base (Mayor, menor, 7, maj7, m7, sus4)
+  más tres extendidas (dim, m7b5, aug). Es lo que implementa `ChordBuilder`.
+- **Q-02 · biblioteca frente a exclusiva de canción.** Resuelta: radio button al
+  guardar, fondo `--libraryTint` en las filas de Biblioteca y filtro de tipo en el
+  selector. Especificado en `11-E2-INTERFAZ.md`, apartados 10 y 11.
 
 ## Cómo registrar nuevas decisiones
 

@@ -108,9 +108,9 @@ Canción (exclusiva):
 - Agregar `m7b5, dim, aug` (+3, total 9) — complejidad mínima
 - Incluir notación (slash chords) como texto libre en editor heredado, no en constructor
 
-**Para validar:**
-- Profesor: ¿Estas 6 cualidades cubren >90% de "Mis 36" y canciones de referencia?
-- Pianista: ¿Faltan inversiones que afecten digitación?
+**Comprobar antes de darlo por bueno:**
+- ¿Estas 6 cualidades cubren >90% de "Mis 36" y canciones de referencia?
+- ¿Faltan inversiones que afecten digitación?
 
 ### Q-02 · Distinción visual biblioteca vs canción
 
@@ -120,53 +120,53 @@ Canción (exclusiva):
 - Colores distintos por tipo
 - Áreas separadas en pantalla
 
-**Para validar:**
-- Fernando/Javier: ¿Es clara la distinción con etiqueta + posición en selector?
-- Pianista: ¿Entiende dónde encuentra voicings compartidos vs exclusivos?
+**Comprobar antes de darlo por bueno:**
+- ¿Es clara la distinción con etiqueta + posición en selector?
+- ¿Entiende dónde encuentra voicings compartidos vs exclusivos?
 
 ### D-P02 · Muestras y transposición
 
 **Propuesta:** Rango 36–84 (Do2–Do7), muestra cercana + transposición ±12, fallback.
 
-**Para validar:**
-- Pianista: ¿Este rango cubre todas las posiciones que toca o construiría?
-- Pianista: ¿Transposición ±12 es suficiente o necesita más?
-- Felipe: ¿Es aceptable la calidad de Salamander + transposición para P0?
+**Comprobar antes de darlo por bueno:**
+- ¿Este rango cubre todas las posiciones que toca o construiría?
+- ¿Transposición ±12 es suficiente o necesita más?
+- ¿Es aceptable la calidad de Salamander + transposición para P0?
 
-## Feedback del equipo (28 julio 2026)
+## Decisiones tomadas (28 de julio de 2026)
 
-### ✅ Acuerdos
+### Confirmado
 - Cualidades 6–9 (Mayor, menor, 7, maj7, m7, sus4 ± dim, m7b5, aug) cubren >90%
 - Rango Do2–Do7 + ±12 semitonos es suficiente
 - Flujo base (acorde → posición → preview → guardar) es intuitivo
 - Muestras + fallback synth es apropiado para P0
 
-### ⚠️ Aclaraciones antes de código
+### Aclaraciones antes de código
 
-**1. Inversiones (Profesor)**
+**1. Inversiones**
 - E2 permite construirlas pero sin etiquetar explícitamente ("1ª inversión")
 - Decisión: Esperar a E3 para selector de inversión automática
 - Impacto P0: Bajo; usuario construye la posición manualmente
 
-**2. Biblioteca vs Canción (Fernando + Javier)**
+**2. Biblioteca vs Canción**
 - Etiqueta gris sola es insuficiente
 - Cambios: 
   - Radio button en confirmación de guardado (no toggle misterioso)
   - Fondo sutil gris (5% de opacidad) en filas de voicing Biblioteca
   - Filtro de tipo en selector ("Todos", "Biblioteca", "Canción")
 
-**3. Previsualización en iPad (Javier)**
+**3. Previsualización en iPad**
 - Teclado visual debe ser expandible (botón "Mostrar diagrama")
 - No forzar scroll infinito
 - Botón Play (pequeño icono) para previsualización sonora
 
-**4. Estados de error/transición (Fernando)**
+**4. Estados de error y transición**
 - Cancelar → se descarta sin auto-borrador (decidido)
 - Duplicar voicing → sí permitido, confirmación mínima
 - Editar voicing Biblioteca → confirmación: "Afectará X canciones"
 - Fallback a synth → silencioso (no requiere indicador)
 
-### 📋 Wireframe guardado (Fernando + Javier)
+### Wireframe de guardado
 
 ```
 ┌─ Guardar voicing ──────────────┐
@@ -222,19 +222,17 @@ Una vez aclarados, desbloquea implementación.
 ## Dependencias
 
 - E1 completada (audio, motor, selectors) ✅
-- Validación de D-P02, Q-01, Q-02 con equipo ⏳
+- Q-01 y Q-02 resueltas; ver `06-DECISIONES.md`
+- D-P02 pendiente: el rango de muestras sigue sin cerrar (issues #12 y #13)
 
-## Propuesta de validación
+## Cómo se comprueba lo que aquí se decide
 
-1. **Reunión breve (30 min)** con profesor, pianista, Fernando y Javier
-2. **Preguntas directas** sobre mínimo viable (arriba)
-3. **Feedback escrito** en este documento
-4. **Decisión**: seguir con mínimo, agregar opciones o replantear
+Este documento se escribió como si un comité fuera a revisarlo. No existe tal
+comité, así que las comprobaciones tienen que salir del propio producto:
 
-## Contacto para feedback
-
-- **Profesor**: cualidades, pedagogía, inversiones
-- **Pianista**: digitación, rango, comodidad real
-- **Fernando**: flujo, accesibilidad, distinción visual
-- **Javier**: jerarquía, compacidad visual, identidad
-- **Felipe**: implementación, audio, persistencia
+- **Criterio musical** — contrastar contra “Mis 36” y contra el repertorio que se
+  quiera añadir. Si una cualidad o un rango no aparecen ahí, la pregunta es teórica.
+- **Criterio de interfaz** — probar el flujo en el iPad real, que es el dispositivo
+  de uso, no en un viewport emulado.
+- **Criterio de implementación** — la suite de pruebas, que desde la PR #9 se
+  ejecuta en cada pull request.

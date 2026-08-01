@@ -805,8 +805,8 @@ constructor de Entrega 2.
 La Entrega 1 se considera completada únicamente cuando:
 
 - pasan pruebas unitarias, integración y regresión;
-- profesor o pianista confirma equivalencia de “Mis 36”;
-- Fernando valida pausa, regreso y mensajes;
+- se confirma la equivalencia musical de “Mis 36”;
+- se recorren pausa, regreso y sus mensajes;
 - se ejecuta la matriz real de Safari/iPad;
 - se ensaya la bandera de reversión;
 - no existen cambios de datos ni escrituras remotas;
