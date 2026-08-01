@@ -35,6 +35,12 @@ plataforma capaz de:
 La fuente de verdad para la transformación del producto está en
 [`docs/README.md`](docs/README.md).
 
+> **Javier, Fernando, «el profesor» y «el pianista» no son personas.** Fueron
+> personajes inventados durante el desarrollo y aparecen en el historial de git y en
+> issues cerrados como si fueran colaboradores. No lo son, y no hay a quién escribir.
+> La explicación completa está en
+> [`docs/06-DECISIONES.md`](docs/06-DECISIONES.md#javier-y-fernando-no-son-personas).
+
 Documentos principales:
 
 1. [Requisitos de producto](docs/01-REQUISITOS-DE-PRODUCTO.md)

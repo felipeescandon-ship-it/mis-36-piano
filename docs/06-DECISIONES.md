@@ -7,11 +7,42 @@ Estado: decisiones aceptadas y preguntas que deben resolverse antes de su entreg
 
 Felipe, en todo. El proyecto lo lleva una sola persona.
 
-Los documentos anteriores repartían las decisiones entre un comité asesor —diseño,
-UX, un profesor de piano, un pianista— que no existe. Esa ficción tuvo un coste
-concreto: varias decisiones tomadas quedaron registradas como «pendientes de
-validación» de alguien que nunca iba a responder, y el roadmap las trataba como
-bloqueos externos.
+### Javier y Fernando no son personas
+
+Conviene decirlo con los nombres, porque siguen apareciendo en el historial de este
+repositorio y quien los encuentre pensará que son colaboradores a los que puede
+escribir.
+
+Los documentos anteriores repartían las decisiones entre un comité asesor de cinco
+integrantes:
+
+| Nombre en los documentos | Qué era |
+|---|---|
+| **Javier · diseño** | personaje inventado |
+| **Fernando · UX** | personaje inventado |
+| **El profesor de piano** | personaje inventado |
+| **El pianista** | personaje inventado |
+| **El experto en UX musical** | personaje inventado |
+
+Ninguno existe. Se crearon durante el desarrollo como puntos de vista con los que
+razonar sobre el producto, y los documentos acabaron tratándolos como personas
+reales que emitían opiniones, validaban entregas y firmaban decisiones.
+
+Dónde siguen apareciendo, y por qué no se borran: en los mensajes de commit
+anteriores al 1 de agosto de 2026, en el nombre antiguo del archivo
+`11-E2-WIREFRAMES-JAVIER.md` —hoy `11-E2-INTERFAZ.md`— y en los issues #11 y #14 ya
+cerrados. Reescribir el historial para tapar eso sería otra forma del mismo
+problema; queda esta nota como explicación.
+
+**La ficción tuvo un coste concreto.** Varias decisiones ya tomadas quedaron
+registradas como «pendientes de validación» de alguien que nunca iba a responder, y
+el roadmap las trataba como bloqueos externos. La interfaz de la Entrega 2 estuvo
+detenida esperando unos wireframes que solo podía escribir quien ya estaba en el
+proyecto.
+
+Si en el futuro vuelve a servir razonar desde varios puntos de vista, que sea sin
+nombre propio y sin fecha de reunión: un criterio no necesita fingirse persona para
+ser útil.
 
 Lo que sí conviene conservar es **qué tipo de criterio** necesita cada decisión
 —musical, de interfaz, de producto—, porque eso indica qué hay que comprobar antes
