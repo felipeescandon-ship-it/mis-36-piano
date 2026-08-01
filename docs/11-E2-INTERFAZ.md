@@ -233,14 +233,13 @@ de la pantalla que se colorea a sí mismo, y por eso funciona como leyenda perma
 
 De **Si1 a Do7** (MIDI 35–96).
 
-Es el único intervalo que satisface los dos documentos que hoy se contradicen: cubre
-el registro de bajo `Si1–La2` que la leyenda de `index.html:716` declara al usuario, y
-llega hasta el techo de las muestras de piano. Queda pendiente de confirmación del
-criterio musical (issue #12).
+Cubre el registro de bajo `Si1–La2` que la leyenda de `index.html:716` declara al
+usuario, y llega hasta el techo de las muestras de piano.
 
-Nota para quien implemente: `docs/09` dice *"Do2 (MIDI 36) a Do7 (MIDI 84)"* y el
-roadmap dice 36–96. Son incompatibles — 84 es Do6. Este documento propone 35–96 y la
-discrepancia debe resolverse en el issue #12 antes de escribir `validateNote`.
+Confirmado y aplicado (issue #12). La documentación anterior se contradecía: `docs/09`
+decía "Do2 (MIDI 36) a Do7 (MIDI 84)" —que además es Do6— y el roadmap decía 36–96.
+`validateNote` comprueba ahora la altura absoluta, no el número de octava, que es lo
+que dejaba pasar Si7 y rechazaba Si1.
 
 Con 62 teclas el diagrama no cabe en ninguna pantalla. Por eso:
 

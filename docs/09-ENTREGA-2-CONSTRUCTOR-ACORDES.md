@@ -35,7 +35,7 @@ análisis funcional.
 Notas concretas en mano derecha e izquierda:
 
 ```
-Nota (nombre + octava: Do2–Do7)
+Nota (nombre + octava: Si1–Do7)
 Mano (izquierda, derecha)
 Digitación opcional (1–5 si existe)
 ```
@@ -71,7 +71,7 @@ anteriores.
 **Estrategia:** usar las notas Salamander existentes sin resolver todas las combinaciones.
 
 ```
-Rango: Do2 (MIDI 36) a Do7 (MIDI 84) — cubre teclado estándar 88 teclas
+Rango: Si1 (MIDI 35) a Do7 (MIDI 96)
 Muestra más cercana: buscar la mitad más cercana, transponer con playbackRate
 Transposición máxima: ±12 semitonos antes de usar fallback synth
 Fallback: si muestra + transposición fallan, osciladores
@@ -126,7 +126,7 @@ Canción (exclusiva):
 
 ### D-P02 · Muestras y transposición
 
-**Propuesta:** Rango 36–84 (Do2–Do7), muestra cercana + transposición ±12, fallback.
+**Resuelto:** rango 35–96 (Si1–Do7), muestra cercana + transposición ±12, fallback.
 
 **Comprobar antes de darlo por bueno:**
 - ¿Este rango cubre todas las posiciones que toca o construiría?
@@ -137,7 +137,7 @@ Canción (exclusiva):
 
 ### Confirmado
 - Cualidades 6–9 (Mayor, menor, 7, maj7, m7, sus4 ± dim, m7b5, aug) cubren >90%
-- Rango Do2–Do7 + ±12 semitonos es suficiente
+- Rango Si1–Do7 + ±12 semitonos es suficiente
 - Flujo base (acorde → posición → preview → guardar) es intuitivo
 - Muestras + fallback synth es apropiado para P0
 
@@ -211,7 +211,7 @@ Una vez aclarados, desbloquea implementación.
 2. Previsualización sonora usa muestras + fallback sin bloquear.
 3. Guardar muestra radio de tipo (Biblioteca/Canción) con confirmación.
 4. Biblioteca y canción son distinguibles: fondo + filtro en selector.
-5. Rango Do2–Do7 cubre posiciones reales sin transposición excesiva.
+5. Rango Si1–Do7 cubre posiciones reales sin transposición excesiva.
 6. 6–9 cualidades de acorde cubren >90% del uso real.
 7. Inversiones permitidas pero sin etiquetar (E3 agrega selector automático).
 8. Previsualización de teclado es expandible en iPad.
@@ -223,7 +223,7 @@ Una vez aclarados, desbloquea implementación.
 
 - E1 completada (audio, motor, selectors) ✅
 - Q-01 y Q-02 resueltas; ver `06-DECISIONES.md`
-- D-P02 pendiente: el rango de muestras sigue sin cerrar (issues #12 y #13)
+- D-P02 resuelto: rango Si1–Do7 (MIDI 35–96), aplicado en `validateNote`
 
 ## Cómo se comprueba lo que aquí se decide
 

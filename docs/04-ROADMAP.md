@@ -24,7 +24,7 @@ acordes ilimitados. Por eso:
 | Especificación multicanción | **Completada** |
 | Arquitectura y contratos | **Entrega 0 integrada; validación física pendiente** |
 | Motor multicanción | **Entrega 1 completada** |
-| Constructor de acordes | **Entrega 2 integrada salvo interfaz (issue #11)** |
+| Constructor de acordes | **Entrega 2 integrada salvo interfaz, ya especificada** |
 | Biblioteca de canciones | **No iniciada (Entrega 3)** |
 | Migración de producción | **No iniciada (Entrega 4)** |
 | Integración continua | **Activa desde la PR #9 y obligatoria para integrar en `main`** |
@@ -36,9 +36,6 @@ lo importa y las banderas siguen apagadas. Es la brecha que recoge el issue #16.
 
 | Issue | Bloquea | Decide |
 |---|---|---|
-| #11 · la especificación de interfaz de E2 ya existe; falta implementarla | los 5 puntos de interfaz de E2 | — |
-| #12 · el rango Do2–Do7 choca con el registro de bajo Si1–La2 | validación de notas | criterio musical |
-| #13 · la validación acepta notas sin muestra de audio | depende de #12 | — |
 | #14 · ¿las notas del acorde salen visibles por defecto? | acabado de la vista Letra | producto |
 | #16 · `src/` está probado pero no se ejecuta | toda la migración | decisión de producto |
 
@@ -132,7 +129,7 @@ Dependencia: Entrega 0.
 ### Entrega 2 · constructor y biblioteca de acordes
 
 Estado: **Integrada en `main` (PR #7): núcleo, persistencia y audio. La interfaz
-está bloqueada por el issue #11.**
+está especificada (PR #19) y pendiente de implementar.**
 
 Objetivo: permitir acordes y posiciones que no existan en la canción actual.
 
@@ -146,14 +143,14 @@ Completado:
 - [x] ChordPreviewPlayer: reproducción sonora de voicings
 - [x] Ámbito: "library" (reutilizable) vs "song" (exclusivo), validado en
       `validateVoicing`
-- [x] 61 pruebas propias, dentro de una suite de 135 que ahora sí termina
+- [x] 63 pruebas propias, dentro de una suite de 137 que ahora sí termina
+- [x] **Rango Si1–Do7 (MIDI 35–96).** `validateNote` lo comprueba sobre la altura
+      absoluta. Antes aceptaba octavas 0 a 8 (MIDI 12–131) y el constructor
+      comprobaba el número de octava en su lugar, de modo que dejaba pasar Si7
+      —once semitonos por encima de la muestra más aguda— y rechazaba el registro
+      de bajo Si1–La2 que documenta `index.html`. Issues #12 y #13.
 
-No completado, pese a haberse dado por hecho:
-
-- [ ] **Rango Do2–Do7, ±12 semitonos.** No está implementado. `validateNote`
-      acepta octavas 0 a 8 (MIDI 12–131) y las muestras de piano solo cubren
-      MIDI 21–96. Además Do2 (MIDI 36) dejaría fuera el registro de bajo
-      Si1–La2 que documenta `index.html`. Issues #12 y #13.
+- [x] Interfaz especificada en [`11-E2-INTERFAZ.md`](11-E2-INTERFAZ.md) (issue #11)
 
 Corrección de julio de 2026 (PR #7): la suite de esta entrega **no llegaba a
 terminar**. El doble de prueba de IndexedDB, duplicado en tres archivos,

@@ -185,10 +185,12 @@ Fecha: 27 de julio de 2026.
 ## Decisiones que requieren prototipo
 
 ### D-P02 · Rango y estrategia de muestras de piano
-Bloquea: aceptación completa del constructor.
 
-Definir registro permitido, muestra más cercana, transposición máxima aceptable y
-conducta cuando una nota no tiene muestra.
+**Resuelta.** Registro permitido Si1–Do7 (MIDI 35–96): el grave es el del bajo que
+documenta `index.html`, el agudo el techo de las muestras. Muestra más cercana con
+transposición de hasta ±12 semitonos y respaldo de osciladores cuando no la hay.
+
+`validateNote` comprueba la altura absoluta, no el número de octava. Issues #12 y #13.
 
 ## Preguntas abiertas
 
