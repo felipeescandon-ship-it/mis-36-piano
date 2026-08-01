@@ -1040,6 +1040,13 @@ makeSection("Coro final",[
 ])
 ];
 
+// Copia de los valores predeterminados antes de que nada los toque. El editor
+// muta `sections` en sitio, así que a partir de aquí deja de ser el estado
+// original: lo que el usuario cambie viaja por songSync, no por estas
+// estructuras. Se clona para que la comprobación del motor nuevo compare
+// contra el mismo punto de partida que el fixture de las pruebas.
+const LEGACY_DEFAULTS=JSON.parse(JSON.stringify({voicings,defaultInversions,voicingVariants,sections}));
+
 const SONG_SYNC_KEY="mis36-song-sync-v1";
 const CLOUD_REVISION_KEY="mis36-cloud-revision";
 const CLOUD_DIRTY_KEY="mis36-cloud-dirty";
@@ -1125,6 +1132,21 @@ function songSyncSnapshot(){
  }));
  return saved;
 }
+/**
+ * Única puerta por la que el modelo nuevo puede leer esta aplicación. Devuelve
+ * datos, no referencias vivas, y nadie la llama salvo la comprobación del
+ * motor universal, que solo se activa con ?motor=universal en la dirección.
+ */
+window.mis36LegacySnapshot=()=>({
+ revision:cloudRevision||"00000000-0000-4000-8000-000000000000",
+ updatedAt:new Date().toISOString(),
+ metadata:{
+   title:"Mis 36",artist:"Pablo Alborán",key:"E",
+   tempo:Number(bpm.value)||72,timeSignature:[4,4],notation:notationMode,tags:[]
+ },
+ ...JSON.parse(JSON.stringify(LEGACY_DEFAULTS)),
+ songSync:songSyncSnapshot()
+});
 function saveSongSync(syncCloud=true){
  const saved=songSyncSnapshot();
  try{
@@ -2705,6 +2727,39 @@ nextPianoToggle.onclick=()=>{
 nextKeyboardWrap.addEventListener("scroll",()=>syncPianoScroll(nextKeyboardWrap,currentKeyboardWrap),{passive:true});
 currentKeyboardWrap.addEventListener("scroll",()=>syncPianoScroll(currentKeyboardWrap,nextKeyboardWrap),{passive:true});
 updateNotationToggle();updateLyricsNotesToggle();renderSyncChordOptions();renderSyncInversionOptions("E");initializeSongSync();updateSettingsSummary();updateNextPianoVisibility();initSections();buildSteps();render();renderFullSong();updateSessionSummary();updateTransportControls();loadCloudSongSync();
+</script>
+
+<!--
+  Motor universal · comprobación en sombra.
+
+  Es el primer punto donde `index.html` alcanza el código de `src/`. No cambia
+  nada de lo que el usuario ve ni oye: migra la canción en memoria, compara la
+  equivalencia canónica y publica el resultado.
+
+  Sin ?motor=universal en la dirección, este bloque sale antes de importar
+  nada, de modo que la aplicación publicada carga exactamente los mismos
+  recursos que antes. La bandera de src/config/features.js sigue apagada y no
+  puede activarse desde aquí: esto es una comprobación, no un interruptor de
+  producción.
+-->
+<script type="module">
+if(new URLSearchParams(location.search).get("motor")==="universal"){
+ try{
+   const {verifyLiveEquivalence}=await import("./src/application/verify-live-equivalence.js");
+   const report=await verifyLiveEquivalence(window.mis36LegacySnapshot());
+   window.mis36EquivalenceReport=report;
+   console[report.ok?"info":"error"](
+     report.ok
+       ?`Motor universal: equivalencia confirmada contra los datos vivos (${report.counts.events} eventos, ${report.elapsedMs} ms).`
+       :"Motor universal: la equivalencia NO se cumple.",
+     report
+   );
+ }catch(error){
+   // Que la comprobación falle no puede afectar a la aplicación publicada.
+   window.mis36EquivalenceReport={ok:false,error:{message:String(error)}};
+   console.error("Motor universal: la comprobación no pudo ejecutarse.",error);
+ }
+}
 </script>
 </body>
 </html>

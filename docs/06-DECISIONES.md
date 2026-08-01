@@ -207,6 +207,44 @@ efecto se nota más.
 
 Fecha: 1 de agosto de 2026.
 
+### D-019 · El motor entra en producción como comprobación antes que como reproductor
+
+`index.html` puede alcanzar `src/`, pero solo para comprobarse a sí mismo. Con
+`?motor=universal` en la dirección, la aplicación migra la canción en memoria,
+compara la equivalencia canónica y publica el informe. Sin ese parámetro no importa
+un solo archivo de `src/`.
+
+El orden es deliberado. Conectar las vistas al motor es el cambio grande —reescribe
+el bucle central de un archivo de 2709 líneas— y hasta ahora se iba a dar sin haber
+ejecutado nunca ese código en un navegador contra los datos reales. Ahora se puede
+ejecutar antes de decidir.
+
+También cubre un hueco de las pruebas: `test/migration.test.js` compara contra un
+fixture congelado, y la canción publicada no lo está, porque el editor la reescribe
+y la nube la sincroniza. La primera ejecución en navegador ya lo demostró: los datos
+vivos sin ediciones dan 86 eventos, mientras el fixture da 81 y cinco borrados. Son
+consistentes —86 menos 5— pero solo una comprobación en vivo lo enseña.
+
+La bandera `pianoUniversalEngine` sigue apagada y no puede activarse desde la URL:
+esto es una comprobación, no un interruptor de producción.
+
+Consecuencia: el issue #16 deja de ser una decisión a ciegas. Sigue abierto lo que de
+verdad decide —cuándo las vistas dejan de consumir el código heredado—, pero ya no
+hay que tomarlo sin evidencia.
+
+Fecha: 1 de agosto de 2026.
+
+### D-020 · La Entrega 0 queda cerrada
+
+La validación física que faltaba era ejecutar el adaptador IndexedDB `shadow` en
+Safari/iPad real. La aceptación de E1.6 la cubrió: se validó en Safari/iPad con
+IndexedDB `shadow`, Letra adaptable, VoiceOver, zoom al 200 % y regreso tras bloqueo.
+
+El roadmap seguía marcando «validación física pendiente» en tres sitios por no haber
+cruzado ambos registros.
+
+Fecha: 1 de agosto de 2026.
+
 ## Decisiones que requieren prototipo
 
 ### D-P02 · Rango y estrategia de muestras de piano
