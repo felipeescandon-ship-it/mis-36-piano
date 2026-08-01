@@ -1,6 +1,6 @@
 # Roadmap · de “Mis 36” a plataforma multicanción
 
-Actualizado: 29 de julio de 2026
+Actualizado: 1 de agosto de 2026
 Formato: Ahora / Siguiente / Después. Las entregas expresan dependencias, no fechas
 prometidas.
 
@@ -27,7 +27,7 @@ acordes ilimitados. Por eso:
 | Constructor de acordes | **Entrega 2 integrada salvo interfaz (issue #11)** |
 | Biblioteca de canciones | **No iniciada (Entrega 3)** |
 | Migración de producción | **No iniciada (Entrega 4)** |
-| Integración continua | **Activa desde la PR #9; falta hacerla obligatoria (issue #15)** |
+| Integración continua | **Activa desde la PR #9 y obligatoria para integrar en `main`** |
 
 Nada de lo que vive en `src/` se ejecuta todavía en producción: `index.html` no
 lo importa y las banderas siguen apagadas. Es la brecha que recoge el issue #16.
@@ -40,7 +40,6 @@ lo importa y las banderas siguen apagadas. Es la brecha que recoge el issue #16.
 | #12 · el rango Do2–Do7 choca con el registro de bajo Si1–La2 | validación de notas | pianista |
 | #13 · la validación acepta notas sin muestra de audio | depende de #12 | — |
 | #14 · ¿las notas del acorde salen visibles por defecto? | acabado de la vista Letra | profesor y Fernando |
-| #15 · marcar el check `test` como obligatorio | protección de `main` | administración del repositorio |
 | #16 · `src/` está probado pero no se ejecuta | toda la migración | decisión de producto |
 
 ## Ahora · fundación
