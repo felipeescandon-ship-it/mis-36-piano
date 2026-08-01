@@ -36,7 +36,6 @@ lo importa y las banderas siguen apagadas. Es la brecha que recoge el issue #16.
 
 | Issue | Bloquea | Decide |
 |---|---|---|
-| #14 · ¿las notas del acorde salen visibles por defecto? | acabado de la vista Letra | producto |
 | #16 · `src/` está probado pero no se ejecuta | toda la migración | decisión de producto |
 
 ## Ahora · fundación

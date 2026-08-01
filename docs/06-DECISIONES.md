@@ -182,6 +182,31 @@ forma parte de E1.4 ni conecta el motor nuevo.
 
 Fecha: 27 de julio de 2026.
 
+### D-018 · Las notas del acorde salen visibles por defecto en Letra
+
+La vista Letra muestra las notas del voicing junto a cada acorde sin que el usuario
+tenga que pedirlo. El conmutador sigue existiendo y su elección se conserva en el
+dispositivo, de modo que quien prefiera la lectura limpia la desactiva una vez.
+
+Esta decisión confirma el comportamiento que ya tenía la aplicación publicada
+(`index.html:838`); no cambia código.
+
+Tiene un coste medido y aceptado: cada anotación `Mi | Mi-Sol#-Si` ocupa unos 124 px
+de ancho medio y ensancha la celda de la palabra que lleva debajo, así que sobre una
+palabra corta quedan unos 100 px muertos y el verso se lee más separado. Con las
+notas ocultas ese efecto desaparece.
+
+Se prefiere la información pedagógica: quien abre Letra está aprendiendo la canción,
+y descubrir que las notas existen vale más que la fluidez tipográfica de un verso.
+Lo contrario obligaría a saber que hay algo que activar.
+
+Consecuencia: la separación de palabras en Letra es un efecto conocido de esta
+decisión, no un defecto que reportar. Si alguna vez molesta lo suficiente, la
+alternativa registrada es ocultarlas solo por debajo de cierto ancho, donde el
+efecto se nota más.
+
+Fecha: 1 de agosto de 2026.
+
 ## Decisiones que requieren prototipo
 
 ### D-P02 · Rango y estrategia de muestras de piano

@@ -22,8 +22,9 @@ plataforma capaz de:
 - Plataforma multicanción: **Entregas 0 y 1 completas; Entrega 2 integrada en
   `main` salvo su interfaz, ya especificada y pendiente de implementar**
 - Pruebas: **137**, ejecutadas automáticamente en cada pull request
-- Cuestiones abiertas que condicionan lo siguiente: issues
-  [#14 y #16](https://github.com/felipeescandon-ship-it/mis-36-piano/issues)
+- Cuestión abierta que condiciona lo siguiente: issue
+  [#16](https://github.com/felipeescandon-ship-it/mis-36-piano/issues/16) — `src/` está
+  probado pero no se ejecuta en producción
 - Letra heredada: puede mostrar u ocultar las notas de la mano derecha junto a cada
   acorde, respetando su inversión y la notación española o inglesa. Utiliza
   anotaciones tipográficas como `Mi | Mi-Sol#-Si`, con el acorde principal azul y
