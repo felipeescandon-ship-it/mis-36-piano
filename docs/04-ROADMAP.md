@@ -36,7 +36,7 @@ lo importa y las banderas siguen apagadas. Es la brecha que recoge el issue #16.
 
 | Issue | Bloquea | Decide |
 |---|---|---|
-| #11 · los wireframes de E2 son un índice, no una especificación | los 5 puntos de interfaz de E2 | Javier |
+| #11 · la especificación de interfaz de E2 ya existe; falta implementarla | los 5 puntos de interfaz de E2 | — |
 | #12 · el rango Do2–Do7 choca con el registro de bajo Si1–La2 | validación de notas | pianista |
 | #13 · la validación acepta notas sin muestra de audio | depende de #12 | — |
 | #14 · ¿las notas del acorde salen visibles por defecto? | acabado de la vista Letra | profesor y Fernando |

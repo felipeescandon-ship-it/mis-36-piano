@@ -46,8 +46,8 @@ Documentos principales:
 8. [Recap y continuidad para E1.3](docs/08-RECAP-Y-CONTINUIDAD.md)
 9. [Entrega 2 · constructor de acordes](docs/09-ENTREGA-2-CONSTRUCTOR-ACORDES.md)
 10. [Recap de la Entrega 2](docs/10-RECAP-E2-COMPLETA.md)
-11. [Wireframes de la Entrega 2](docs/11-E2-WIREFRAMES-JAVIER.md) — **incompleto:
-    contiene el índice de la especificación, no la especificación. Issue #11**
+11. [Interfaz de la Entrega 2](docs/11-E2-WIREFRAMES-JAVIER.md) — especificación
+    visual completa. Su apartado 16 enumera lo que deliberadamente no decide
 
 ## Reglas de seguridad
 
