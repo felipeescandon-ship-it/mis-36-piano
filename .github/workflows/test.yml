@@ -7,6 +7,12 @@ on:
 
 jobs:
   test:
+    # «test» es el nombre con el que este trabajo se publica como check y con el
+    # que la protección de `main` lo exige. Sin esta línea el nombre lo hereda
+    # del identificador del trabajo, de modo que renombrar `jobs.test:` dejaría
+    # a la rama esperando para siempre un check que ya nadie publica. Si alguna
+    # vez hay que cambiarlo, hay que actualizar también la regla de protección.
+    name: test
     runs-on: ubuntu-latest
     # La suite completa tarda menos de un segundo. Un límite corto convierte
     # cualquier prueba que se cuelgue en un fallo visible en lugar de en una
