@@ -22,27 +22,31 @@ acordes ilimitados. Por eso:
 |---|---|
 | Experiencia actual Tocar / Letra / Editar / Práctica | **Completada en producción** |
 | Especificación multicanción | **Completada** |
-| Arquitectura y contratos | **Entrega 0 integrada; validación física pendiente** |
+| Arquitectura y contratos | **Entrega 0 completada (D-020)** |
 | Motor multicanción | **Entrega 1 completada** |
 | Constructor de acordes | **Entrega 2 integrada salvo interfaz, ya especificada** |
 | Biblioteca de canciones | **No iniciada (Entrega 3)** |
 | Migración de producción | **No iniciada (Entrega 4)** |
 | Integración continua | **Activa desde la PR #9 y obligatoria para integrar en `main`** |
 
-Nada de lo que vive en `src/` se ejecuta todavía en producción: `index.html` no
-lo importa y las banderas siguen apagadas. Es la brecha que recoge el issue #16.
+Las vistas siguen siendo las heredadas y las banderas siguen apagadas. Desde
+agosto de 2026, `index.html` sí alcanza `src/` con `?motor=universal` para
+comprobar la equivalencia canónica contra los datos vivos, sin cambiar nada de lo
+que se ve ni se oye (D-019). Lo que el issue #16 decide —cuándo las vistas dejan de
+consumir el código heredado— sigue abierto, pero ya no se decide a ciegas.
 
 ## Cuestiones abiertas
 
 | Issue | Bloquea | Decide |
 |---|---|---|
-| #16 · `src/` está probado pero no se ejecuta | toda la migración | decisión de producto |
+| #16 · ¿cuándo las vistas dejan de consumir el código heredado? | Entregas 3 y 4 | producto |
 
 ## Ahora · fundación
 
 ### Entrega 0 · contratos y prototipo
 
-Estado: **prototipo en sombra completado; validación manual de navegador pendiente**
+Estado: **Completada.** La validación física del adaptador IndexedDB `shadow` en
+Safari/iPad la cubrió la aceptación de E1.6 — ver D-020.
 
 Objetivo: demostrar que el modelo nuevo representa “Mis 36” sin cambiar la
 aplicación pública.
@@ -66,9 +70,6 @@ Implementado en la rama de fundación:
   2 duraciones personalizadas;
 - adaptador IndexedDB aislado, sin cola ni escritura remota;
 - pruebas automáticas de validación, equivalencia, idempotencia y persistencia.
-
-Pendiente antes de cerrar formalmente la entrega: ejecutar el adaptador IndexedDB
-en Safari/iPad real y registrar el resultado.
 
 Dependencia: ninguna escritura en la nube nueva.
 

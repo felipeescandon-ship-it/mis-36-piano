@@ -35,6 +35,12 @@ plataforma capaz de:
 La fuente de verdad para la transformación del producto está en
 [`docs/README.md`](docs/README.md).
 
+> **Javier, Fernando, «el profesor» y «el pianista» no son personas.** Fueron
+> personajes inventados durante el desarrollo y aparecen en el historial de git y en
+> issues cerrados como si fueran colaboradores. No lo son, y no hay a quién escribir.
+> La explicación completa está en
+> [`docs/06-DECISIONES.md`](docs/06-DECISIONES.md#javier-y-fernando-no-son-personas).
+
 Documentos principales:
 
 1. [Requisitos de producto](docs/01-REQUISITOS-DE-PRODUCTO.md)
@@ -74,21 +80,39 @@ Esta estructura sigue funcionando para una canción, pero no debe ampliarse agre
 más canciones o más listas cerradas dentro de `index.html`. La migración documentada
 separa el motor, los datos y la persistencia antes de abrir la biblioteca al usuario.
 
-## El motor nuevo todavía no corre en producción
+## El motor nuevo se comprueba en producción, pero todavía no la reproduce
 
 Los contratos, el migrador heredado, la comparación canónica, la persistencia local
 en estado `shadow`, el motor de reproducción de la Entrega 1 y el constructor de
 acordes de la Entrega 2 viven en `src/`.
 
-**Nada de eso lo importa `index.html` ni la API publicada**, y las tres banderas
-siguen desactivadas; `test/safety.test.js` lo verifica en cada ejecución. Es decir:
-`src/` está probado pero no se ejecuta para ningún usuario, y lo que sí corre en
-producción son las 2709 líneas de `index.html`.
+**Las vistas siguen siendo las heredadas.** Tocar, Letra, Editar y Práctica corren
+sobre el código de `index.html`; ningún usuario oye ni ve nada producido por `src/`,
+y las tres banderas de `src/config/features.js` siguen apagadas —
+`test/safety.test.js` lo verifica en cada ejecución.
 
-Es una consecuencia deliberada de migrar por fases, pero el coste crece con cada
-entrega: hay dos descripciones de cómo funciona la aplicación y la que está cubierta
-por pruebas no es la que usan los usuarios. La decisión de cuándo `index.html`
-empieza a consumir `src/` sigue abierta — issue #16.
+Lo que sí existe desde agosto de 2026 es una puerta:
+
+```
+https://mis-36-piano.vercel.app/?motor=universal
+```
+
+Con ese parámetro, y solo con él, `index.html` importa `src/`, migra la canción en
+memoria, comprueba la equivalencia canónica contra los datos que sirve producción y
+publica el resultado en `window.mis36EquivalenceReport` y en la consola. No cambia
+nada de lo que se ve ni se oye.
+
+Sin el parámetro no se descarga un solo archivo de `src/`: el bloque sale antes de
+importar nada. Verificado en navegador con cero peticiones a `src/`.
+
+Importa porque `test/migration.test.js` comprueba la equivalencia contra un fixture
+congelado, y la canción publicada no está congelada — el editor la reescribe y la
+nube la sincroniza. La comprobación en vivo detecta desviaciones que el fixture no
+puede ver.
+
+Queda pendiente la decisión de fondo del issue #16: cuándo las vistas dejan de
+consumir el código heredado y pasan a consumir el motor. Este paso no la toma; hace
+que deje de ser una decisión a ciegas.
 
 Para ejecutar las verificaciones:
 
