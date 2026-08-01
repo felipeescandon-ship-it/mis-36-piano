@@ -23,7 +23,7 @@ plataforma capaz de:
   `main` salvo su interfaz, que está bloqueada por el issue #11**
 - Pruebas: **135**, ejecutadas automáticamente en cada pull request
 - Cuestiones abiertas que condicionan lo siguiente: issues
-  [#11 a #16](https://github.com/felipeescandon-ship-it/mis-36-piano/issues)
+  [#11 a #14 y #16](https://github.com/felipeescandon-ship-it/mis-36-piano/issues)
 - Letra heredada: puede mostrar u ocultar las notas de la mano derecha junto a cada
   acorde, respetando su inversión y la notación española o inglesa. Utiliza
   anotaciones tipográficas como `Mi | Mi-Sol#-Si`, con el acorde principal azul y
@@ -106,5 +106,12 @@ Los checks de Vercel que acompañan a cada PR verifican que el sitio compila y s
 despliega, **no** que las pruebas pasen. Conviene no confundirlos: una PR llegó a
 producción en verde rompiendo tres aserciones porque nadie ejecutaba la suite.
 
-El check `test` todavía no está marcado como requerido para `main`, así que un fallo
-se ve pero no impide integrar — issue #15.
+El check `test` es requerido para integrar en `main` y la regla no admite excepciones
+para administradores, de modo que un fallo bloquea la integración en lugar de
+limitarse a mostrarse. Como consecuencia, `git push` directo a `main` queda
+rechazado: el check solo puede ejecutarse después de subir los commits, así que todo
+cambio entra por pull request.
+
+Ese check se publica con el nombre `test`, declarado explícitamente en el workflow.
+Renombrarlo allí sin actualizar la regla de protección dejaría a `main` esperando
+indefinidamente un check que ya nadie publica.
