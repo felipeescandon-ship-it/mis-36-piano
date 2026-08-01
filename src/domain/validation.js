@@ -57,14 +57,29 @@ export function pitchClassForSpelling(spelling) {
   return SPELLINGS.get(spelling);
 }
 
+// Registro soportado: Si1–Do7. El extremo grave es el del bajo que documenta
+// `index.html` ("Registro sugerido para el bajo: Si1–La2"); el agudo es el techo
+// de las muestras de piano, que llegan hasta Do7. Fuera de aquí no hay muestra y
+// el motor tendría que estirar la más cercana más allá de lo aceptable.
+export const LOWEST_SUPPORTED_MIDI = 35;
+export const HIGHEST_SUPPORTED_MIDI = 96;
+
+export function midiNumber(note) {
+  return note.pitchClass + (note.octave + 1) * 12;
+}
+
 export function validateNote(note, path = "note") {
   object(note, path);
   exactKeys(note, ["pitchClass", "octave", "spelling", "hand", "finger"], path);
   if (!Number.isInteger(note.pitchClass) || note.pitchClass < 0 || note.pitchClass > 11) {
     fail("invalid_pitch_class", "La altura debe estar entre 0 y 11.", `${path}.pitchClass`);
   }
-  if (!Number.isInteger(note.octave) || note.octave < 0 || note.octave > 8) {
-    fail("invalid_octave", "La octava está fuera del registro soportado.", `${path}.octave`);
+  if (!Number.isInteger(note.octave)) {
+    fail("invalid_octave", "La octava debe ser un número entero.", `${path}.octave`);
+  }
+  const midi = midiNumber(note);
+  if (midi < LOWEST_SUPPORTED_MIDI || midi > HIGHEST_SUPPORTED_MIDI) {
+    fail("invalid_octave", "La nota está fuera del registro soportado (Si1–Do7).", `${path}.octave`);
   }
   if (pitchClassForSpelling(note.spelling) !== note.pitchClass) {
     fail("invalid_spelling", "La escritura no corresponde a la altura.", `${path}.spelling`);

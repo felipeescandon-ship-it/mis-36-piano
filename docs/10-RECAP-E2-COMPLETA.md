@@ -72,7 +72,7 @@ Usa `audio.playVoicing(voicing, at, duration, generation)` de E1.3.
 
 ### Builder & Factory (25 tests)
 - State machine transitions, qualities, root/bass/notes
-- Rango Do2–Do7, límite 32 notas
+- Rango Si1–Do7, límite 32 notas
 - Inmutabilidad de Chord/Voicing, UUIDs
 
 ### Selectors (15 tests)
@@ -109,7 +109,7 @@ Usa `audio.playVoicing(voicing, at, duration, generation)` de E1.3.
 | Aspecto | Decisión |
 |---------|----------|
 | Cualidades | 6 base (Mayor, menor, 7, maj7, m7, sus4) + 3 extendidas (dim, m7b5, aug) |
-| Rango | Do2–Do7 (MIDI 36–96), ±12 semitonos con fallback synth |
+| Rango | Si1–Do7 (MIDI 35–96), ±12 semitonos con fallback synth |
 | Inversiones | Permitidas en E2 (sin etiquetar); E3 agrega selector automático |
 | Biblioteca/Canción | Radio button al guardar + fondo gris en filas + filtro en selector |
 | iPad | Teclado expandible (botón "Mostrar diagrama"), no fuerza scroll |
@@ -134,7 +134,7 @@ Usa `audio.playVoicing(voicing, at, duration, generation)` de E1.3.
 
 - ✅ Inversiones permitidas sin etiquetar (no bloquea E2)
 - ✅ Distinción Biblioteca/Canción definida en wireframe verbal
-- ⚠️ Rango Do2–Do7 + ±12: dado por validado sin estarlo (issues #12 y #13)
+- ✅ Rango Si1–Do7 (MIDI 35–96): confirmado y aplicado en `validateNote`
 - ✅ Cualidades (6-9): decididas y aplicadas en `ChordBuilder`
 
 ## Deuda técnica

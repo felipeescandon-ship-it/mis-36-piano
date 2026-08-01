@@ -47,15 +47,12 @@ export function createChordBuilder() {
     },
 
     addNote(note) {
+      // El registro lo impone `validateNote`, que compara la altura absoluta
+      // contra las muestras disponibles. Este método comprobaba la octava en su
+      // lugar (2 a 7), lo que dejaba pasar Si7 —veinte semitonos por encima de la
+      // muestra más aguda— y rechazaba el registro de bajo Si1–La2 que la
+      // aplicación publicada documenta.
       validateNote(note);
-
-      if (note.octave < 2 || note.octave > 7) {
-        throw new ContractError(
-          "out_of_range",
-          "La octava debe estar entre 2 y 7 (Do2–Do7).",
-          "octave"
-        );
-      }
 
       if (state.notes.length >= 32) {
         throw new ContractError("invalid_notes", "El voicing no puede exceder 32 notas.", "notes");

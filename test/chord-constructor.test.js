@@ -240,7 +240,7 @@ describe("Chord Constructor", () => {
       }));
     });
 
-    it("accepts Do7 (octave 7, MIDI 84)", () => {
+    it("accepts Do7 (octave 7, MIDI 96)", () => {
       const builder = createChordBuilder();
       assert.doesNotThrow(() => builder.addNote({
         pitchClass: 0,
@@ -250,24 +250,48 @@ describe("Chord Constructor", () => {
       }));
     });
 
-    it("rejects Do1 (too low for E2)", () => {
+    // El grave del registro no es Do2 sino Si1: es donde empieza el bajo que
+    // documenta la aplicación publicada, y la validación anterior lo rechazaba.
+    it("accepts Si1 (octave 1, MIDI 35) — el grave del registro de bajo", () => {
       const builder = createChordBuilder();
-      assert.throws(() => builder.addNote({
-        pitchClass: 0,
+      assert.doesNotThrow(() => builder.addNote({
+        pitchClass: 11,
         octave: 1,
-        spelling: "C",
+        spelling: "B",
         hand: "left",
-      }), /octava|rango/i);
+      }));
     });
 
-    it("rejects Do8 (too high for E2)", () => {
+    it("rejects La1 (MIDI 33, por debajo del registro)", () => {
+      const builder = createChordBuilder();
+      assert.throws(() => builder.addNote({
+        pitchClass: 9,
+        octave: 1,
+        spelling: "A",
+        hand: "left",
+      }), /registro/i);
+    });
+
+    // Si7 pasaba la comprobación anterior por estar en la octava 7, pese a quedar
+    // once semitonos por encima de la muestra más aguda.
+    it("rejects Si7 (MIDI 107, sin muestra pese a estar en la octava 7)", () => {
+      const builder = createChordBuilder();
+      assert.throws(() => builder.addNote({
+        pitchClass: 11,
+        octave: 7,
+        spelling: "B",
+        hand: "right",
+      }), /registro/i);
+    });
+
+    it("rejects Do8 (MIDI 108, por encima del registro)", () => {
       const builder = createChordBuilder();
       assert.throws(() => builder.addNote({
         pitchClass: 0,
         octave: 8,
         spelling: "C",
         hand: "right",
-      }), /octava|rango/i);
+      }), /registro/i);
     });
   });
 
