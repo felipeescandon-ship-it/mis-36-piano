@@ -1,7 +1,8 @@
 # E2 Completa · Constructor de acordes
 
 Actualizado: 29 de julio de 2026  
-Estado: Core, persistencia y audio preview completados; UI pendiente de Javier/Fernando wireframes.
+Estado: Core, persistencia y audio preview completados; interfaz especificada en
+`11-E2-INTERFAZ.md` y pendiente de implementar.
 
 ## Ubicación y rama
 
@@ -122,7 +123,8 @@ Usa `audio.playVoicing(voicing, at, duration, generation)` de E1.3.
 
 ## Próximos pasos (UI)
 
-1. **Wireframes confirmados** — Javier confirma layout, Fondo gris, radio button, filtro
+1. **Especificación de interfaz** — layout, fondo gris, radio button y filtro definidos
+   en `11-E2-INTERFAZ.md`
 2. **Integración a index.html** — Constructor en modal/página
 3. **Flujo guardado** — Radio Biblioteca/Canción, confirmación de impacto
 4. **Selector de voicings** — Mostrar biblioteca global + canción exclusivos
@@ -132,8 +134,8 @@ Usa `audio.playVoicing(voicing, at, duration, generation)` de E1.3.
 
 - ✅ Inversiones permitidas sin etiquetar (no bloquea E2)
 - ✅ Distinción Biblioteca/Canción definida en wireframe verbal
-- ✅ Rango Do2–Do7 + ±12 validado por pianista
-- ✅ Cualidades (6-9) validadas por profesor
+- ⚠️ Rango Do2–Do7 + ±12: dado por validado sin estarlo (issues #12 y #13)
+- ✅ Cualidades (6-9): decididas y aplicadas en `ChordBuilder`
 
 ## Deuda técnica
 
@@ -165,7 +167,7 @@ Si UI es el próximo trabajo:
 
 1. Leer este documento y `docs/09-ENTREGA-2-CONSTRUCTOR-ACORDES.md`
 2. Revisar wireframe verbal en `docs/09-ENTREGA-2-CONSTRUCTOR-ACORDES.md` (sección Wireframe guardado)
-3. Confirmar con Javier/Fernando cualquier cambio visual
+3. Contrastar cualquier cambio visual con `11-E2-INTERFAZ.md`
 4. Crear rama `feat/entrega-2-ui` desde `feat/entrega-2-constructor`
 5. Implementar constructor visual (probablemente usando modules ES + Lit o Preact si existe)
 6. PR a `main` + validación Vercel

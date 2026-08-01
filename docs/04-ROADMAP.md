@@ -37,9 +37,9 @@ lo importa y las banderas siguen apagadas. Es la brecha que recoge el issue #16.
 | Issue | Bloquea | Decide |
 |---|---|---|
 | #11 · la especificación de interfaz de E2 ya existe; falta implementarla | los 5 puntos de interfaz de E2 | — |
-| #12 · el rango Do2–Do7 choca con el registro de bajo Si1–La2 | validación de notas | pianista |
+| #12 · el rango Do2–Do7 choca con el registro de bajo Si1–La2 | validación de notas | criterio musical |
 | #13 · la validación acepta notas sin muestra de audio | depende de #12 | — |
-| #14 · ¿las notas del acorde salen visibles por defecto? | acabado de la vista Letra | profesor y Fernando |
+| #14 · ¿las notas del acorde salen visibles por defecto? | acabado de la vista Letra | producto |
 | #16 · `src/` está probado pero no se ejecuta | toda la migración | decisión de producto |
 
 ## Ahora · fundación
@@ -73,12 +73,6 @@ Implementado en la rama de fundación:
 
 Pendiente antes de cerrar formalmente la entrega: ejecutar el adaptador IndexedDB
 en Safari/iPad real y registrar el resultado.
-
-Responsables:
-
-- arquitectura/front-end: Felipe;
-- usabilidad de los contratos: Fernando;
-- validación musical: profesor y pianista.
 
 Dependencia: ninguna escritura en la nube nueva.
 
@@ -131,12 +125,6 @@ activa el motor nuevo ni cambia el alcance pendiente de E1.4.
 La especificación completa, contratos, invariantes, riesgos y criterios están en
 [`07-ENTREGA-1-MOTOR-UNIVERSAL.md`](07-ENTREGA-1-MOTOR-UNIVERSAL.md).
 
-Responsables:
-
-- front-end/motor: Felipe;
-- flujo UX: Fernando;
-- criterios musicales: pianista y experto en UX musical.
-
 Dependencia: Entrega 0.
 
 ## Siguiente · capacidad de crear
@@ -188,14 +176,6 @@ Pendiente (UI):
 - [ ] Teclado expandible en iPad
 - [ ] Integración con interfaz de canción
 
-Responsables:
-
-- experiencia visual: Javier;
-- interacción y seguridad: Fernando;
-- implementación: Felipe;
-- validación pedagógica: profesor;
-- comodidad de posiciones: pianista.
-
 Dependencia: contratos de Chord y Voicing.
 
 ### Entrega 3 · biblioteca local de canciones
@@ -213,12 +193,6 @@ Incluye:
 - canción activa persistente;
 - búsqueda básica si cabe sin retrasar P0;
 - estados vacíos y recuperación ante archivos inválidos.
-
-Responsables:
-
-- diseño: Javier;
-- UX: Fernando y experto en UX musical;
-- implementación: Felipe.
 
 Dependencias: Entregas 1 y 2.
 
@@ -241,12 +215,6 @@ Incluye:
 - bandera interna para probar la biblioteca nueva;
 - ensayo de reversión.
 
-Responsables:
-
-- migración/API: Felipe;
-- aceptación musical: profesor y pianista;
-- aceptación de flujo: Fernando.
-
 Dependencia: Entregas 0–3 y plan de QA aprobado.
 
 ### Entrega 5 · sincronización por recurso
@@ -264,12 +232,6 @@ Incluye:
 - historial y restauración;
 - estados de dispositivo y nube;
 - tolerancia a desconexión y reintentos.
-
-Responsables:
-
-- API y front-end: Felipe;
-- mensajes y resolución de conflicto: Fernando;
-- revisión de confianza: comité completo.
 
 Dependencia: migración en sombra verificada.
 

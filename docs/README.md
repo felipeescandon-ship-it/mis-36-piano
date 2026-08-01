@@ -5,9 +5,9 @@ Estado: Entrega 0, E1.1 y E1.2 integradas en `main`; E1.3 preparada.
 
 ## Propósito
 
-Estos documentos convierten el consenso del comité de producto, música, diseño y
-front-end en un contrato verificable. Deben leerse antes de implementar la
-biblioteca multicanción o modificar la persistencia.
+Estos documentos convierten las decisiones de producto, música, diseño y front-end
+en un contrato verificable. Deben leerse antes de implementar la biblioteca
+multicanción o modificar la persistencia.
 
 ## Orden de lectura
 

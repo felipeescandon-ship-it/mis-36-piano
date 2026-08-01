@@ -230,8 +230,8 @@ Antes de producción:
 - [ ] sintaxis, validadores y pruebas automáticas pasan;
 - [ ] no hay cambios no relacionados en Git;
 - [ ] migración y reversión fueron ensayadas;
-- [ ] profesor y pianista validan equivalencia musical;
-- [ ] Fernando valida tareas críticas y mensajes;
-- [ ] Javier valida jerarquía visual y adaptación;
-- [ ] Felipe confirma API, persistencia y consola;
+- [ ] la equivalencia musical con “Mis 36” se comprueba tocando, no solo leyendo el diff;
+- [ ] las tareas críticas y sus mensajes se recorren completas al menos una vez;
+- [ ] la jerarquía visual y la adaptación se revisan en el iPad real, no en un viewport emulado;
+- [ ] API, persistencia y consola quedan sin errores;
 - [ ] producción se verifica sin escribir datos musicales de prueba.

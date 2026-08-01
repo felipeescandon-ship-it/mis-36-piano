@@ -1,6 +1,5 @@
 # Entrega 2 · Especificación de interfaz del constructor de acordes
 
-Rol de diseño: Javier
 Actualizado: 1 de agosto de 2026
 
 Este documento define la interfaz del constructor de acordes con el detalle necesario
@@ -237,7 +236,7 @@ De **Si1 a Do7** (MIDI 35–96).
 Es el único intervalo que satisface los dos documentos que hoy se contradicen: cubre
 el registro de bajo `Si1–La2` que la leyenda de `index.html:716` declara al usuario, y
 llega hasta el techo de las muestras de piano. Queda pendiente de confirmación del
-pianista (issue #12).
+criterio musical (issue #12).
 
 Nota para quien implemente: `docs/09` dice *"Do2 (MIDI 36) a Do7 (MIDI 84)"* y el
 roadmap dice 36–96. Son incompatibles — 84 es Do6. Este documento propone 35–96 y la
@@ -467,7 +466,7 @@ Escrito explícitamente, porque la versión anterior de este archivo dio por
 especificado lo que no lo estaba:
 
 1. **El rango exacto de notas.** Se propone Si1–Do7 (MIDI 35–96) por ser el único que
-   concilia los documentos existentes, pero requiere confirmación del pianista y
+   concilia los documentos existentes, pero requiere confirmación musical y
    resolver la contradicción 84/96 — issues #12 y #13.
 2. **Dónde se abre el constructor desde la canción.** Este documento define la hoja;
    no define el punto de entrada en la interfaz de canción, porque depende de cómo

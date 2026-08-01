@@ -20,7 +20,7 @@ plataforma capaz de:
 - Aplicación actual: `index.html`
 - API actual: `api/song-sync.js`
 - Plataforma multicanción: **Entregas 0 y 1 completas; Entrega 2 integrada en
-  `main` salvo su interfaz, que está bloqueada por el issue #11**
+  `main` salvo su interfaz, ya especificada y pendiente de implementar**
 - Pruebas: **135**, ejecutadas automáticamente en cada pull request
 - Cuestiones abiertas que condicionan lo siguiente: issues
   [#11 a #14 y #16](https://github.com/felipeescandon-ship-it/mis-36-piano/issues)
@@ -46,7 +46,7 @@ Documentos principales:
 8. [Recap y continuidad para E1.3](docs/08-RECAP-Y-CONTINUIDAD.md)
 9. [Entrega 2 · constructor de acordes](docs/09-ENTREGA-2-CONSTRUCTOR-ACORDES.md)
 10. [Recap de la Entrega 2](docs/10-RECAP-E2-COMPLETA.md)
-11. [Interfaz de la Entrega 2](docs/11-E2-WIREFRAMES-JAVIER.md) — especificación
+11. [Interfaz de la Entrega 2](docs/11-E2-INTERFAZ.md) — especificación
     visual completa. Su apartado 16 enumera lo que deliberadamente no decide
 
 ## Reglas de seguridad
