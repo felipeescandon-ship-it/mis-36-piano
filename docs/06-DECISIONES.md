@@ -391,6 +391,72 @@ página.
 
 Fecha: 3 de agosto de 2026.
 
+### D-024 · Reproducción (Tocar) para canciones nuevas, motor real por primera vez en producción
+
+Hasta esta vuelta, el motor de la Entrega 1 (`playback-machine.js`,
+`playback-engine.js`, `audio-runtime.js`) estaba probado pero nunca conectado
+a una interfaz real (D-019 solo lo usaba para comprobar equivalencia en
+memoria, sin sonido). Las canciones nuevas del taller (E3.4) se podían editar
+y ver en Letra, pero no reproducir. Se agregó una tercera pestaña "▶ Tocar" en
+el taller que sí lo conecta: motor de reproducción + `AudioRuntime` real
+(muestras Salamander con sintetizador de respaldo) mostrando el acorde
+sonando y el siguiente con sus notas, transporte Reproducir/Pausar/Detener y
+tempo editable.
+
+Esto es exclusivo de la biblioteca de canciones nuevas ("Piano Studio"), no
+de "Mis 36": las banderas de `src/config/features.js` y la garantía de
+`test/safety.test.js` sobre `?motor=universal` siguen intactas y no cambian
+con esta entrega — "Mis 36" sigue sonando enteramente con el código heredado
+de `index.html`. Que el taller ya importe módulos de `src/` para canciones
+nuevas viene desde E3.1 (`song-factory.js`, repositorios); lo nuevo acá es que
+también reproduce audio real con ese código.
+
+El motor se crea de nuevo cada vez que se abre la pestaña Tocar (no persiste
+entre aperturas ni sobrevive a cambiar de pestaña) y se destruye —incluyendo
+cerrar el `AudioContext`— al salir de ella o cerrar el taller, para no dejar
+sonido de fondo ni contextos de audio acumulándose. Si la canción todavía no
+tiene ningún acorde colocado, se muestra un aviso en vez de intentar cargar
+una línea de tiempo vacía.
+
+Ser la primera integración real expuso dos defectos en `audio-runtime.js` que
+ninguna prueba anterior ejercitaba, porque ningún consumidor había mantenido
+un `clock` vivo a través de una pausa/reanudación real:
+
+1. `get clock()` devolvía `state: this.state` como valor copiado en el
+   momento de leer la propiedad. Como `playback-machine` guarda ese objeto
+   una sola vez y lo consulta después, cualquier cambio real de
+   `AudioRuntime.state` (por ejemplo, el `AudioContext` reanudándose tras el
+   gesto del usuario) quedaba invisible para siempre: el audio se bloqueaba
+   en el primer intento y `resume()` nunca lo desbloqueaba. Se cambió a un
+   getter (`get state() { return runtime.state }`) para que siga la
+   referencia viva.
+2. `_resumeContext()` solo marcaba `state="running"` si el estado previo era
+   exactamente `"blocked"`. Un `AudioContext` creado ya `"running"` (el caso
+   común: se crea dentro del gesto de clic que abre la pestaña) nunca pasaba
+   por ese camino y `state` se quedaba en `"uninitialized"` para siempre —
+   que `playback-machine` trata igual que bloqueado, así que no sonaba nunca
+   aunque el audio funcionara bien. Se corrigió sincronizando `state` con la
+   realidad de `audioContext.state` en ambos casos, no solo al recuperarse de
+   uno bloqueado. Cubierto por `audio-runtime.test.js` #12 y #13.
+
+También se corrigió el orden de `playback-engine.js#load()`: fijaba
+`playbackDocument` **después** de llamar a `machine.load()`, pero ese llamado
+ya notifica a los suscriptores de forma síncrona. Cualquier UI reactiva a
+`subscribe()` (como esta) recibía `getPlaybackDocument() === null` en la
+primera notificación aunque el snapshot ya dijera `"ready"`, y no había una
+segunda notificación que lo corrigiera. Se invirtió el orden; cubierto por un
+nuevo caso en `playback-engine.test.js`.
+
+Queda fuera de esta vuelta: seguimiento de letra en vivo durante la
+reproducción (la vista Letra del taller sigue siendo estática), práctica y
+transposición para canciones nuevas.
+
+Verificado con Playwright: reproducir/pausar/detener/cambiar tempo sobre una
+canción importada desde texto, y que una canción sin acordes todavía muestre
+el aviso en vez de fallar.
+
+Fecha: 3 de agosto de 2026.
+
 ## Decisiones que requieren prototipo
 
 ### D-P02 · Rango y estrategia de muestras de piano

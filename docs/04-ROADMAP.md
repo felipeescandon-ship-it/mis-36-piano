@@ -246,12 +246,41 @@ Completado:
       texto→palabra es una aproximación por columna, no una lectura musical
       exacta — se corrige igual que cualquier acorde colocado a mano, con el
       selector de posición que ya existía.
+- [x] E3.4 (tercera vuelta) · Reproducción (Tocar) para canciones nuevas:
+      pestaña "▶ Tocar" en el taller que conecta, por primera vez en
+      producción, el motor de la Entrega 1 (`playback-engine.js`,
+      `playback-machine.js`, `selectors.js`) con audio real
+      (`audio-runtime.js` + muestras Salamander/sintetizador de respaldo).
+      Muestra el acorde sonando y el siguiente con sus notas, transporte
+      Reproducir/Pausar/Detener y tempo editable. El motor se crea de nuevo
+      cada vez que se abre la pestaña (no persiste entre aperturas) y se
+      destruye al salir de ella o cerrar el taller, para no dejar un
+      `AudioContext` sonando de fondo. Si la canción todavía no tiene ningún
+      acorde colocado, se muestra un aviso en vez de intentar reproducir.
+      Corrección durante la implementación: esta fue la primera vez que algo
+      llamaba `AudioRuntime.clock` desde una máquina de reproducción de larga
+      vida, y expuso dos huecos que ningún test anterior ejercitaba —
+      `audio-runtime.test.js` #12-13 los cubren ahora:
+      1. `get clock()` devolvía `state` como valor copiado en el momento de
+         leer la propiedad, no como una referencia viva — una vez que
+         `playback-machine` guardaba ese objeto, nunca volvía a ver cambios
+         reales de `AudioRuntime.state` y el audio se quedaba bloqueado para
+         siempre tras el primer intento fallido.
+      2. `_resumeContext()` solo marcaba `state="running"` si el estado previo
+         era exactamente `"blocked"` — un `AudioContext` que arranca ya
+         `"running"` (frecuente tras el gesto del usuario que abre la
+         pestaña) se quedaba en `"uninitialized"` para siempre y
+         `playback-machine` lo trataba igual que bloqueado, sin sonar nunca.
+      También se corrigió el orden de `playback-engine.js#load()`: fijaba
+      `playbackDocument` **después** de llamar a `machine.load()`, que ya
+      notifica a los suscriptores de forma síncrona — cualquier UI reactiva
+      (como esta) recibía `null` en la primera notificación aunque el
+      snapshot ya dijera "ready" (`playback-engine.test.js`, nuevo caso).
+      Quedan fuera de esta vuelta: seguimiento de letra en vivo (la vista
+      Letra sigue siendo estática), práctica y transposición — ver más abajo.
 
 Quedan fuera de esta primera vuelta de E3.4, sin bloquearla:
 
-- Reproducción (Tocar) para canciones nuevas — conectar la máquina de estados
-  y el reloj de Entrega 1 (`playback-machine.js`, `selectors.js`) a una
-  interfaz real con transporte.
 - Constructor de acordes accesible directamente desde el taller de canción
   (hoy solo se construyen acordes nuevos desde el editor de Mis 36; el taller
   reutiliza lo que ya exista en la biblioteca compartida).

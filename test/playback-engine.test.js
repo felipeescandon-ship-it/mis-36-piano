@@ -71,6 +71,27 @@ function setup(library = contrastLibraryFixture) {
   return { clock, audioRuntime, ticker, engine };
 }
 
+test("subscribe() ve el playbackDocument ya listo en la notificación de load(), no el anterior", () => {
+  // engine.load() llama a machine.load(), que notifica a los suscriptores de
+  // forma síncrona. Si getPlaybackDocument() todavía devolviera el valor
+  // previo (null antes de la primera carga) en ese instante, cualquier UI
+  // que reaccione al snapshot inicial mostraría "sin canción" a pesar de que
+  // el snapshot ya diga "ready".
+  const clock = new FakeClock();
+  const audioRuntime = createSpyAudio();
+  const ticker = createFakeTicker();
+  const engine = createPlaybackEngine({ clock, audioRuntime, ticker });
+
+  let seenDuringLoad;
+  engine.subscribe(() => {
+    seenDuringLoad = engine.getPlaybackDocument();
+  });
+  engine.load(contrastLibraryFixture);
+
+  assert.ok(seenDuringLoad, "el documento ya está disponible durante la notificación de load()");
+  assert.equal(seenDuringLoad.song.id, contrastLibraryFixture.song.id);
+});
+
 test("play() + tick dispara playVoicing con las notas del primer evento", () => {
   const { engine, audioRuntime, ticker } = setup();
   engine.play({ range: playbackRanges.song() });

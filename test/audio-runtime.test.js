@@ -277,6 +277,45 @@ test('6. detects suspended AudioContext and reports blocked state', async () => 
   assert.strictEqual(runtime.state, 'running', 'recovers to running after resume');
 });
 
+test('12. clock.state reflects live runtime state instead of a snapshot', async () => {
+  // playback-machine holds onto a single clock object for its whole lifetime
+  // and re-reads clock.state on every play()/resume() call. If clock.state
+  // were captured by value when .clock was first read (as it used to be),
+  // a machine built before the AudioContext resumed would stay "blocked"
+  // forever even after the user granted audio — resume() would keep seeing
+  // the stale value and never unblock.
+  const audioContext = new MockAudioContext();
+  audioContext.state = 'suspended';
+  const pianoSamples = { playVoicing: () => {}, destroy: () => {} };
+  const fallbackSynth = new FallbackSynth(audioContext);
+  const runtime = new AudioRuntime({ audioContext, pianoSamples, fallbackSynth });
+
+  const clock = runtime.clock;
+  const generation = runtime.nextGeneration();
+  runtime.playVoicing({ notes: [{ pitchClass: 0, octave: 4 }] }, 1.0, 1.0, generation);
+  assert.strictEqual(clock.state, 'blocked', 'the same clock object sees the blocked state');
+
+  await clock.resume();
+  assert.strictEqual(clock.state, 'running', 'the same clock object sees the recovered state');
+});
+
+test('13. resume() reaches running even when the context was never suspended', async () => {
+  // A context created right after a user gesture (e.g. clicking "Play") is
+  // often already 'running' from the start, so playVoicing() never sets
+  // state to 'blocked' and there is nothing to "recover" from. Without an
+  // explicit sync, `state` stays 'uninitialized' forever and
+  // playback-machine reads that as blocked, so no sound would ever play.
+  const audioContext = new MockAudioContext();
+  audioContext.state = 'running';
+  const pianoSamples = { playVoicing: () => {}, destroy: () => {} };
+  const fallbackSynth = new FallbackSynth(audioContext);
+  const runtime = new AudioRuntime({ audioContext, pianoSamples, fallbackSynth });
+
+  assert.strictEqual(runtime.state, 'uninitialized', 'starts uninitialized even if the context is already running');
+  await runtime.clock.resume();
+  assert.strictEqual(runtime.state, 'running', 'resume() syncs state even without a prior suspension');
+});
+
 test('7. cancels only sources from specified generation', () => {
   const audioContext = new MockAudioContext();
 

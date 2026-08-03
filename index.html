@@ -516,6 +516,19 @@ display:flex;flex-direction:column;gap:8px;min-height:150px;text-align:left}
 .workspace-letra-line{padding:10px 0;border-bottom:1px dashed var(--line);line-height:1.9}
 .workspace-letra-chip{display:inline-block;background:var(--blueSoft);color:var(--blue);font-weight:900;font-size:11px;padding:2px 6px;border-radius:6px;margin:0 3px;vertical-align:middle}
 .workspace-toolbar{display:flex;gap:8px;flex-wrap:wrap}
+.workspace-tocar-now,.workspace-tocar-next{background:var(--slotEmpty);border:1px solid var(--line);border-radius:14px;padding:14px;margin-bottom:14px}
+.workspace-tocar-label{font-size:12px;font-weight:900;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin:0 0 6px}
+.workspace-tocar-label span{text-transform:none;letter-spacing:0;font-weight:700}
+.workspace-tocar-chord{font-size:32px;font-weight:900;color:var(--blue)}
+.workspace-tocar-chord.small{font-size:20px;color:var(--muted)}
+.workspace-tocar-notes{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
+.workspace-tocar-note{display:inline-block;background:var(--blueSoft);color:var(--blue);font-weight:800;font-size:13px;padding:4px 9px;border-radius:8px}
+.workspace-tocar-note.bass{background:#e9eff7;color:#173354}
+.workspace-tocar-transport{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.workspace-tocar-tempo{display:flex;gap:6px;align-items:center;font-size:13px;font-weight:700;color:var(--muted);margin-left:auto}
+.workspace-tocar-tempo input{width:60px;min-height:36px;border-radius:8px;border:1px solid var(--line);padding:0 8px;font-size:13px;text-align:center}
+#songWorkspace .chord-constructor-header{flex-wrap:wrap}
+#songWorkspace .view-switch button{min-width:0;padding:8px 10px;font-size:13px;white-space:nowrap}
 </style>
 </head>
 <body>
@@ -855,6 +868,7 @@ display:flex;flex-direction:column;gap:8px;min-height:150px;text-align:left}
         <div class="view-switch" role="group" aria-label="Vista de la canción">
           <button id="workspaceTabEdit" type="button" aria-pressed="true">✎ Editar</button>
           <button id="workspaceTabLyrics" type="button" aria-pressed="false">♪ Letra</button>
+          <button id="workspaceTabTocar" type="button" aria-pressed="false">▶ Tocar</button>
         </div>
         <button id="workspaceClose" class="secondary" type="button" aria-label="Cerrar taller de canción">✕</button>
       </div>
@@ -869,6 +883,31 @@ display:flex;flex-direction:column;gap:8px;min-height:150px;text-align:left}
     </div>
     <div id="workspaceLyricsPane" class="workspace-pane" hidden>
       <div id="workspaceLyricsView"></div>
+    </div>
+    <div id="workspaceTocarPane" class="workspace-pane" hidden>
+      <p id="workspaceTocarEmpty" class="chord-constructor-hint" hidden>Todavía no hay acordes colocados en esta canción. Agregalos en Editar o pegá una tablatura para poder reproducirla.</p>
+      <div id="workspaceTocarBody" hidden>
+        <div class="workspace-tocar-now">
+          <p class="workspace-tocar-label">Ahora <span id="workspaceTocarSection"></span></p>
+          <div id="workspaceTocarChord" class="workspace-tocar-chord">—</div>
+          <div id="workspaceTocarNotes" class="workspace-tocar-notes"></div>
+        </div>
+        <div class="workspace-tocar-next">
+          <p class="workspace-tocar-label">Siguiente</p>
+          <div id="workspaceTocarNextChord" class="workspace-tocar-chord small">—</div>
+          <div id="workspaceTocarNextNotes" class="workspace-tocar-notes"></div>
+        </div>
+        <div class="workspace-tocar-transport">
+          <button id="workspaceTocarPlay" class="primary" type="button">▶ Reproducir</button>
+          <button id="workspaceTocarPause" class="secondary" type="button" hidden>⏸ Pausar</button>
+          <button id="workspaceTocarStop" class="secondary" type="button" disabled>⏹ Detener</button>
+          <label class="workspace-tocar-tempo">Tempo
+            <input id="workspaceTocarTempo" type="number" min="20" max="300" step="1">
+            BPM
+          </label>
+        </div>
+        <p id="workspaceTocarStatus" class="chord-constructor-status" aria-live="polite"></p>
+      </div>
     </div>
     <div id="workspaceStatus" class="chord-constructor-status" aria-live="polite"></div>
   </div>
@@ -3695,12 +3734,102 @@ function setWorkspaceStatus(message,isError){
  el.classList.toggle("error",!!isError);
 }
 function setWorkspaceTab(tab){
- const isEdit=tab==="edit";
- document.getElementById("workspaceTabEdit").setAttribute("aria-pressed",String(isEdit));
- document.getElementById("workspaceTabLyrics").setAttribute("aria-pressed",String(!isEdit));
- document.getElementById("workspaceEditPane").hidden=!isEdit;
- document.getElementById("workspaceLyricsPane").hidden=isEdit;
- if(!isEdit)renderWorkspaceLyrics();
+ document.getElementById("workspaceTabEdit").setAttribute("aria-pressed",String(tab==="edit"));
+ document.getElementById("workspaceTabLyrics").setAttribute("aria-pressed",String(tab==="lyrics"));
+ document.getElementById("workspaceTabTocar").setAttribute("aria-pressed",String(tab==="tocar"));
+ document.getElementById("workspaceEditPane").hidden=tab!=="edit";
+ document.getElementById("workspaceLyricsPane").hidden=tab!=="lyrics";
+ document.getElementById("workspaceTocarPane").hidden=tab!=="tocar";
+ if(tab==="lyrics")renderWorkspaceLyrics();
+ if(tab==="tocar")openWorkspaceTocar();
+ else stopWorkspaceTocar();
+}
+
+let workspacePlaybackModules=null;
+async function loadPlaybackModules(){
+ if(workspacePlaybackModules)return workspacePlaybackModules;
+ const [engineModule,audioRuntimeModule,pianoSamplesModule,fallbackSynthModule,selectorsModule]=await Promise.all([
+   import("./src/application/playback/playback-engine.js"),
+   import("./src/infrastructure/audio/audio-runtime.js"),
+   import("./src/infrastructure/audio/piano-samples.js"),
+   import("./src/infrastructure/audio/fallback-synth.js"),
+   import("./src/application/playback/selectors.js"),
+ ]);
+ workspacePlaybackModules={
+   createPlaybackEngine:engineModule.createPlaybackEngine,
+   AudioRuntime:audioRuntimeModule.default,
+   PianoSamples:pianoSamplesModule.default,
+   FallbackSynth:fallbackSynthModule.default,
+   selectTocarViewModel:selectorsModule.selectTocarViewModel,
+ };
+ return workspacePlaybackModules;
+}
+
+let workspaceEngine=null,workspaceAudioRuntime=null,workspaceAudioContext=null,workspaceEngineUnsubscribe=null;
+
+const TOCAR_PITCH_CLASS_ES=["Do","Do#","Re","Re#","Mi","Fa","Fa#","Sol","Sol#","La","La#","Si"];
+function tocarNotesHTML(notes){
+ if(!notes||!notes.length)return "";
+ return notes.map(note=>`<span class="workspace-tocar-note ${note.hand==="left"?"bass":""}">${TOCAR_PITCH_CLASS_ES[note.pitchClass]}</span>`).join("");
+}
+
+function renderWorkspaceTocarViewModel(viewModel){
+ const body=document.getElementById("workspaceTocarBody");
+ const empty=document.getElementById("workspaceTocarEmpty");
+ if(!viewModel){
+   body.hidden=true;empty.hidden=false;
+   return;
+ }
+ body.hidden=false;empty.hidden=true;
+ document.getElementById("workspaceTocarChord").textContent=viewModel.currentChord?workspaceChordLabel(viewModel.currentChord.id):"—";
+ document.getElementById("workspaceTocarNotes").innerHTML=tocarNotesHTML(viewModel.heldNotes);
+ document.getElementById("workspaceTocarNextChord").textContent=viewModel.nextChord?workspaceChordLabel(viewModel.nextChord.id):"—";
+ document.getElementById("workspaceTocarNextNotes").innerHTML=tocarNotesHTML(viewModel.upcomingNotes);
+ const section=workspaceSong.sections.find(s=>s.id===viewModel.sectionId);
+ document.getElementById("workspaceTocarSection").textContent=section?`· ${section.name}`:"";
+ const transport=viewModel.transportState;
+ const playButton=document.getElementById("workspaceTocarPlay");
+ const pauseButton=document.getElementById("workspaceTocarPause");
+ const stopButton=document.getElementById("workspaceTocarStop");
+ playButton.hidden=!(transport.canPlay||transport.canResume);
+ playButton.textContent=transport.canResume?"▶ Continuar":"▶ Reproducir";
+ pauseButton.hidden=!transport.canPause;
+ stopButton.disabled=!transport.canStop;
+ const tempoInput=document.getElementById("workspaceTocarTempo");
+ if(document.activeElement!==tempoInput)tempoInput.value=viewModel.tempo||"";
+ const status=document.getElementById("workspaceTocarStatus");
+ status.textContent=transport.status==="blocked"?'Tocá "▶ Reproducir" para activar el audio.':"";
+}
+
+async function openWorkspaceTocar(){
+ stopWorkspaceTocar();
+ const song=workspaceSong,chords=workspaceLibraryChords,voicings=workspaceLibraryVoicings;
+ const modules=await loadPlaybackModules();
+ if(workspaceSong!==song)return; // el usuario cerró/cambió de canción mientras cargaban los módulos
+ workspaceAudioContext=new (window.AudioContext||window.webkitAudioContext)();
+ workspaceAudioRuntime=new modules.AudioRuntime({
+   audioContext:workspaceAudioContext,
+   pianoSamples:new modules.PianoSamples(workspaceAudioContext),
+   fallbackSynth:new modules.FallbackSynth(workspaceAudioContext),
+ });
+ workspaceEngine=modules.createPlaybackEngine({clock:workspaceAudioRuntime.clock,audioRuntime:workspaceAudioRuntime});
+ workspaceEngineUnsubscribe=workspaceEngine.subscribe(snapshot=>{
+   const viewModel=modules.selectTocarViewModel(snapshot,workspaceEngine.getPlaybackDocument());
+   renderWorkspaceTocarViewModel(viewModel);
+ });
+ try{
+   workspaceEngine.load({song,chords,voicings});
+   workspaceEngine.start();
+ }catch(error){
+   renderWorkspaceTocarViewModel(null);
+ }
+}
+
+function stopWorkspaceTocar(){
+ if(workspaceEngineUnsubscribe){workspaceEngineUnsubscribe();workspaceEngineUnsubscribe=null;}
+ if(workspaceEngine){workspaceEngine.destroy();workspaceEngine=null;}
+ if(workspaceAudioContext){workspaceAudioContext.close?.().catch(()=>{});workspaceAudioContext=null;}
+ workspaceAudioRuntime=null;
 }
 
 let workspaceSaveTimer=null;
@@ -3744,6 +3873,7 @@ async function closeSongWorkspace(){
  // El autoguardado corre con debounce (400ms): cerrar sin esperarlo perdería en
  // silencio la última edición si el cierre llega antes de que el timer dispare.
  clearTimeout(workspaceSaveTimer);
+ stopWorkspaceTocar();
  if(workspaceSong)await saveWorkspaceNow();
  document.getElementById("songWorkspace").hidden=true;
  workspaceSong=null;
@@ -3751,7 +3881,28 @@ async function closeSongWorkspace(){
 
 document.getElementById("workspaceTabEdit").onclick=()=>setWorkspaceTab("edit");
 document.getElementById("workspaceTabLyrics").onclick=()=>setWorkspaceTab("lyrics");
+document.getElementById("workspaceTabTocar").onclick=()=>setWorkspaceTab("tocar");
 document.getElementById("workspaceClose").onclick=closeSongWorkspace;
+document.getElementById("workspaceTocarPlay").onclick=async()=>{
+ if(!workspaceEngine)return;
+ await workspaceAudioRuntime.clock.resume();
+ const status=workspaceEngine.getSnapshot().status;
+ if(["paused","blocked"].includes(status))workspaceEngine.resume();
+ else workspaceEngine.play();
+};
+document.getElementById("workspaceTocarPause").onclick=()=>{
+ workspaceEngine?.pause();
+};
+document.getElementById("workspaceTocarStop").onclick=()=>{
+ workspaceEngine?.stop();
+};
+document.getElementById("workspaceTocarTempo").addEventListener("change",event=>{
+ if(!workspaceEngine)return;
+ const value=Math.round(Number(event.target.value));
+ if(!Number.isFinite(value))return;
+ try{workspaceEngine.setTempo(Math.max(20,Math.min(300,value)));}
+ catch(error){/* setTempo ya valida el rango; un valor fuera de rango se ignora */}
+});
 document.getElementById("workspaceTitleInput").addEventListener("input",event=>{
  workspaceSong.metadata.title=event.target.value;
  scheduleWorkspaceSave();

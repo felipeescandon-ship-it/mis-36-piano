@@ -80,8 +80,12 @@ export function createPlaybackEngine({ clock, audioRuntime, ticker } = {}) {
 
   return Object.freeze({
     load(library) {
-      const result = machine.load(library);
+      // playbackDocument se fija antes de machine.load(): ese llamado
+      // dispara la notificación a los suscriptores de forma síncrona, y si
+      // quedara para después, getPlaybackDocument() les devolvería el valor
+      // previo (null en la primera carga) justo cuando más lo necesitan.
       playbackDocument = createPlaybackDocument(library);
+      const result = machine.load(library);
       timeline = null;
       return result;
     },

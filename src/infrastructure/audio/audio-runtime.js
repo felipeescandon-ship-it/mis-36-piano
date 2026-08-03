@@ -39,23 +39,27 @@ class AudioRuntime {
   // ─────────────────────────────────────────────────────────────────
 
   get clock() {
+    const runtime = this;
     return {
-      now: () => this.audioContext.currentTime,
-      state: this.state,
-      resume: () => this._resumeContext(),
+      now: () => runtime.audioContext.currentTime,
+      get state() { return runtime.state; },
+      resume: () => runtime._resumeContext(),
     };
   }
 
   _resumeContext() {
     if (this.audioContext.state === 'suspended') {
       return this.audioContext.resume().then(() => {
-        if (this.state === 'blocked') {
-          this.state = 'running';
-        }
+        if (this.audioContext.state === 'running') this.state = 'running';
       }).catch(() => {
         this.state = 'failed';
       });
     }
+    // Ya no está suspendido (puede no haberlo estado nunca, si el contexto se
+    // creó tras un gesto del usuario): sincroniza el estado igual, porque sin
+    // esto `this.state` se queda en 'uninitialized' para siempre y
+    // playback-machine lo trata como bloqueado aunque el audio funcione bien.
+    if (this.audioContext.state === 'running') this.state = 'running';
     return Promise.resolve();
   }
 
