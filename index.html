@@ -1233,7 +1233,7 @@ let cloudChangeGeneration=0,cloudSaveQueued=false;
 const deletedSongEvents=new Set();
 function lyricWords(text){return text.trim().split(/\s+/).filter(Boolean)}
 function syncEventKey(section,event){return `${section}:${event.uid}`}
-function initializeSongSync(){
+function assignDefaultAnchors(){
  sections.forEach(section=>{
    section.lines.forEach((lineText,line)=>{
      const lineEvents=section.events.filter(event=>event.line===line);
@@ -1244,6 +1244,9 @@ function initializeSongSync(){
      });
    });
  });
+}
+function initializeSongSync(){
+ assignDefaultAnchors();
  try{
    const saved=JSON.parse(localStorage.getItem(SONG_SYNC_KEY)||"{}");
    if(saved?.version>=2){
@@ -2890,7 +2893,7 @@ nextPianoToggle.onclick=()=>{
 };
 nextKeyboardWrap.addEventListener("scroll",()=>syncPianoScroll(nextKeyboardWrap,currentKeyboardWrap),{passive:true});
 currentKeyboardWrap.addEventListener("scroll",()=>syncPianoScroll(currentKeyboardWrap,nextKeyboardWrap),{passive:true});
-verifyVoicingLibraryIntegrity();updateNotationToggle();updateLyricsNotesToggle();renderSyncChordOptions();renderSyncInversionOptions("E");if(!isPreviewingOtherSong)initializeSongSync();updateSettingsSummary();updateNextPianoVisibility();initSections();buildSteps();render();renderFullSong();updateSessionSummary();updateTransportControls();if(!isPreviewingOtherSong)loadCloudSongSync();
+verifyVoicingLibraryIntegrity();updateNotationToggle();updateLyricsNotesToggle();renderSyncChordOptions();renderSyncInversionOptions("E");if(isPreviewingOtherSong)assignDefaultAnchors();else initializeSongSync();updateSettingsSummary();updateNextPianoVisibility();initSections();buildSteps();render();renderFullSong();updateSessionSummary();updateTransportControls();if(!isPreviewingOtherSong)loadCloudSongSync();
 </script>
 </body>
 </html>
