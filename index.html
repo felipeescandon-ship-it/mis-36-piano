@@ -488,12 +488,12 @@ display:flex;flex-direction:column;gap:8px;min-height:150px;text-align:left}
 .library-card-title{font-size:16px;font-weight:900;line-height:1.25}
 .library-badge{font-size:10px;font-weight:900;letter-spacing:.05em;text-transform:uppercase;padding:3px 7px;border-radius:999px;white-space:nowrap}
 .library-badge.origin{background:var(--blueSoft);color:var(--blue)}
-.library-badge.archived{background:var(--amberSoft);color:var(--amber)}
 .library-card-meta{font-size:12px;color:var(--muted);font-weight:700;margin-top:auto}
 .library-card-row{display:flex;gap:6px;align-items:center}
-.library-open{flex:1;min-height:40px;border-radius:9px;background:var(--panel);border:1px solid var(--line);font-weight:800}
+.library-open{flex:1;min-width:0;min-height:40px;border-radius:9px;background:var(--panel);border:1px solid var(--line);font-weight:800;white-space:nowrap}
 .library-card.origin .library-open{background:var(--blue);color:#fff;border-color:var(--blue)}
-.library-icon-btn{min-width:38px;min-height:38px;border-radius:9px;border:1px solid var(--line);background:var(--panel);color:var(--muted)}
+.library-icon-btn{flex:0 0 auto;min-width:34px;min-height:34px;border-radius:9px;border:1px solid var(--line);background:var(--panel);color:var(--muted)}
+.library-card-top .library-icon-btn{min-width:28px;min-height:28px;font-size:13px}
 .library-new-card{align-items:center;justify-content:center;text-align:center;border:2px dashed #b9c7dc;background:transparent;gap:4px}
 .library-new-card .plus{font-size:22px;font-weight:900;color:var(--blue)}
 @media(max-width:640px){
@@ -3415,19 +3415,20 @@ function setLibraryStatus(message,isError){
 }
 
 function libraryCardHTML(song,{origin=false,archived=false}={}){
- const badge=origin?'<span class="library-badge origin">Original</span>':archived?'<span class="library-badge archived">Archivada</span>':"";
+ const badge=origin?'<span class="library-badge origin">Original</span>':"";
  // "Mis 36" todavía no es un Song real en el store (eso es la migración de
  // Entrega 4): su tarjeta solo puede abrir, no duplicarse ni exportarse.
- const secondary=archived
+ const topAction=archived
    ?`<button class="library-icon-btn" data-action="restore" data-id="${song.id}" title="Restaurar" aria-label="Restaurar">↩</button>`
    :origin?""
-   :`<button class="library-icon-btn" data-action="duplicate" data-id="${song.id}" title="Duplicar" aria-label="Duplicar">⧉</button>
-     <button class="library-icon-btn" data-action="export" data-id="${song.id}" title="Exportar" aria-label="Exportar">⬇</button>
-     <button class="library-icon-btn" data-action="archive" data-id="${song.id}" title="Archivar" aria-label="Archivar">🗄</button>`;
+   :`<button class="library-icon-btn" data-action="archive" data-id="${song.id}" title="Archivar" aria-label="Archivar">🗄</button>`;
+ const secondary=(origin||archived)?"":
+   `<button class="library-icon-btn" data-action="duplicate" data-id="${song.id}" title="Duplicar" aria-label="Duplicar">⧉</button>
+    <button class="library-icon-btn" data-action="export" data-id="${song.id}" title="Exportar" aria-label="Exportar">⬇</button>`;
  const title=origin?"Mis 36":song.metadata.title;
  const meta=origin?"Guía de acompañamiento original":(song.metadata.key?`${escapeHTML(song.metadata.key)} · `:"")+`${song.metadata.tempo} bpm`;
  return `<div class="library-card ${origin?"origin":""}" data-title="${escapeHTML(title.toLowerCase())}">
-   <div class="library-card-top"><span class="library-card-title">${escapeHTML(title)}</span>${badge}</div>
+   <div class="library-card-top"><span class="library-card-title">${escapeHTML(title)}</span>${badge}${topAction}</div>
    <span class="library-card-meta">${meta}</span>
    <div class="library-card-row">
      <button class="library-open" data-action="open" data-id="${origin?"mis36":song.id}" data-origin="${origin?"1":"0"}">Abrir</button>
