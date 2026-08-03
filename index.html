@@ -827,7 +827,7 @@ const sectionName=document.getElementById("sectionName");
 const sectionCount=document.getElementById("sectionCount");
 const steps=document.getElementById("steps");
 const NOTE_ES={C:"Do","C#":"Do#",D:"Re","D#":"Re#",E:"Mi","E#":"Mi#",F:"Fa","F#":"Fa#",G:"Sol","G#":"Sol#",A:"La","A#":"La#",B:"Si","B#":"Si#"};
-const CHORD_ES={"E":"Mi","F#":"Fa#","F#m":"Fa#m","A":"La","Am":"Lam","C#m":"Do#m","C#":"Do#","G#m":"Sol#m","G#":"Sol#","D":"Re","B":"Si","B/D#":"Si/Re#","G":"Sol","C":"Do","Bm":"Sim","Em":"Mim","Dm":"Rem","G/B":"Sol/Si","G/D":"Sol/Re"};
+const CHORD_ES={"E":"Mi","F#":"Fa#","F#m":"Fa#m","A":"La","Am":"Lam","C#m":"Do#m","C#":"Do#","G#m":"Sol#m","G#":"Sol#","D":"Re","B":"Si","B/D#":"Si/Re#","G":"Sol","C":"Do","Bm":"Sim","Em":"Mim","Dm":"Rem","G/B":"Sol/Si","G/D":"Sol/Re","F":"Fa","Gm":"Solm","F#m7":"Fa#m7","Bm7":"Sim7","Em7":"Mim7","D7M":"Re7M","F7M":"Fa7M","A#7M":"La#7M","A7":"La7","F#7":"Fa#7","A#°":"La#°"};
 let notationMode="es";
 let songEditMode=false,selectedSyncEvent=null,addingSyncChord=null,movingSyncEvent=false;
 let lyricsPreviewPosition=null,lyricsPreviewAnchor=null;
@@ -922,13 +922,26 @@ const voicings={
 "Em":{l:"E2",r:[["G3",1],["B3",2],["E4",5]],inv:"1ª inversión"},
 "Dm":{l:"D2",r:[["A3",1],["D4",2],["F4",5]],inv:"2ª inversión"},
 "G/B":{l:"B2",r:[["G3",1],["B3",3],["D4",5]],inv:"acorde de Sol con Si en el bajo"},
-"G/D":{l:"D2",r:[["G3",1],["B3",3],["D4",5]],inv:"acorde de Sol con Re en el bajo"}
+"G/D":{l:"D2",r:[["G3",1],["B3",3],["D4",5]],inv:"acorde de Sol con Re en el bajo"},
+"F":{l:"F2",r:[["F4",1],["A4",3],["C5",5]],inv:"fundamental"},
+"Gm":{l:"G2",r:[["A#3",1],["D4",2],["G4",5]],inv:"1ª inversión"},
+"F#m7":{l:"F#2",r:[["F#3",1],["A3",2],["C#4",3],["E4",5]],inv:"fundamental"},
+"Bm7":{l:"B2",r:[["B3",1],["D4",2],["F#4",3],["A4",5]],inv:"fundamental"},
+"Em7":{l:"E2",r:[["E3",1],["G3",2],["B3",3],["D4",5]],inv:"fundamental"},
+"D7M":{l:"D2",r:[["D4",1],["F#4",2],["A4",3],["C#5",5]],inv:"fundamental"},
+"F7M":{l:"F2",r:[["F4",1],["A4",2],["C5",3],["E5",5]],inv:"fundamental"},
+"A#7M":{l:"A#2",r:[["A#3",1],["D4",2],["F4",3],["A4",5]],inv:"fundamental"},
+"A7":{l:"A2",r:[["A3",1],["C#4",2],["E4",3],["G4",5]],inv:"fundamental"},
+"F#7":{l:"F#2",r:[["F#3",1],["A#3",2],["C#4",3],["E4",5]],inv:"fundamental"},
+"A#°":{l:"A#2",r:[["A#3",1],["C#4",3],["E4",5]],inv:"fundamental"}
 };
 
 const defaultInversions={
  "E":"root","F#":"first","F#m":"first","A":"first","Am":"first","C#m":"second",
  "C#":"second","G#m":"first","G#":"first","D":"second","B":"root","B/D#":"root",
- "G":"first","C":"second","Bm":"first","Em":"first","Dm":"second","G/B":"root","G/D":"root"
+ "G":"first","C":"second","Bm":"first","Em":"first","Dm":"second","G/B":"root","G/D":"root",
+ "F":"root","Gm":"first","F#m7":"root","Bm7":"root","Em7":"root","D7M":"root","F7M":"root",
+ "A#7M":"root","A7":"root","F#7":"root","A#°":"root"
 };
 const voicingVariants={
  "E":{
@@ -987,6 +1000,39 @@ const voicingVariants={
  },
  "G/D":{
    root:[["G3",1],["B3",3],["D4",5]],first:[["B3",1],["D4",2],["G4",5]],second:[["D3",1],["G3",2],["B3",5]]
+ },
+ "F":{
+   root:[["F4",1],["A4",3],["C5",5]],first:[["A3",1],["C4",2],["F4",5]],second:[["C4",1],["F4",2],["A4",5]]
+ },
+ "Gm":{
+   root:[["G3",1],["A#3",3],["D4",5]],first:[["A#3",1],["D4",2],["G4",5]],second:[["D4",1],["G4",2],["A#4",5]]
+ },
+ "F#m7":{
+   root:[["F#3",1],["A3",2],["C#4",3],["E4",5]],first:[["A3",1],["C#4",2],["E4",3],["F#4",5]],second:[["C#4",1],["E4",2],["F#4",3],["A4",5]]
+ },
+ "Bm7":{
+   root:[["B3",1],["D4",2],["F#4",3],["A4",5]],first:[["D4",1],["F#4",2],["A4",3],["B4",5]],second:[["F#4",1],["A4",2],["B4",3],["D5",5]]
+ },
+ "Em7":{
+   root:[["E3",1],["G3",2],["B3",3],["D4",5]],first:[["G3",1],["B3",2],["D4",3],["E4",5]],second:[["B3",1],["D4",2],["E4",3],["G4",5]]
+ },
+ "D7M":{
+   root:[["D4",1],["F#4",2],["A4",3],["C#5",5]],first:[["F#4",1],["A4",2],["C#5",3],["D5",5]],second:[["A4",1],["C#5",2],["D5",3],["F#5",5]]
+ },
+ "F7M":{
+   root:[["F4",1],["A4",2],["C5",3],["E5",5]],first:[["A4",1],["C5",2],["E5",3],["F5",5]],second:[["C5",1],["E5",2],["F5",3],["A5",5]]
+ },
+ "A#7M":{
+   root:[["A#3",1],["D4",2],["F4",3],["A4",5]],first:[["D4",1],["F4",2],["A4",3],["A#4",5]],second:[["F4",1],["A4",2],["A#4",3],["D5",5]]
+ },
+ "A7":{
+   root:[["A3",1],["C#4",2],["E4",3],["G4",5]],first:[["C#4",1],["E4",2],["G4",3],["A4",5]],second:[["E4",1],["G4",2],["A4",3],["C#5",5]]
+ },
+ "F#7":{
+   root:[["F#3",1],["A#3",2],["C#4",3],["E4",5]],first:[["A#3",1],["C#4",2],["E4",3],["F#4",5]],second:[["C#4",1],["E4",2],["F#4",3],["A#4",5]]
+ },
+ "A#°":{
+   root:[["A#3",1],["C#4",3],["E4",5]],first:[["C#4",1],["E4",2],["A#4",5]],second:[["E4",1],["A#4",2],["C#5",5]]
  }
 };
 
@@ -1186,6 +1232,92 @@ makeSection("Coro final",[
 ])
 ];
 
+// Tercera canción del catálogo (KM0, Pablo Alborán). Necesita 4 familias de
+// acordes nuevas: m7, 7M (mayor séptima), 7 (dominante) y ° (disminuido),
+// construidas por teoría (primer ejemplar de cada familia) y por
+// transposición entre sí una vez que existe el primero (docs/plan-multi-cancion.md).
+const km0Sections=[
+makeSection("Introducción",[
+ ["Introducción instrumental","A","E","F#m7","D"]
+]),
+makeSection("Estrofa 1",[
+ ["De nuevo me enfrento a ti, querida página en blanco","A","E"],
+ ["Escribo con mis colmillos alegrías y llantos","F#m7","D","A"],
+ ["Querida amiga, no me falles, inúndate de palabras","E"],
+ ["Quédate inmóvil en la mesa hasta que mis alas se abran","F#m7","D","Bm7"]
+]),
+makeSection("Pre-coro 1",[
+ ["Llevo tanto tiempo calculando este momento","D7M","F7M"],
+ ["Mis heridas se han curado mal con tanto movimiento","F7M","Dm"]
+]),
+makeSection("Coro 1",[
+ ["Mi casa vacía y el corazón lleno","A","Em7"],
+ ["De historias que casi me arrancan del pecho","F#m7","Bm7"],
+ ["Kilómetro cero, primera casilla","A#7M","D"],
+ ["Cara a cara conmigo","G"],
+ ["Sentado en la silla","A7","A"]
+]),
+makeSection("Post-coro 1",[
+ ["No nos ha ido mal porque no esperaba tanto","D","F#m7"],
+ ["Jugué con los ojos cerrados con Dios y con el diablo","Em7"],
+ ["Preguntándole al espejo quién era Pablo","A"],
+ ["Y no nos ha ido mal, aunque costó despedirse","A7","D"],
+ ["Canté en lugares lejanos, nunca me sentí un extraño","F#m","Em7"],
+ ["Nada de eso ha sido en vano, ahora casi nada me hace daño","D","G","D"]
+]),
+makeSection("Estrofa 2",[
+ ["De nuevo me enfrento a ti, futuro sin apellidos","A","E","F#m7"],
+ ["Aprieto fuerte los dientes, jamás me di por vencido","F#m7","D","A"],
+ ["Cuando el mundo se calle, mis labios querrán buscarte","A","E","F#m7"],
+ ["Porque el pasado se fue y nos reclama el presente","D","Bm7"]
+]),
+makeSection("Pre-coro 2",[
+ ["Llevo tanto tiempo calculando este momento","D"],
+ ["Mis heridas se han curado mal con tanto movimiento","F7M","D"]
+]),
+makeSection("Coro 2",[
+ ["Mi casa vacía y el corazón lleno","A","Em"],
+ ["De historias que casi me arrancan del pecho","F#7","Bm"],
+ ["Kilómetro cero, primera casilla","A#7M","D"],
+ ["Cara a cara conmigo","Em7"],
+ ["Sentaíto en la silla","A"]
+]),
+makeSection("Post-coro 2",[
+ ["No nos ha ido mal porque no esperaba tanto","D","F#m"],
+ ["Jugué con los ojos cerrados con Dios y con el diablo","Em"],
+ ["Preguntándole al espejo quién era Pablo","A"],
+ ["Y no nos ha ido mal, aunque costó despedirse","D"],
+ ["Canté en lugares lejanos, nunca me sentí un extraño","F#m","Em7"],
+ ["Nada de eso ha sido en vano, ahora casi nada me hace daño","G","Gm","D"]
+]),
+makeSection("Puente instrumental",[
+ ["Interludio instrumental","D","A#7M","G","D","F"],
+ ["Interludio instrumental","A#7M","G","D","E","D","E","Bm7"]
+]),
+makeSection("Pre-coro 3",[
+ ["Llevo tanto tiempo calculando este momento","Bm7","D","F"],
+ ["Mis heridas se han curado mal con tanto movimiento","F","D"]
+]),
+makeSection("Coro 3",[
+ ["Mi casa vacía y el corazón lleno","A","Em"],
+ ["De historias que casi me arrancan del pecho","A#°","Bm"],
+ ["Kilómetro cero, primera casilla","Gm","D"],
+ ["Cara a cara conmigo","Em"],
+ ["Sentaíto en la silla","A"]
+]),
+makeSection("Post-coro 3",[
+ ["No nos ha ido mal porque no esperaba tanto","D","F#m"],
+ ["Jugué con los ojos cerrados con Dios y con el diablo","Em"],
+ ["Preguntándole al espejo quién era Pablo","A"],
+ ["Y no nos ha ido mal, aunque costó despedirse","D"],
+ ["Canté en lugares lejanos, nunca me sentí un extraño","F#m","Em7"],
+ ["Nada de eso ha sido en vano, ahora casi nada me hace daño","G","Gm","D"]
+]),
+makeSection("Final",[
+ ["Final instrumental","E","D","E"]
+])
+];
+
 // Fase 1 del plan multi-canción (docs/plan-multi-cancion.md): modelo genérico
 // de canción. "Mis 36" pasa a ser la canción semilla del registro; el resto
 // del archivo sigue leyendo `sections` directamente porque, mientras no se
@@ -1208,6 +1340,14 @@ const SONGS={
    originalKey:"G",
    sourceText:null,
    sections:vivemeSections
+ },
+ "km0":{
+   id:"km0",
+   title:"KM0",
+   artist:"Pablo Alborán",
+   originalKey:"A",
+   sourceText:null,
+   sections:km0Sections
  }
 };
 let currentSongId="mis-36";
