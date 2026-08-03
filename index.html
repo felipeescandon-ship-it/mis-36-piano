@@ -2754,10 +2754,22 @@ if(new URLSearchParams(location.search).get("motor")==="universal"){
        :"Motor universal: la equivalencia NO se cumple.",
      report
    );
+
+   // Mostrar en overlay visible para iPad
+   const overlay=document.createElement("div");
+   overlay.style.cssText="position:fixed;top:0;left:0;right:0;max-height:60vh;overflow:auto;background:rgba(0,0,0,0.9);color:#0f0;padding:16px;font-family:monospace;font-size:13px;z-index:99999;white-space:pre-wrap;word-break:break-all;line-height:1.4;";
+   overlay.textContent=`Motor Universal Report\n${"=".repeat(40)}\n\n${JSON.stringify(report,null,2)}`;
+   document.body.appendChild(overlay);
  }catch(error){
    // Que la comprobación falle no puede afectar a la aplicación publicada.
    window.mis36EquivalenceReport={ok:false,error:{message:String(error)}};
    console.error("Motor universal: la comprobación no pudo ejecutarse.",error);
+
+   // Mostrar error en overlay
+   const overlay=document.createElement("div");
+   overlay.style.cssText="position:fixed;top:0;left:0;right:0;max-height:60vh;overflow:auto;background:rgba(0,0,0,0.9);color:#f00;padding:16px;font-family:monospace;font-size:13px;z-index:99999;white-space:pre-wrap;word-break:break-all;line-height:1.4;";
+   overlay.textContent=`Motor Universal Error\n${"=".repeat(40)}\n\n${String(error)}`;
+   document.body.appendChild(overlay);
  }
 }
 </script>
