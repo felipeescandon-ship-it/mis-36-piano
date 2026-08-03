@@ -1,5 +1,9 @@
 # Recap y continuidad · inicio de E1.3
 
+**⚠️ Documento obsoleto desde el 3 de agosto de 2026.** Ver
+[`10-RECAP-E2-COMPLETA.md`](10-RECAP-E2-COMPLETA.md) y
+[`04-ROADMAP.md`](04-ROADMAP.md) para estado actual.
+
 Actualizado: 28 de julio de 2026  
 Estado: Entrega 0 y Entrega 1 completadas en producción; E2 (constructor de
 acordes) pendiente de implementación.
