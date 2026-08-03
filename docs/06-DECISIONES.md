@@ -7,11 +7,42 @@ Estado: decisiones aceptadas y preguntas que deben resolverse antes de su entreg
 
 Felipe, en todo. El proyecto lo lleva una sola persona.
 
-Los documentos anteriores repartían las decisiones entre un comité asesor —diseño,
-UX, un profesor de piano, un pianista— que no existe. Esa ficción tuvo un coste
-concreto: varias decisiones tomadas quedaron registradas como «pendientes de
-validación» de alguien que nunca iba a responder, y el roadmap las trataba como
-bloqueos externos.
+### Javier y Fernando no son personas
+
+Conviene decirlo con los nombres, porque siguen apareciendo en el historial de este
+repositorio y quien los encuentre pensará que son colaboradores a los que puede
+escribir.
+
+Los documentos anteriores repartían las decisiones entre un comité asesor de cinco
+integrantes:
+
+| Nombre en los documentos | Qué era |
+|---|---|
+| **Javier · diseño** | personaje inventado |
+| **Fernando · UX** | personaje inventado |
+| **El profesor de piano** | personaje inventado |
+| **El pianista** | personaje inventado |
+| **El experto en UX musical** | personaje inventado |
+
+Ninguno existe. Se crearon durante el desarrollo como puntos de vista con los que
+razonar sobre el producto, y los documentos acabaron tratándolos como personas
+reales que emitían opiniones, validaban entregas y firmaban decisiones.
+
+Dónde siguen apareciendo, y por qué no se borran: en los mensajes de commit
+anteriores al 1 de agosto de 2026, en el nombre antiguo del archivo
+`11-E2-WIREFRAMES-JAVIER.md` —hoy `11-E2-INTERFAZ.md`— y en los issues #11 y #14 ya
+cerrados. Reescribir el historial para tapar eso sería otra forma del mismo
+problema; queda esta nota como explicación.
+
+**La ficción tuvo un coste concreto.** Varias decisiones ya tomadas quedaron
+registradas como «pendientes de validación» de alguien que nunca iba a responder, y
+el roadmap las trataba como bloqueos externos. La interfaz de la Entrega 2 estuvo
+detenida esperando unos wireframes que solo podía escribir quien ya estaba en el
+proyecto.
+
+Si en el futuro vuelve a servir razonar desde varios puntos de vista, que sea sin
+nombre propio y sin fecha de reunión: un criterio no necesita fingirse persona para
+ser útil.
 
 Lo que sí conviene conservar es **qué tipo de criterio** necesita cada decisión
 —musical, de interfaz, de producto—, porque eso indica qué hay que comprobar antes
@@ -204,6 +235,44 @@ Consecuencia: la separación de palabras en Letra es un efecto conocido de esta
 decisión, no un defecto que reportar. Si alguna vez molesta lo suficiente, la
 alternativa registrada es ocultarlas solo por debajo de cierto ancho, donde el
 efecto se nota más.
+
+Fecha: 1 de agosto de 2026.
+
+### D-019 · El motor entra en producción como comprobación antes que como reproductor
+
+`index.html` puede alcanzar `src/`, pero solo para comprobarse a sí mismo. Con
+`?motor=universal` en la dirección, la aplicación migra la canción en memoria,
+compara la equivalencia canónica y publica el informe. Sin ese parámetro no importa
+un solo archivo de `src/`.
+
+El orden es deliberado. Conectar las vistas al motor es el cambio grande —reescribe
+el bucle central de un archivo de 2709 líneas— y hasta ahora se iba a dar sin haber
+ejecutado nunca ese código en un navegador contra los datos reales. Ahora se puede
+ejecutar antes de decidir.
+
+También cubre un hueco de las pruebas: `test/migration.test.js` compara contra un
+fixture congelado, y la canción publicada no lo está, porque el editor la reescribe
+y la nube la sincroniza. La primera ejecución en navegador ya lo demostró: los datos
+vivos sin ediciones dan 86 eventos, mientras el fixture da 81 y cinco borrados. Son
+consistentes —86 menos 5— pero solo una comprobación en vivo lo enseña.
+
+La bandera `pianoUniversalEngine` sigue apagada y no puede activarse desde la URL:
+esto es una comprobación, no un interruptor de producción.
+
+Consecuencia: el issue #16 deja de ser una decisión a ciegas. Sigue abierto lo que de
+verdad decide —cuándo las vistas dejan de consumir el código heredado—, pero ya no
+hay que tomarlo sin evidencia.
+
+Fecha: 1 de agosto de 2026.
+
+### D-020 · La Entrega 0 queda cerrada
+
+La validación física que faltaba era ejecutar el adaptador IndexedDB `shadow` en
+Safari/iPad real. La aceptación de E1.6 la cubrió: se validó en Safari/iPad con
+IndexedDB `shadow`, Letra adaptable, VoiceOver, zoom al 200 % y regreso tras bloqueo.
+
+El roadmap seguía marcando «validación física pendiente» en tres sitios por no haber
+cruzado ambos registros.
 
 Fecha: 1 de agosto de 2026.
 
