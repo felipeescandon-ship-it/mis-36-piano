@@ -257,6 +257,9 @@ Quedan fuera de esta primera vuelta de E3.4, sin bloquearla:
   reutiliza lo que ya exista en la biblioteca compartida).
 - Duración (`beats`) editable por acorde: se asigna 1 pulso fijo al colocarlo.
 - Vista Práctica para canciones nuevas.
+- Opción de eliminar canciones de forma permanente — diferente de archivar.
+  Se implementará como eliminación lógica con historial de recuperación antes
+  de pasar a eliminación física (después de Entrega 5).
 
 Dependencias: Entregas 1 y 2.
 
