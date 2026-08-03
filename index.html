@@ -820,7 +820,7 @@ const sectionName=document.getElementById("sectionName");
 const sectionCount=document.getElementById("sectionCount");
 const steps=document.getElementById("steps");
 const NOTE_ES={C:"Do","C#":"Do#",D:"Re","D#":"Re#",E:"Mi","E#":"Mi#",F:"Fa","F#":"Fa#",G:"Sol","G#":"Sol#",A:"La","A#":"La#",B:"Si","B#":"Si#"};
-const CHORD_ES={"E":"Mi","F#":"Fa#","F#m":"Fa#m","A":"La","Am":"Lam","C#m":"Do#m","C#":"Do#","G#m":"Sol#m","G#":"Sol#","D":"Re","B":"Si","B/D#":"Si/Re#"};
+const CHORD_ES={"E":"Mi","F#":"Fa#","F#m":"Fa#m","A":"La","Am":"Lam","C#m":"Do#m","C#":"Do#","G#m":"Sol#m","G#":"Sol#","D":"Re","B":"Si","B/D#":"Si/Re#","G":"Sol","C":"Do","Bm":"Sim","Em":"Mim","Dm":"Rem","G/B":"Sol/Si","G/D":"Sol/Re"};
 let notationMode="es";
 let songEditMode=false,selectedSyncEvent=null,addingSyncChord=null,movingSyncEvent=false;
 let lyricsPreviewPosition=null,lyricsPreviewAnchor=null;
@@ -908,12 +908,20 @@ const voicings={
 "G#":{l:"G#2",r:[["C4",1],["D#4",2],["G#4",5]],spell:{"C":"B#"},inv:"1ª inversión"},
 "D":{l:"D2",r:[["A3",1],["D4",2],["F#4",5]],inv:"2ª inversión"},
 "B":{l:"B1",r:[["B3",1],["D#4",3],["F#4",5]],inv:"fundamental"},
-"B/D#":{l:"D#2",r:[["B3",1],["D#4",3],["F#4",5]],inv:"acorde de Si con Re# en el bajo"}
+"B/D#":{l:"D#2",r:[["B3",1],["D#4",3],["F#4",5]],inv:"acorde de Si con Re# en el bajo"},
+"G":{l:"G2",r:[["B3",1],["D4",2],["G4",5]],inv:"1ª inversión"},
+"C":{l:"C2",r:[["G3",1],["C4",2],["E4",5]],inv:"2ª inversión"},
+"Bm":{l:"B2",r:[["D4",1],["F#4",2],["B4",5]],inv:"1ª inversión"},
+"Em":{l:"E2",r:[["G3",1],["B3",2],["E4",5]],inv:"1ª inversión"},
+"Dm":{l:"D2",r:[["A3",1],["D4",2],["F4",5]],inv:"2ª inversión"},
+"G/B":{l:"B2",r:[["G3",1],["B3",3],["D4",5]],inv:"acorde de Sol con Si en el bajo"},
+"G/D":{l:"D2",r:[["G3",1],["B3",3],["D4",5]],inv:"acorde de Sol con Re en el bajo"}
 };
 
 const defaultInversions={
  "E":"root","F#":"first","F#m":"first","A":"first","Am":"first","C#m":"second",
- "C#":"second","G#m":"first","G#":"first","D":"second","B":"root","B/D#":"root"
+ "C#":"second","G#m":"first","G#":"first","D":"second","B":"root","B/D#":"root",
+ "G":"first","C":"second","Bm":"first","Em":"first","Dm":"second","G/B":"root","G/D":"root"
 };
 const voicingVariants={
  "E":{
@@ -951,8 +959,62 @@ const voicingVariants={
  },
  "B/D#":{
    root:[["B3",1],["D#4",3],["F#4",5]],first:[["D#4",1],["F#4",2],["B4",5]],second:[["F#3",1],["B3",2],["D#4",5]]
+ },
+ "G":{
+   root:[["G3",1],["B3",3],["D4",5]],first:[["B3",1],["D4",2],["G4",5]],second:[["D3",1],["G3",2],["B3",5]]
+ },
+ "C":{
+   root:[["C4",1],["E4",3],["G4",5]],first:[["E3",1],["G3",2],["C4",5]],second:[["G3",1],["C4",2],["E4",5]]
+ },
+ "Bm":{
+   root:[["B3",1],["D4",3],["F#4",5]],first:[["D4",1],["F#4",2],["B4",5]],second:[["F#3",1],["B3",2],["D4",5]]
+ },
+ "Em":{
+   root:[["E3",1],["G3",3],["B3",5]],first:[["G3",1],["B3",2],["E4",5]],second:[["B3",1],["E4",2],["G4",5]]
+ },
+ "Dm":{
+   root:[["D4",1],["F4",3],["A4",5]],first:[["F3",1],["A3",2],["D4",5]],second:[["A3",1],["D4",2],["F4",5]]
+ },
+ "G/B":{
+   root:[["G3",1],["B3",3],["D4",5]],first:[["B3",1],["D4",2],["G4",5]],second:[["D3",1],["G3",2],["B3",5]]
+ },
+ "G/D":{
+   root:[["G3",1],["B3",3],["D4",5]],first:[["B3",1],["D4",2],["G4",5]],second:[["D3",1],["G3",2],["B3",5]]
  }
 };
+
+// Fase 2 del plan multi-canción (docs/plan-multi-cancion.md): congelar la
+// biblioteca de voicings actual. Estos 12 acordes son la referencia sonora
+// aprobada de "Mis 36" — ningún voicing aprobado se edita en sitio; para
+// darle otro carácter se crea una variante nueva. La lista es fija (no
+// "todo lo que haya en voicings ahora") para que la biblioteca pueda seguir
+// creciendo con acordes nuevos sin que la comprobación los confunda con una
+// edición accidental de los 12 originales.
+const ORIGINAL_VOICING_CHORDS=["E","F#","F#m","A","Am","C#m","C#","G#m","G#","D","B","B/D#"];
+const VOICING_LIBRARY_SNAPSHOT=Object.freeze(JSON.parse(JSON.stringify({
+ voicings:Object.fromEntries(ORIGINAL_VOICING_CHORDS.map(chord=>[chord,voicings[chord]])),
+ voicingVariants:Object.fromEntries(ORIGINAL_VOICING_CHORDS.map(chord=>[chord,voicingVariants[chord]])),
+ defaultInversions:Object.fromEntries(ORIGINAL_VOICING_CHORDS.map(chord=>[chord,defaultInversions[chord]]))
+})));
+function verifyVoicingLibraryIntegrity(){
+ let ok=true;
+ for(const chord of ORIGINAL_VOICING_CHORDS){
+   if(JSON.stringify(voicings[chord])!==JSON.stringify(VOICING_LIBRARY_SNAPSHOT.voicings[chord])){
+     console.error(`El voicing aprobado de "${chord}" ya no coincide con su copia original.`);
+     ok=false;
+   }
+   if(JSON.stringify(voicingVariants[chord])!==JSON.stringify(VOICING_LIBRARY_SNAPSHOT.voicingVariants[chord])){
+     console.error(`Las variantes de inversión aprobadas de "${chord}" ya no coinciden con su copia original.`);
+     ok=false;
+   }
+   if(defaultInversions[chord]!==VOICING_LIBRARY_SNAPSHOT.defaultInversions[chord]){
+     console.error(`La inversión predeterminada aprobada de "${chord}" ya no coincide con su copia original.`);
+     ok=false;
+   }
+ }
+ return ok;
+}
+
 function inversionText(id){
  if(notationMode==="en")return {root:"Root position",first:"1st inversion",second:"2nd inversion"}[id];
  return {root:"Fundamental",first:"1.ª inversión",second:"2.ª inversión"}[id];
@@ -969,7 +1031,7 @@ const makeSection=(name,rows)=>({
    uid:`${line}:${chordIndex}`,chord,lyric,line,beats:4,inversion:defaultInversions[chord]
  })))
 });
-const sections=[
+let sections=[
 makeSection("Introducción",[
  ["Introducción instrumental","E","F#","A","E","C#m","F#","Am"],
  ["Entrada: Esto no es solo un atajo","E"]
@@ -1040,11 +1102,125 @@ makeSection("Coro final",[
 ])
 ];
 
+// Segunda canción del catálogo (repertorio real elegido para validar la
+// biblioteca de acordes de la Fase 2, docs/plan-multi-cancion.md). Usa los 7
+// acordes nuevos (G, C, Bm, Em, Dm, G/B, G/D) agregados a la biblioteca más
+// arriba, además de Am y D que "Mis 36" ya aprobó.
+const vivemeSections=[
+makeSection("Estrofa 1",[
+ ["No necesito más de nada","G"],
+ ["Ahora que","Bm"],
+ ["Me iluminó tu amor inmenso fuera y dentro","Em","G/D","C"],
+ ["Créeme esta vez","G/B","Am"],
+ ["Créeme porque","Em","D"],
+ ["Creéme y veras","Am","D"],
+ ["No acabará más","G"]
+]),
+makeSection("Estrofa 2",[
+ ["Tengo un deseo escrito en alto","G"],
+ ["Que vuela ya","Bm"],
+ ["Mi pensamiento no depende de mi cuerpo","Em","G/D","C"],
+ ["Créeme esta vez","G/B","Am"],
+ ["Créeme porque","Em","D"],
+ ["Me haría daño, ahora ya lo sé","Am","D","G"]
+]),
+makeSection("Pre-coro 1",[
+ ["Hay gran espacio y tú y yo","D","C"],
+ ["Cielo abierto que ya","Em"],
+ ["No se cierra a los dos","D"],
+ ["Pues sabemos lo que es necesidad","C"]
+]),
+makeSection("Coro 1",[
+ ["Víveme sin miedo ahora","G"],
+ ["Que sea una vida o sea una hora","Dm"],
+ ["No me dejes libre aquí desnudo","C"],
+ ["Mi nuevo espacio que ahora es tuyo, te ruego","G/B","Am","D"],
+ ["Víveme sin más vergüenza","G"],
+ ["Aunque esté todo el mundo en contra","Dm"],
+ ["Deja la apariencia y toma el sentido","C"],
+ ["Y siente lo que llevo dentro","G/B","Am","D"]
+]),
+makeSection("Estrofa 3",[
+ ["Y te transformas en un cuadro dentro de mí","G","Bm"],
+ ["Que cubre mis paredes blancas y cansadas","Em","G/D","C"],
+ ["Créeme esta vez","G/B","Am"],
+ ["Créeme porque","Em","D"],
+ ["Me haría daño una y otra vez","Am","D","G"]
+]),
+makeSection("Pre-coro 2",[
+ ["Si, entre mi realidad","D","C"],
+ ["Hoy yo tengo algo más","Em"],
+ ["Que jamás tuve ayer","D"],
+ ["Necesitas vivirme un poco más","C"]
+]),
+makeSection("Coro 2",[
+ ["Víveme sin miedo ahora","G"],
+ ["Que sea una vida o sea una hora","Dm"],
+ ["No me dejes libre aquí desnudo","C"],
+ ["Mi nuevo espacio que ahora es tuyo, te ruego","G/B","Am","D"],
+ ["Víveme sin más vergüenza","G"],
+ ["Aunque esté todo el mundo en contra","Dm"],
+ ["Deja la apariencia y toma el sentido","C"],
+ ["Y siente lo que llevo dentro","G/B","Am","D"]
+]),
+makeSection("Puente",[
+ ["Has abierto en mí","Am"],
+ ["La fantasía","Em"],
+ ["Me esperan días de una ilimitada dicha","Am","D"],
+ ["Es tu guión","Am"],
+ ["La vida mía","Em"],
+ ["Me enfocas, me diriges, pones las ideas","Am","D"]
+]),
+makeSection("Coro final",[
+ ["Víveme sin miedo ahora","G"],
+ ["Aunque esté todo el mundo en contra","Dm"],
+ ["Deja la apariencia, toma el sentido","C"],
+ ["Y siente lo que llevo dentro","G/B","Am","D"]
+])
+];
+
+// Fase 1 del plan multi-canción (docs/plan-multi-cancion.md): modelo genérico
+// de canción. "Mis 36" pasa a ser la canción semilla del registro; el resto
+// del archivo sigue leyendo `sections` directamente porque, mientras no se
+// previsualice otra canción, es la misma referencia que
+// SONGS["mis-36"].sections, así que el editor puede seguir mutándola en
+// sitio sin que nada más cambie de comportamiento.
+const SONGS={
+ "mis-36":{
+   id:"mis-36",
+   title:"Mis 36",
+   artist:"",
+   originalKey:"E",
+   sourceText:null,
+   sections
+ },
+ "viveme":{
+   id:"viveme",
+   title:"Víveme",
+   artist:"Laura Pausini",
+   originalKey:"G",
+   sourceText:null,
+   sections:vivemeSections
+ }
+};
+let currentSongId="mis-36";
+function currentSong(){return SONGS[currentSongId]}
+
+// Vista previa temporal para escuchar/aprobar una canción nueva (por ejemplo
+// ?song=viveme) antes de que exista el catálogo real (Fase 3) o la API
+// genérica (Fase 4). Es de solo lectura a propósito: no toca songSync ni la
+// nube, así que nunca puede corromper los datos guardados de "Mis 36".
+const previewSongId=new URLSearchParams(location.search).get("song");
+const isPreviewingOtherSong=Boolean(previewSongId&&previewSongId!=="mis-36"&&SONGS[previewSongId]);
+if(isPreviewingOtherSong){
+ currentSongId=previewSongId;
+ sections=SONGS[currentSongId].sections;
+}
+
 // Copia de los valores predeterminados antes de que nada los toque. El editor
 // muta `sections` en sitio, así que a partir de aquí deja de ser el estado
 // original: lo que el usuario cambie viaja por songSync, no por estas
-// estructuras. Se clona para que la comprobación del motor nuevo compare
-// contra el mismo punto de partida que el fixture de las pruebas.
+// estructuras.
 const LEGACY_DEFAULTS=JSON.parse(JSON.stringify({voicings,defaultInversions,voicingVariants,sections}));
 
 const SONG_SYNC_KEY="mis36-song-sync-v1";
@@ -1057,7 +1233,7 @@ let cloudChangeGeneration=0,cloudSaveQueued=false;
 const deletedSongEvents=new Set();
 function lyricWords(text){return text.trim().split(/\s+/).filter(Boolean)}
 function syncEventKey(section,event){return `${section}:${event.uid}`}
-function initializeSongSync(){
+function assignDefaultAnchors(){
  sections.forEach(section=>{
    section.lines.forEach((lineText,line)=>{
      const lineEvents=section.events.filter(event=>event.line===line);
@@ -1068,6 +1244,9 @@ function initializeSongSync(){
      });
    });
  });
+}
+function initializeSongSync(){
+ assignDefaultAnchors();
  try{
    const saved=JSON.parse(localStorage.getItem(SONG_SYNC_KEY)||"{}");
    if(saved?.version>=2){
@@ -1133,6 +1312,7 @@ function songSyncSnapshot(){
  return saved;
 }
 function saveSongSync(syncCloud=true){
+ if(isPreviewingOtherSong)return;
  const saved=songSyncSnapshot();
  try{
    localStorage.setItem(SONG_SYNC_KEY,JSON.stringify(saved));
@@ -1311,6 +1491,7 @@ async function cloudFetch(resource,options={}){
  finally{clearTimeout(timeout)}
 }
 async function saveCloudSongSync(force=false){
+ if(isPreviewingOtherSong)return false;
  if(cloudRequestRunning){
    cloudSaveQueued=true;
    return false;
@@ -1375,6 +1556,7 @@ async function saveCloudSongSync(force=false){
  }
 }
 async function loadCloudSongSync(forceRefresh=false){
+ if(isPreviewingOtherSong){setCloudStatus("Nube: no disponible en la vista previa","warning");return false;}
  if(cloudRequestRunning&&!forceRefresh)return false;
  cloudRequestRunning=true;
  cloudSyncNow.disabled=true;
@@ -2531,7 +2713,7 @@ document.addEventListener("keydown",event=>{
 });
 document.addEventListener("visibilitychange",()=>{
  if(!document.hidden&&audioCtx&&audioCtx.state!=="running")setAudioStatus("Toca un control para reactivar el audio");
- if(!document.hidden)loadCloudSongSync();
+ if(!document.hidden&&!isPreviewingOtherSong)loadCloudSongSync();
 });
 
 playMode.onchange=()=>{
@@ -2711,7 +2893,7 @@ nextPianoToggle.onclick=()=>{
 };
 nextKeyboardWrap.addEventListener("scroll",()=>syncPianoScroll(nextKeyboardWrap,currentKeyboardWrap),{passive:true});
 currentKeyboardWrap.addEventListener("scroll",()=>syncPianoScroll(currentKeyboardWrap,nextKeyboardWrap),{passive:true});
-updateNotationToggle();updateLyricsNotesToggle();renderSyncChordOptions();renderSyncInversionOptions("E");initializeSongSync();updateSettingsSummary();updateNextPianoVisibility();initSections();buildSteps();render();renderFullSong();updateSessionSummary();updateTransportControls();loadCloudSongSync();
+verifyVoicingLibraryIntegrity();updateNotationToggle();updateLyricsNotesToggle();renderSyncChordOptions();renderSyncInversionOptions("E");if(isPreviewingOtherSong)assignDefaultAnchors();else initializeSongSync();updateSettingsSummary();updateNextPianoVisibility();initSections();buildSteps();render();renderFullSong();updateSessionSummary();updateTransportControls();if(!isPreviewingOtherSong)loadCloudSongSync();
 </script>
 </body>
 </html>
