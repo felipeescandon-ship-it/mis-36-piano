@@ -2742,34 +2742,33 @@ updateNotationToggle();updateLyricsNotesToggle();renderSyncChordOptions();render
   puede activarse desde aquí: esto es una comprobación, no un interruptor de
   producción.
 -->
+<div id="motorUniversalContainer" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.95);color:#0f0;padding:16px;font-family:monospace;font-size:12px;overflow:auto;z-index:99999;white-space:pre-wrap;word-break:break-all;line-height:1.4;">
+  <div style="margin-bottom:10px;color:#fff;">Motor Universal Report (click para cerrar)</div>
+  <div id="motorUniversalContent"></div>
+</div>
 <script type="module">
 if(new URLSearchParams(location.search).get("motor")==="universal"){
- try{
-   const {verifyLiveEquivalence}=await import("./src/application/verify-live-equivalence.js");
-   const report=await verifyLiveEquivalence(window.mis36LegacySnapshot());
-   window.mis36EquivalenceReport=report;
-   console[report.ok?"info":"error"](
-     report.ok
-       ?`Motor universal: equivalencia confirmada contra los datos vivos (${report.counts.events} eventos, ${report.elapsedMs} ms).`
-       :"Motor universal: la equivalencia NO se cumple.",
-     report
-   );
-
-   // Mostrar en overlay visible para iPad
-   const overlay=document.createElement("div");
-   overlay.style.cssText="position:fixed;top:0;left:0;right:0;max-height:60vh;overflow:auto;background:rgba(0,0,0,0.9);color:#0f0;padding:16px;font-family:monospace;font-size:13px;z-index:99999;white-space:pre-wrap;word-break:break-all;line-height:1.4;";
-   overlay.textContent=`Motor Universal Report\n${"=".repeat(40)}\n\n${JSON.stringify(report,null,2)}`;
-   document.body.appendChild(overlay);
- }catch(error){
-   // Que la comprobación falle no puede afectar a la aplicación publicada.
-   window.mis36EquivalenceReport={ok:false,error:{message:String(error)}};
-   console.error("Motor universal: la comprobación no pudo ejecutarse.",error);
-
-   // Mostrar error en overlay
-   const overlay=document.createElement("div");
-   overlay.style.cssText="position:fixed;top:0;left:0;right:0;max-height:60vh;overflow:auto;background:rgba(0,0,0,0.9);color:#f00;padding:16px;font-family:monospace;font-size:13px;z-index:99999;white-space:pre-wrap;word-break:break-all;line-height:1.4;";
-   overlay.textContent=`Motor Universal Error\n${"=".repeat(40)}\n\n${String(error)}`;
-   document.body.appendChild(overlay);
+ const container=document.getElementById("motorUniversalContainer");
+ const content=document.getElementById("motorUniversalContent");
+ if(container){
+   container.style.display="block";
+   try{
+     const {verifyLiveEquivalence}=await import("./src/application/verify-live-equivalence.js");
+     const report=await verifyLiveEquivalence(window.mis36LegacySnapshot());
+     window.mis36EquivalenceReport=report;
+     content.textContent=JSON.stringify(report,null,2);
+     console[report.ok?"info":"error"](
+       report.ok
+         ?`Motor universal: equivalencia confirmada contra los datos vivos (${report.counts.events} eventos, ${report.elapsedMs} ms).`
+         :"Motor universal: la equivalencia NO se cumple.",
+       report
+     );
+   }catch(error){
+     window.mis36EquivalenceReport={ok:false,error:{message:String(error)}};
+     content.textContent=`ERROR: ${String(error)}\n\n${error.stack||""}`;
+     console.error("Motor universal: la comprobación no pudo ejecutarse.",error);
+   }
+   container.onclick=()=>{container.style.display="none"};
  }
 }
 </script>
