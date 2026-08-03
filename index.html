@@ -499,6 +499,22 @@ display:flex;flex-direction:column;gap:8px;min-height:150px;text-align:left}
 @media(max-width:640px){
  .library-toolbar{gap:8px}
 }
+.workspace-sheet{max-width:900px}
+.workspace-title-input{font-size:22px;font-weight:900;border:0;background:none;padding:2px 0;min-width:160px;color:var(--ink)}
+.workspace-pane{padding:16px 20px;max-height:60vh;overflow:auto}
+.workspace-section{border:1px solid var(--line);border-radius:14px;padding:14px;margin-bottom:14px;background:var(--slotEmpty)}
+.workspace-section-head{display:flex;gap:8px;align-items:center;margin-bottom:10px}
+.workspace-section-head input{flex:1;font-weight:900;font-size:15px;padding:8px 10px;border-radius:9px;border:1px solid var(--line)}
+.workspace-line{display:flex;gap:8px;align-items:flex-start;margin-bottom:10px}
+.workspace-line-main{flex:1;min-width:0}
+.workspace-line textarea{width:100%;min-height:40px;padding:8px 10px;border-radius:9px;border:1px solid var(--line);font-family:inherit;font-size:14px;resize:vertical}
+.workspace-chips{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0 2px}
+.workspace-chip{display:inline-flex;align-items:center;gap:6px;padding:4px 8px;border-radius:999px;background:var(--blueSoft);color:var(--blue);font-weight:800;font-size:12.5px}
+.workspace-chip button{background:none;border:0;font-weight:900;color:inherit;min-width:20px}
+.workspace-add-chord{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-top:4px}
+.workspace-add-chord select{min-height:36px;border-radius:8px;border:1px solid var(--line);padding:0 8px;font-size:13px;max-width:220px}
+.workspace-letra-line{padding:10px 0;border-bottom:1px dashed var(--line);line-height:1.9}
+.workspace-letra-chip{display:inline-block;background:var(--blueSoft);color:var(--blue);font-weight:900;font-size:11px;padding:2px 6px;border-radius:6px;margin:0 3px;vertical-align:middle}
 </style>
 </head>
 <body>
@@ -827,6 +843,30 @@ display:flex;flex-direction:column;gap:8px;min-height:150px;text-align:left}
       <button id="librarySongNameCancel" class="secondary" type="button">Cancelar</button>
       <button id="librarySongNameConfirm" class="primary" type="button">Crear</button>
     </div>
+  </div>
+</div>
+
+<div id="songWorkspace" class="chord-constructor-overlay" hidden>
+  <div class="chord-constructor-sheet workspace-sheet" role="dialog" aria-modal="true" aria-labelledby="workspaceTitleInput">
+    <div class="chord-constructor-header">
+      <input id="workspaceTitleInput" class="workspace-title-input" aria-label="Título de la canción">
+      <div style="display:flex;gap:8px;align-items:center">
+        <div class="view-switch" role="group" aria-label="Vista de la canción">
+          <button id="workspaceTabEdit" type="button" aria-pressed="true">✎ Editar</button>
+          <button id="workspaceTabLyrics" type="button" aria-pressed="false">♪ Letra</button>
+        </div>
+        <button id="workspaceClose" class="secondary" type="button" aria-label="Cerrar taller de canción">✕</button>
+      </div>
+    </div>
+    <div id="workspaceEditPane" class="workspace-pane">
+      <div id="workspaceSections"></div>
+      <button id="workspaceAddSection" class="secondary" type="button">+ Sección</button>
+      <p id="workspaceChordHint" class="chord-constructor-hint" hidden>Todavía no construiste ningún acorde. Abrí Mis 36 → Editar → "＋ Añadir" → "Crear acorde nuevo…" para tener acordes disponibles aquí.</p>
+    </div>
+    <div id="workspaceLyricsPane" class="workspace-pane" hidden>
+      <div id="workspaceLyricsView"></div>
+    </div>
+    <div id="workspaceStatus" class="chord-constructor-status" aria-live="polite"></div>
   </div>
 </div>
 
@@ -3304,13 +3344,17 @@ document.getElementById("chordSaveConfirm").onclick=async()=>{
  }
 };
 
+function escapeHTML(text){
+ return String(text??"").replace(/[&<>"']/g,ch=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[ch]));
+}
+
 let songLibraryModules=null;
 let librarySongsCache=[];
 let libraryArchivedCache=[];
 
 async function loadSongLibraryModules(){
  if(songLibraryModules)return songLibraryModules;
- const [factoryModule,repoModule,portabilityModule,activeStoreModule,shadowDbModule,chordRepoModule,voicingRepoModule]=await Promise.all([
+ const [factoryModule,repoModule,portabilityModule,activeStoreModule,shadowDbModule,chordRepoModule,voicingRepoModule,validationModule]=await Promise.all([
    import("./src/application/song-library/song-factory.js"),
    import("./src/infrastructure/song-repository.js"),
    import("./src/application/song-library/song-portability.js"),
@@ -3318,6 +3362,7 @@ async function loadSongLibraryModules(){
    import("./src/infrastructure/indexed-db-shadow.js"),
    import("./src/infrastructure/chord-repository.js"),
    import("./src/infrastructure/voicing-repository.js"),
+   import("./src/domain/validation.js"),
  ]);
  songLibraryModules={
    createSongFactory:factoryModule.createSongFactory,
@@ -3329,6 +3374,7 @@ async function loadSongLibraryModules(){
    openShadowDatabase:shadowDbModule.openShadowDatabase,
    createChordRepository:chordRepoModule.createChordRepository,
    createVoicingRepository:voicingRepoModule.createVoicingRepository,
+   validateSong:validationModule.validateSong,
  };
  return songLibraryModules;
 }
@@ -3350,9 +3396,9 @@ function libraryCardHTML(song,{origin=false,archived=false}={}){
      <button class="library-icon-btn" data-action="export" data-id="${song.id}" title="Exportar" aria-label="Exportar">⬇</button>
      <button class="library-icon-btn" data-action="archive" data-id="${song.id}" title="Archivar" aria-label="Archivar">🗄</button>`;
  const title=origin?"Mis 36":song.metadata.title;
- const meta=origin?"Guía de acompañamiento original":(song.metadata.key?`${song.metadata.key} · `:"")+`${song.metadata.tempo} bpm`;
- return `<div class="library-card ${origin?"origin":""}" data-title="${title.toLowerCase()}">
-   <div class="library-card-top"><span class="library-card-title">${title}</span>${badge}</div>
+ const meta=origin?"Guía de acompañamiento original":(song.metadata.key?`${escapeHTML(song.metadata.key)} · `:"")+`${song.metadata.tempo} bpm`;
+ return `<div class="library-card ${origin?"origin":""}" data-title="${escapeHTML(title.toLowerCase())}">
+   <div class="library-card-top"><span class="library-card-title">${escapeHTML(title)}</span>${badge}</div>
    <span class="library-card-meta">${meta}</span>
    <div class="library-card-row">
      <button class="library-open" data-action="open" data-id="${origin?"mis36":song.id}" data-origin="${origin?"1":"0"}">Abrir</button>
@@ -3428,9 +3474,8 @@ async function handleLibraryCardClick(event){
  }
  if(action==="open"){
    if(button.dataset.origin==="1"){closeLibrary();return}
-   const song=librarySongsCache.find(item=>item.id===button.dataset.id);
    modules.createActiveSongStore().setActiveSongId(button.dataset.id);
-   setLibraryStatus(`«${song?.metadata.title}» marcada como canción activa. Tocar, Letra y Editar para canciones nuevas se conectan en la siguiente fase (E3.4).`);
+   await openSongWorkspace(button.dataset.id);
    return;
  }
  const id=button.dataset.id;
@@ -3480,8 +3525,8 @@ document.getElementById("librarySongNameConfirm").onclick=async()=>{
    const song=modules.createSongFactory().createSong({title});
    await modules.createSongRepository().saveSong(db,song);
    document.getElementById("librarySongNameDialog").hidden=true;
-   await renderLibrary();
-   setLibraryStatus(`«${title}» creada. Se abre en Editar en la siguiente fase (E3.4).`);
+   modules.createActiveSongStore().setActiveSongId(song.id);
+   await openSongWorkspace(song.id);
  }catch(error){
    setLibraryStatus(`No se pudo crear la canción: ${error.message}`,true);
  }finally{
@@ -3510,6 +3555,249 @@ document.getElementById("libraryImportInput").onchange=async(event)=>{
    setLibraryStatus(`No se pudo importar: ${error.message}`,true);
  }
 };
+
+// --- Taller de canción (E3.4): Editar + Letra estática para canciones que no
+// son Mis 36. Sin reproducción todavía — eso conecta la máquina de estados de
+// Entrega 1, y esta primera vuelta se acotó a edición y lectura sin audio.
+let workspaceSong=null;
+let workspaceLibraryChords=[];
+let workspaceLibraryVoicings=[];
+
+function lineWords(text){
+ return text.trim()?text.trim().split(/\s+/):[];
+}
+function anchorLabel(words,anchor){
+ if(!words.length)return "Línea vacía";
+ if(anchor<=0)return `Antes de "${words[0]}"`;
+ if(anchor>=words.length)return `Al final (después de "${words.at(-1)}")`;
+ return `Antes de "${words[anchor]}"`;
+}
+function workspaceChordLabel(chordId){
+ const known=chordText(chordId);
+ if(known!==chordId)return known;
+ return workspaceLibraryChords.find(c=>c.id===chordId)?.symbol||"Acorde";
+}
+function renumberSectionPositions(section){
+ const lineIndex=new Map(section.lines.map((line,index)=>[line.id,index]));
+ section.events.sort((a,b)=>{
+   const diff=(lineIndex.get(a.lineId)??0)-(lineIndex.get(b.lineId)??0);
+   return diff!==0?diff:a.anchor-b.anchor;
+ });
+ section.events.forEach((event,index)=>{event.position=index});
+}
+function clampLineEventAnchors(section,line){
+ const maxAnchor=lineWords(line.text).length;
+ for(const event of section.events){
+   if(event.lineId===line.id&&event.anchor>maxAnchor)event.anchor=maxAnchor;
+ }
+}
+
+function lineEditHTML(section,line){
+ const words=lineWords(line.text);
+ const events=[...section.events].filter(event=>event.lineId===line.id).sort((a,b)=>a.anchor-b.anchor);
+ const chips=events.map(event=>`<span class="workspace-chip">${escapeHTML(workspaceChordLabel(event.chord.chordId))}<button type="button" data-action="remove-event" data-section-id="${section.id}" data-event-id="${event.id}" aria-label="Quitar acorde">✕</button></span>`).join("");
+ const chordOptions=workspaceLibraryVoicings.map(voicing=>`<option value="${voicing.id}">${escapeHTML(workspaceChordLabel(voicing.chordId))} — ${escapeHTML(voicing.name)}</option>`).join("");
+ const anchorOptions=Array.from({length:words.length+1},(_,anchor)=>`<option value="${anchor}">${escapeHTML(anchorLabel(words,anchor))}</option>`).join("");
+ const addChordRow=workspaceLibraryVoicings.length
+   ?`<div class="workspace-add-chord">
+       <select data-role="anchor-select">${anchorOptions}</select>
+       <select data-role="chord-select">${chordOptions}</select>
+       <button class="link-button" type="button" data-action="add-event" data-section-id="${section.id}" data-line-id="${line.id}">+ acorde</button>
+     </div>`
+   :"";
+ return `<div class="workspace-line" data-line-id="${line.id}">
+   <div class="workspace-line-main">
+     <textarea data-action="edit-line" data-section-id="${section.id}" data-line-id="${line.id}" rows="1" aria-label="Letra de la línea">${escapeHTML(line.text)}</textarea>
+     <div class="workspace-chips">${chips}</div>
+     ${addChordRow}
+   </div>
+   <button class="library-icon-btn" data-action="remove-line" data-section-id="${section.id}" data-line-id="${line.id}" title="Eliminar línea" aria-label="Eliminar línea" ${section.lines.length<=1?"disabled":""}>🗑</button>
+ </div>`;
+}
+function sectionEditHTML(section){
+ return `<div class="workspace-section" data-section-id="${section.id}">
+   <div class="workspace-section-head">
+     <input type="text" class="workspace-section-name" data-action="edit-section-name" data-section-id="${section.id}" value="${escapeHTML(section.name)}" aria-label="Nombre de la sección">
+     <button class="library-icon-btn" data-action="remove-section" data-section-id="${section.id}" title="Eliminar sección" aria-label="Eliminar sección" ${workspaceSong.sections.length<=1?"disabled":""}>🗑</button>
+   </div>
+   ${section.lines.map(line=>lineEditHTML(section,line)).join("")}
+   <button class="link-button" data-action="add-line" data-section-id="${section.id}" type="button">+ Línea</button>
+ </div>`;
+}
+function renderWorkspaceEdit(){
+ document.getElementById("workspaceSections").innerHTML=workspaceSong.sections.map(sectionEditHTML).join("");
+ document.getElementById("workspaceChordHint").hidden=workspaceLibraryVoicings.length>0;
+}
+
+function lyricsLineHTML(section,line){
+ const words=lineWords(line.text);
+ const events=[...section.events].filter(event=>event.lineId===line.id).sort((a,b)=>a.anchor-b.anchor);
+ if(!words.length)return "";
+ const parts=[];
+ let cursor=0;
+ for(const event of events){
+   if(event.anchor>cursor)parts.push(escapeHTML(words.slice(cursor,event.anchor).join(" ")));
+   parts.push(`<span class="workspace-letra-chip">${escapeHTML(workspaceChordLabel(event.chord.chordId))}</span>`);
+   cursor=event.anchor;
+ }
+ if(cursor<words.length)parts.push(escapeHTML(words.slice(cursor).join(" ")));
+ return `<p class="workspace-letra-line">${parts.join(" ")}</p>`;
+}
+function renderWorkspaceLyrics(){
+ const container=document.getElementById("workspaceLyricsView");
+ const hasContent=workspaceSong.sections.some(section=>section.lines.some(line=>lineWords(line.text).length));
+ if(!hasContent){
+   container.innerHTML='<p style="color:var(--muted)">Todavía no hay letra. Volvé a Editar para escribirla.</p>';
+   return;
+ }
+ container.innerHTML=workspaceSong.sections.map(section=>`
+   <div class="workspace-section">
+     <div class="chord-constructor-section-title">${escapeHTML(section.name)}</div>
+     ${section.lines.map(line=>lyricsLineHTML(section,line)).join("")}
+   </div>
+ `).join("");
+}
+
+function setWorkspaceStatus(message,isError){
+ const el=document.getElementById("workspaceStatus");
+ el.textContent=message||"";
+ el.classList.toggle("error",!!isError);
+}
+function setWorkspaceTab(tab){
+ const isEdit=tab==="edit";
+ document.getElementById("workspaceTabEdit").setAttribute("aria-pressed",String(isEdit));
+ document.getElementById("workspaceTabLyrics").setAttribute("aria-pressed",String(!isEdit));
+ document.getElementById("workspaceEditPane").hidden=!isEdit;
+ document.getElementById("workspaceLyricsPane").hidden=isEdit;
+ if(!isEdit)renderWorkspaceLyrics();
+}
+
+let workspaceSaveTimer=null;
+async function saveWorkspaceNow(){
+ try{
+   const modules=await loadSongLibraryModules();
+   workspaceSong.revision=crypto.randomUUID();
+   workspaceSong.updatedAt=new Date().toISOString();
+   modules.validateSong(workspaceSong);
+   const db=await modules.openShadowDatabase();
+   await modules.createSongRepository().saveSong(db,workspaceSong);
+   setWorkspaceStatus("Guardado.");
+ }catch(error){
+   setWorkspaceStatus(`No se pudo guardar: ${error.message}`,true);
+ }
+}
+function scheduleWorkspaceSave(){
+ setWorkspaceStatus("Guardando…");
+ clearTimeout(workspaceSaveTimer);
+ workspaceSaveTimer=setTimeout(saveWorkspaceNow,400);
+}
+
+async function openSongWorkspace(songId){
+ const modules=await loadSongLibraryModules();
+ const db=await modules.openShadowDatabase();
+ const song=await modules.createSongRepository().getSong(db,songId);
+ if(!song){setLibraryStatus("No se encontró la canción.",true);return}
+ const chordRepo=modules.createChordRepository(),voicingRepo=modules.createVoicingRepository();
+ const [chords,voicings]=await Promise.all([chordRepo.getAllChords(db),voicingRepo.getAllVoicings(db)]);
+ workspaceSong=song;
+ workspaceLibraryChords=chords;
+ workspaceLibraryVoicings=voicings;
+ document.getElementById("workspaceTitleInput").value=song.metadata.title;
+ renderWorkspaceEdit();
+ setWorkspaceTab("edit");
+ setWorkspaceStatus("");
+ closeLibrary();
+ document.getElementById("songWorkspace").hidden=false;
+}
+async function closeSongWorkspace(){
+ // El autoguardado corre con debounce (400ms): cerrar sin esperarlo perdería en
+ // silencio la última edición si el cierre llega antes de que el timer dispare.
+ clearTimeout(workspaceSaveTimer);
+ if(workspaceSong)await saveWorkspaceNow();
+ document.getElementById("songWorkspace").hidden=true;
+ workspaceSong=null;
+}
+
+document.getElementById("workspaceTabEdit").onclick=()=>setWorkspaceTab("edit");
+document.getElementById("workspaceTabLyrics").onclick=()=>setWorkspaceTab("lyrics");
+document.getElementById("workspaceClose").onclick=closeSongWorkspace;
+document.getElementById("workspaceTitleInput").addEventListener("input",event=>{
+ workspaceSong.metadata.title=event.target.value;
+ scheduleWorkspaceSave();
+});
+document.getElementById("workspaceAddSection").onclick=()=>{
+ workspaceSong.sections.push({
+   id:crypto.randomUUID(),
+   name:`Sección ${workspaceSong.sections.length+1}`,
+   lines:[{id:crypto.randomUUID(),text:""}],
+   events:[],
+ });
+ renderWorkspaceEdit();
+ scheduleWorkspaceSave();
+};
+document.getElementById("workspaceSections").addEventListener("input",event=>{
+ const target=event.target;
+ const section=workspaceSong.sections.find(item=>item.id===target.dataset.sectionId);
+ if(!section)return;
+ if(target.matches('[data-action="edit-section-name"]')){
+   section.name=target.value;
+   scheduleWorkspaceSave();
+ }else if(target.matches('[data-action="edit-line"]')){
+   const line=section.lines.find(item=>item.id===target.dataset.lineId);
+   if(!line)return;
+   line.text=target.value;
+   clampLineEventAnchors(section,line);
+   const select=target.closest(".workspace-line").querySelector('[data-role="anchor-select"]');
+   if(select){
+     const words=lineWords(line.text);
+     const previous=select.value;
+     select.innerHTML=Array.from({length:words.length+1},(_,anchor)=>`<option value="${anchor}">${escapeHTML(anchorLabel(words,anchor))}</option>`).join("");
+     if(previous&&Number(previous)<=words.length)select.value=previous;
+   }
+   scheduleWorkspaceSave();
+ }
+});
+document.getElementById("workspaceSections").addEventListener("click",event=>{
+ const button=event.target.closest("[data-action]");
+ if(!button)return;
+ const action=button.dataset.action;
+ const section=workspaceSong.sections.find(item=>item.id===button.dataset.sectionId);
+ if(!section)return;
+ if(action==="add-line"){
+   section.lines.push({id:crypto.randomUUID(),text:""});
+   renderWorkspaceEdit();scheduleWorkspaceSave();
+ }else if(action==="remove-line"){
+   if(section.lines.length<=1)return;
+   section.lines=section.lines.filter(line=>line.id!==button.dataset.lineId);
+   section.events=section.events.filter(event=>event.lineId!==button.dataset.lineId);
+   renumberSectionPositions(section);
+   renderWorkspaceEdit();scheduleWorkspaceSave();
+ }else if(action==="remove-section"){
+   if(workspaceSong.sections.length<=1)return;
+   workspaceSong.sections=workspaceSong.sections.filter(item=>item.id!==section.id);
+   renderWorkspaceEdit();scheduleWorkspaceSave();
+ }else if(action==="add-event"){
+   const lineEl=button.closest(".workspace-line");
+   const anchor=Number(lineEl.querySelector('[data-role="anchor-select"]').value);
+   const voicingId=lineEl.querySelector('[data-role="chord-select"]').value;
+   const voicing=workspaceLibraryVoicings.find(item=>item.id===voicingId);
+   if(!voicing)return;
+   section.events.push({
+     id:crypto.randomUUID(),
+     lineId:button.dataset.lineId,
+     anchor,
+     position:0,
+     beats:1,
+     chord:{chordId:voicing.chordId,voicingId:voicing.id,voicingRevision:voicing.revision},
+   });
+   renumberSectionPositions(section);
+   renderWorkspaceEdit();scheduleWorkspaceSave();
+ }else if(action==="remove-event"){
+   section.events=section.events.filter(event=>event.id!==button.dataset.eventId);
+   renumberSectionPositions(section);
+   renderWorkspaceEdit();scheduleWorkspaceSave();
+ }
+});
 
 updateNotationToggle();updateLyricsNotesToggle();renderSyncChordOptions();renderSyncInversionOptions("E");initializeSongSync();updateSettingsSummary();updateNextPianoVisibility();initSections();buildSteps();render();renderFullSong();updateSessionSummary();updateTransportControls();loadCloudSongSync();
 syncAddChordTrackedValue=syncAddChord.value;

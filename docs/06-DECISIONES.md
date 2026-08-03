@@ -302,6 +302,54 @@ acordes guardados que los necesite.
 
 Fecha: 3 de agosto de 2026.
 
+### D-022 · Nombre de la plataforma y primera vuelta de Entrega 3
+
+La landing con catálogo ya no puede llamarse solo "Mis 36" si contiene más de
+una canción. Se fijó **"Piano Studio"** como nombre de la plataforma; "Mis 36"
+sigue siendo la canción original, primera tarjeta del catálogo, no un caso
+especial de código.
+
+Orden de trabajo: en vez de resolver el issue #16 (cuándo las vistas dejan de
+consumir el código heredado) de una vez para todo el catálogo, las canciones
+nuevas creadas en la biblioteca corren directamente sobre el motor de `src/`
+(Entrega 1), mientras "Mis 36" sigue intacta en código heredado. Eso responde
+#16 solo para lo nuevo; migrar "Mis 36" al motor sigue siendo Entrega 4.
+
+Implementado (E3.1–E3.4, primera vuelta): repositorio y fábrica de canciones,
+import/export JSON autocontenido con regeneración de identificadores,
+pantalla de biblioteca (crear, abrir, duplicar, archivar, restaurar, buscar)
+y un taller de edición (Editar + Letra estática, sin reproducción) para
+canciones que no son Mis 36. Todo verificado con Playwright, no solo pruebas
+unitarias.
+
+Tres defectos reales aparecieron durante la verificación en navegador, ninguno
+detectado por la suite de pruebas:
+
+- **La hoja de biblioteca quedaba invisible fuera de la vista Letra/Editar.**
+  Se anidó por copiar la ubicación del constructor de acordes (dentro de
+  `#fullView`), pero ese contenedor es `display:none` en Tocar. El constructor
+  puede vivir ahí porque su punto de entrada solo es alcanzable ya en Editar;
+  el botón de biblioteca vive en el header y debe abrir desde cualquier vista.
+  Se sacó de `#fullView` como hermano de nivel superior.
+- **XSS en el título de canción.** `libraryCardHTML` interpolaba
+  `song.metadata.title` (texto libre del usuario) sin escapar dentro de
+  `innerHTML`. Se agregó `escapeHTML()` y se aplicó ahí y en el taller de
+  canción, que tiene el mismo patrón con nombres de sección, letra y nombres
+  de voicing.
+- **Cierre del taller podía perder la última edición.** El autoguardado corre
+  con debounce (400ms); cerrar el taller no esperaba ese guardado pendiente,
+  así que una edición hecha justo antes de cerrar podía perderse en silencio.
+  `closeSongWorkspace` ahora cancela el debounce y fuerza el guardado antes de
+  ocultar la hoja.
+
+Queda fuera de esta primera vuelta, sin bloquearla: reproducción (Tocar) para
+canciones nuevas — conecta la máquina de estados de Entrega 1 a una interfaz
+con transporte real —, constructor de acordes accesible directamente desde el
+taller (hoy reutiliza lo que ya exista en la biblioteca compartida), duración
+por acorde editable (se asigna 1 pulso fijo) y Práctica para canciones nuevas.
+
+Fecha: 3 de agosto de 2026.
+
 ## Decisiones que requieren prototipo
 
 ### D-P02 · Rango y estrategia de muestras de piano

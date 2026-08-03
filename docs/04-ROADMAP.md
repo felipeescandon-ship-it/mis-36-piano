@@ -25,7 +25,7 @@ acordes ilimitados. Por eso:
 | Arquitectura y contratos | **Entrega 0 completada (D-020)** |
 | Motor multicanción | **Entrega 1 completada** |
 | Constructor de acordes | **Entrega 2 completada (D-021)** |
-| Biblioteca de canciones | **No iniciada (Entrega 3)** |
+| Biblioteca de canciones | **En curso (Entrega 3)** |
 | Migración de producción | **No iniciada (Entrega 4)** |
 | Integración continua | **Activa desde la PR #9 y obligatoria para integrar en `main`** |
 
@@ -198,19 +198,52 @@ Dependencia: contratos de Chord y Voicing.
 
 ### Entrega 3 · biblioteca local de canciones
 
-Estado: **no iniciada**
+Estado: **en curso.**
 
 Objetivo: crear y utilizar varias canciones sin nube.
 
-Incluye:
+Nombre de la plataforma que contiene el catálogo: **Piano Studio** (3 de agosto
+de 2026). "Mis 36" sigue siendo la canción original, primera tarjeta del
+catálogo — no un caso especial de código.
 
-- pantalla de biblioteca;
-- crear, abrir, duplicar, archivar y restaurar;
-- metadatos y estructura editable;
-- importar y exportar JSON propio;
-- canción activa persistente;
-- búsqueda básica si cabe sin retrasar P0;
-- estados vacíos y recuperación ante archivos inválidos.
+Completado:
+
+- [x] E3.1 · `SongFactory` (crear, duplicar preservando referencias de acorde,
+      archivar, restaurar) y `SongRepository` sobre el almacén `songs` que ya
+      existía en IndexedDB shadow desde Entrega 0. Canción activa persistente
+      aparte, en localStorage, por no ser un recurso versionado.
+- [x] E3.2 · Import/export JSON (`song-portability.js`): el archivo exportado
+      es autocontenido (canción + solo los acordes/voicings que referencia) y
+      se valida con `validateLibrary`. Importar siempre regenera todos los
+      identificadores — conservar los originales arriesgaría el mismo choque
+      silencioso que corrigió D-021, agravado porque el archivo puede venir de
+      otro dispositivo con una biblioteca local distinta.
+- [x] E3.3 · Pantalla de biblioteca en `index.html`: hoja modal desde un botón
+      en el header, grilla de canciones, "Mis 36" fija primero, "+ Nueva
+      canción", buscador, archivar/restaurar, duplicar, exportar/importar con
+      recuperación clara ante archivo inválido. Verificado con Playwright.
+      Corrección durante la implementación: la hoja vive fuera de `#fullView`
+      a propósito — esa sección es `display:none` en la vista Tocar, y el
+      botón del header debe abrir la biblioteca sin importar la vista activa;
+      el constructor de acordes sí puede vivir dentro porque su punto de
+      entrada solo es alcanzable ya en Editar.
+- [x] E3.4 (primera vuelta) · Taller de canción para canciones que no son
+      Mis 36: Editar (secciones, líneas, colocar acordes ya construidos en la
+      biblioteca compartida sobre una palabra) y Letra estática (misma
+      información, solo lectura). Autoguardado con debounce; cerrar el taller
+      fuerza ese guardado pendiente para no perder la última edición en
+      silencio. Sin reproducción todavía.
+
+Quedan fuera de esta primera vuelta de E3.4, sin bloquearla:
+
+- Reproducción (Tocar) para canciones nuevas — conectar la máquina de estados
+  y el reloj de Entrega 1 (`playback-machine.js`, `selectors.js`) a una
+  interfaz real con transporte.
+- Constructor de acordes accesible directamente desde el taller de canción
+  (hoy solo se construyen acordes nuevos desde el editor de Mis 36; el taller
+  reutiliza lo que ya exista en la biblioteca compartida).
+- Duración (`beats`) editable por acorde: se asigna 1 pulso fijo al colocarlo.
+- Vista Práctica para canciones nuevas.
 
 Dependencias: Entregas 1 y 2.
 
