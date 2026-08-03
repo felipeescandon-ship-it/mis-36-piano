@@ -416,6 +416,59 @@ button.song-line-end{padding:3px 8px}
  .show-full.song-editing .sync-duration select{width:100%;min-width:0}
  .show-full.song-editing #syncAdd,.show-full.song-editing #syncMove,.show-full.song-editing #syncDelete{flex:1 1 auto}
 }
+:root{
+  --slotEmpty:#f3f6fa;--libraryTint:#eef2f7;--dangerSoft:#fee2e2
+}
+.chord-constructor-overlay{position:fixed;inset:0;z-index:150;display:flex;align-items:center;justify-content:center;
+padding:16px;background:rgba(7,26,51,.42)}
+.chord-constructor-overlay[hidden]{display:none}
+.chord-constructor-sheet{width:100%;max-width:1040px;max-height:92vh;overflow:auto;background:var(--panel);
+border-radius:20px;box-shadow:var(--shadow);display:flex;flex-direction:column}
+.chord-save-sheet{max-width:480px;padding:20px;gap:12px;display:grid}
+.chord-constructor-header{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:16px 20px;
+border-bottom:1px solid var(--line)}
+.chord-constructor-name{font-size:clamp(26px,4vw,38px);font-weight:900;min-height:2em;display:flex;align-items:center}
+.chord-constructor-body{display:grid;grid-template-columns:40% 60%;gap:20px;padding:16px 20px}
+.chord-constructor-column{display:flex;flex-direction:column;gap:16px;min-width:0}
+.chord-constructor-section-title{font-size:18px;font-weight:800;margin-bottom:8px}
+.chord-constructor-grid{display:flex;flex-wrap:wrap;gap:8px}
+.chord-constructor-pitch{min-width:44px;min-height:44px;padding:8px 12px;border-radius:11px;font-weight:800}
+.chord-constructor-pitch.white-key{background:var(--panel);border:1px solid var(--line);color:var(--ink)}
+.chord-constructor-pitch.black-key{background:var(--ink);color:var(--panel)}
+.chord-constructor-pitch.selected{background:var(--blue);color:#fff;box-shadow:0 4px 12px rgba(21,95,192,.24)}
+.chord-constructor-qualities{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:8px}
+.chord-constructor-quality{min-height:44px;padding-inline:16px;background:var(--panel);border:1px solid var(--line);font-weight:800}
+.chord-constructor-quality.selected{background:var(--blue);color:#fff;box-shadow:0 4px 12px rgba(21,95,192,.24)}
+.chord-constructor-hint{margin:6px 0;color:var(--muted);font-size:14px}
+.link-button{background:none;border:0;color:var(--blue);font-weight:800;padding:8px 0;text-align:left;min-height:44px}
+.chord-constructor-hand-toggle{display:flex;gap:8px;margin-bottom:8px}
+.chord-hand-button{min-height:44px;padding-inline:16px;background:var(--panel);border:1px solid var(--line);font-weight:800}
+.chord-hand-button.left.active{background:var(--green);color:#fff}
+.chord-hand-button.right.active{background:var(--blue);color:#fff}
+.chord-constructor-keyboard{margin-bottom:10px}
+.chord-constructor-keyboard .keyboard{--w:clamp(28px,3.4vw,40px)}
+.chord-constructor-keyboard[hidden]{display:none}
+.chord-constructor-notes{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.chord-constructor-notes-title{font-size:13px;font-weight:800;color:var(--muted);margin-bottom:6px}
+.chord-constructor-chips{display:flex;flex-direction:column;gap:6px}
+.chord-constructor-chip{display:flex;align-items:center;justify-content:space-between;gap:8px;min-height:44px;
+padding:6px 10px;border-radius:13px;border:1px solid;font-weight:850}
+.chord-constructor-chip.left{background:var(--greenSoft);border-color:var(--green)}
+.chord-constructor-chip.right{background:var(--blueSoft);border-color:var(--blue)}
+.chord-constructor-chip-remove{min-width:44px;min-height:44px;background:none;border:0;font-weight:900}
+.chord-constructor-status{padding:0 20px;min-height:20px;color:var(--muted);font-size:14px}
+.chord-constructor-status.error{color:#9f1d1d}
+.chord-constructor-footer{display:flex;justify-content:flex-end;gap:8px;padding:16px 20px;border-top:1px solid var(--line)}
+.chord-save-name-label{display:grid;gap:6px;font-weight:800}
+.chord-save-name-label input{min-height:44px;padding:8px 12px;border:1px solid var(--line);border-radius:11px}
+.chord-save-scope-option{display:flex;gap:10px;align-items:flex-start;padding:10px;border:1px solid var(--line);border-radius:11px;min-height:44px}
+.chord-save-scope-option input{width:20px;height:20px;margin-top:2px}
+@media(max-width:900px){
+ .chord-constructor-body{grid-template-columns:1fr}
+}
+@media(max-width:600px){
+ .chord-constructor-sheet{max-width:100%;max-height:100%;height:100%;border-radius:0}
+}
 </style>
 </head>
 <body>
@@ -615,6 +668,87 @@ button.song-line-end{padding:3px 8px}
   <button id="syncDelete" class="danger sync-editor-control" type="button" disabled>Eliminar acorde</button>
 </div>
 <div id="songSheet" class="song-sheet"></div>
+
+<div id="chordConstructor" class="chord-constructor-overlay" hidden>
+  <div class="chord-constructor-sheet" role="dialog" aria-modal="true" aria-labelledby="chordConstructorTitle">
+    <div class="chord-constructor-header">
+      <div id="chordConstructorTitle" class="chord-constructor-name">Nuevo acorde</div>
+      <button id="chordConstructorClose" class="secondary" type="button" aria-label="Cerrar constructor">✕</button>
+    </div>
+    <div class="chord-constructor-body">
+      <div class="chord-constructor-column">
+        <div>
+          <div class="chord-constructor-section-title">Fundamental</div>
+          <div id="chordConstructorRoot" class="chord-constructor-grid" role="radiogroup" aria-label="Fundamental"></div>
+        </div>
+        <div>
+          <div class="chord-constructor-section-title">Cualidad</div>
+          <div id="chordConstructorQuality" class="chord-constructor-qualities" role="radiogroup" aria-label="Cualidad"></div>
+          <button id="chordConstructorMoreQualities" class="link-button" type="button">▸ Más cualidades (3)</button>
+          <div id="chordConstructorQualityExtended" class="chord-constructor-qualities" role="radiogroup" aria-label="Cualidades extendidas" hidden></div>
+        </div>
+        <div>
+          <label class="check-row">
+            <input id="chordConstructorBassToggle" type="checkbox">
+            <span>Bajo distinto de la fundamental</span>
+          </label>
+          <div id="chordConstructorBassHint" class="chord-constructor-hint" hidden></div>
+          <div id="chordConstructorBass" class="chord-constructor-grid" role="radiogroup" aria-label="Bajo" hidden></div>
+        </div>
+      </div>
+      <div class="chord-constructor-column">
+        <div>
+          <div class="chord-constructor-hand-toggle">
+            <button id="chordConstructorHandLeft" class="chord-hand-button left active" type="button" aria-pressed="true">● Izquierda</button>
+            <button id="chordConstructorHandRight" class="chord-hand-button right" type="button" aria-pressed="false">Derecha</button>
+          </div>
+          <button id="chordConstructorToggleKeyboard" class="link-button" type="button">▸ Mostrar diagrama</button>
+          <div id="chordConstructorKeyboardWrap" class="keyboard-wrap chord-constructor-keyboard" hidden>
+            <div id="chordConstructorKeyboard" class="keyboard"></div>
+          </div>
+          <div class="chord-constructor-notes">
+            <div>
+              <div class="chord-constructor-notes-title">Mano izquierda</div>
+              <div id="chordConstructorLeftNotes" class="chord-constructor-chips"></div>
+            </div>
+            <div>
+              <div class="chord-constructor-notes-title">Mano derecha</div>
+              <div id="chordConstructorRightNotes" class="chord-constructor-chips"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div id="chordConstructorStatus" class="chord-constructor-status" aria-live="polite"></div>
+    <div class="chord-constructor-footer">
+      <button id="chordConstructorListen" class="secondary" type="button" disabled>♪ Escuchar</button>
+      <button id="chordConstructorCancel" class="secondary" type="button">Cancelar</button>
+      <button id="chordConstructorSave" class="primary" type="button" disabled>Guardar</button>
+    </div>
+  </div>
+</div>
+
+<div id="chordSaveDialog" class="chord-constructor-overlay" hidden>
+  <div class="chord-constructor-sheet chord-save-sheet" role="dialog" aria-modal="true" aria-labelledby="chordSaveTitle">
+    <div id="chordSaveTitle" class="chord-constructor-section-title">Guardar posición</div>
+    <label class="chord-save-name-label">
+      <span>Nombre</span>
+      <input id="chordSaveName" type="text">
+    </label>
+    <label class="chord-save-scope-option">
+      <input type="radio" name="chordSaveScope" value="song" checked>
+      <span><strong>Solo esta canción</strong><br>No aparecerá en otras canciones.</span>
+    </label>
+    <label class="chord-save-scope-option">
+      <input type="radio" name="chordSaveScope" value="library">
+      <span><strong>Biblioteca</strong><br>Reutilizable en cualquier canción. Editarla después afectará a todas.</span>
+    </label>
+    <div class="chord-constructor-footer">
+      <button id="chordSaveCancel" class="secondary" type="button">Cancelar</button>
+      <button id="chordSaveConfirm" class="primary" type="button">Guardar</button>
+    </div>
+  </div>
+</div>
 </div>
 </section>
 
@@ -821,6 +955,11 @@ const sectionCount=document.getElementById("sectionCount");
 const steps=document.getElementById("steps");
 const NOTE_ES={C:"Do","C#":"Do#",D:"Re","D#":"Re#",E:"Mi","E#":"Mi#",F:"Fa","F#":"Fa#",G:"Sol","G#":"Sol#",A:"La","A#":"La#",B:"Si","B#":"Si#"};
 const CHORD_ES={"E":"Mi","F#":"Fa#","F#m":"Fa#m","A":"La","Am":"Lam","C#m":"Do#m","C#":"Do#","G#m":"Sol#m","G#":"Sol#","D":"Re","B":"Si","B/D#":"Si/Re#"};
+// Los acordes del constructor (issue #11) se identifican por UUID, no por
+// símbolo, porque su símbolo puede coincidir con uno de los 12 de arriba
+// ("Re Mayor" produce el mismo "D" que ya existe). CHORD_ES/CUSTOM_CHORD_EN
+// llevan el texto a mostrar para esos IDs en cada notación.
+const CUSTOM_CHORD_EN={};
 let notationMode="es";
 let songEditMode=false,selectedSyncEvent=null,addingSyncChord=null,movingSyncEvent=false;
 let lyricsPreviewPosition=null,lyricsPreviewAnchor=null;
@@ -1560,7 +1699,7 @@ whites.forEach((w,i)=>{const n=w.slice(0,-1),o=w.slice(-1);if(i<whites.length-1&
 function baseNote(note){return note.match(/^([A-G]#?)/)[1]}
 function noteText(note,chord=null){const physical=baseNote(note),spell=chord&&voicings[chord]?.spell,n=spell?.[note]||spell?.[physical]||physical;return notationMode==="es"?NOTE_ES[n]:n}
 function keyHint(note,chord){const physical=baseNote(note),spell=chord&&voicings[chord]?.spell,written=spell?.[note]||spell?.[physical];if(!written)return "";return notationMode==="es"?` (tecla ${NOTE_ES[physical]})`:` (${physical} key)`}
-function chordText(chord){return notationMode==="es"?CHORD_ES[chord]:chord}
+function chordText(chord){return notationMode==="es"?(CHORD_ES[chord]??chord):(CUSTOM_CHORD_EN[chord]??chord)}
 function renderChordNotes(element,notes){
  element.replaceChildren(...notes.map(note=>{
    const chip=document.createElement("span");
@@ -1583,12 +1722,19 @@ function renderSyncChordOptions(){
    const addOption=option.cloneNode(true);
    syncAddChord.appendChild(addOption);
  });
+ const newChordOption=document.createElement("option");
+ newChordOption.value=NEW_CHORD_SENTINEL;
+ newChordOption.textContent="＋ Crear acorde nuevo…";
+ syncAddChord.appendChild(newChordOption);
  if(voicings[selectedValue])syncChord.value=selectedValue;
  if(voicings[addValue])syncAddChord.value=addValue;
 }
 function renderSyncInversionOptions(chord,selectedId=defaultInversions[chord]){
  syncInversion.innerHTML="";
+ // Un acorde creado en el constructor solo tiene la posición construida: no
+ // se ofrecen inversiones que voicingVariants no contiene de verdad.
  ["root","first","second"].forEach(id=>{
+   if(!voicingVariants[chord]?.[id])return;
    const option=document.createElement("option");
    option.value=id;
    option.textContent=inversionText(id);
@@ -2602,6 +2748,12 @@ syncMove.onclick=()=>{
  renderFullSong();
 };
 syncAddChord.onchange=()=>{
+ if(syncAddChord.value===NEW_CHORD_SENTINEL){
+   syncAddChord.value=syncAddChordTrackedValue||syncAddChord.options[0]?.value||"";
+   openChordConstructor();
+   return;
+ }
+ syncAddChordTrackedValue=syncAddChord.value;
  if(!addingSyncChord)return;
  addingSyncChord=syncAddChord.value;
  playChord(addingSyncChord,defaultInversions[addingSyncChord]);
@@ -2726,7 +2878,357 @@ nextPianoToggle.onclick=()=>{
 };
 nextKeyboardWrap.addEventListener("scroll",()=>syncPianoScroll(nextKeyboardWrap,currentKeyboardWrap),{passive:true});
 currentKeyboardWrap.addEventListener("scroll",()=>syncPianoScroll(currentKeyboardWrap,nextKeyboardWrap),{passive:true});
+
+/*
+ * Constructor de acordes · issue #11, docs/11-E2-INTERFAZ.md.
+ *
+ * `index.html` no conocía el modelo Chord/Voicing de `src/`; esto abre el
+ * primer punto real donde lo usa, no solo lo comprueba (a diferencia del
+ * bloque de motor universal, este corre siempre, sin bandera).
+ *
+ * El acorde construido se traduce a la forma que el motor heredado ya
+ * entiende (símbolo + voicings + voicingVariants + defaultInversions) para
+ * que "＋ Añadir" lo coloque en la letra exactamente igual que cualquiera de
+ * los 36 originales. Se persiste además como Chord/Voicing real en
+ * IndexedDB, vía ChordRepository/VoicingRepository, para que sobreviva a
+ * recargar la página y, más adelante, a la biblioteca de Entrega 3.
+ */
+const NEW_CHORD_SENTINEL="__new_chord__";
+let syncAddChordTrackedValue=null;
+let chordConstructorModules=null;
+let chordBuilderInstance=null;
+let chordConstructorActiveHand="left";
+let chordConstructorKeyboardExpanded=false;
+
+const CONSTRUCTOR_ROOT_ORDER=["C","C#","D","D#","E","F","F#","G","G#","A","A#","B"];
+const CONSTRUCTOR_PITCH_ES={C:"Do","C#":"Do#",D:"Re","D#":"Re#",E:"Mi",F:"Fa","F#":"Fa#",G:"Sol","G#":"Sol#",A:"La","A#":"La#",B:"Si"};
+const CONSTRUCTOR_SPELLING_TO_PITCH_CLASS={C:0,"C#":1,D:2,"D#":3,E:4,F:5,"F#":6,G:7,"G#":8,A:9,"A#":10,B:11};
+const CONSTRUCTOR_BASE_QUALITIES=["Mayor","menor","7","maj7","m7","sus4"];
+const CONSTRUCTOR_EXTENDED_QUALITIES=["dim","m7b5","aug"];
+
+// Si1 a Do7 (MIDI 35-96): registro de bajo documentado más techo de muestras.
+const constructorWhiteNames=["C","D","E","F","G","A","B"],constructorWhites=["B1"];
+for(let o=2;o<=6;o++)for(const n of constructorWhiteNames)constructorWhites.push(n+o);
+constructorWhites.push("C7");
+const constructorBlacks=[];
+constructorWhites.forEach((w,i)=>{const n=w.slice(0,-1),o=w.slice(-1);if(i<constructorWhites.length-1&&blackAfter[n])constructorBlacks.push({note:blackAfter[n]+o,position:i+1})});
+
+function constructorNoteKey(note){return `${CONSTRUCTOR_ROOT_ORDER[note.pitchClass]}${note.octave}`}
+
+function registerLegacyChord(id,spanishName,englishName,l,r){
+ voicings[id]={l,r};
+ defaultInversions[id]="root";
+ voicingVariants[id]={root:r};
+ CHORD_ES[id]=spanishName;
+ CUSTOM_CHORD_EN[id]=englishName;
+}
+
+async function loadChordConstructorModules(){
+ if(chordConstructorModules)return chordConstructorModules;
+ const [builderModule,factoryModule,adapterModule,shadowDbModule,chordRepoModule,voicingRepoModule,selectorsModule]=await Promise.all([
+   import("./src/application/chord-constructor/chord-builder.js"),
+   import("./src/application/chord-constructor/chord-factory.js"),
+   import("./src/application/chord-constructor/legacy-chord-adapter.js"),
+   import("./src/infrastructure/indexed-db-shadow.js"),
+   import("./src/infrastructure/chord-repository.js"),
+   import("./src/infrastructure/voicing-repository.js"),
+   import("./src/application/chord-constructor/chord-selectors.js"),
+ ]);
+ chordConstructorModules={
+   createChordBuilder:builderModule.createChordBuilder,
+   createChordFactory:factoryModule.createChordFactory,
+   toLegacyChord:adapterModule.toLegacyChord,
+   openShadowDatabase:shadowDbModule.openShadowDatabase,
+   createChordRepository:chordRepoModule.createChordRepository,
+   createVoicingRepository:voicingRepoModule.createVoicingRepository,
+   selectors:selectorsModule,
+ };
+ return chordConstructorModules;
+}
+
+async function hydrateCustomChords(){
+ try{
+   const modules=await loadChordConstructorModules();
+   const db=await modules.openShadowDatabase();
+   const chordRepo=modules.createChordRepository(),voicingRepo=modules.createVoicingRepository();
+   const [customChords,allVoicings]=await Promise.all([
+     chordRepo.getChordsBySource(db,"custom"),
+     voicingRepo.getAllVoicings(db),
+   ]);
+   let added=false;
+   for(const chord of customChords){
+     const voicing=allVoicings.find(v=>v.chordId===chord.id);
+     if(!voicing)continue;
+     if(voicings[chord.id])continue;
+     let legacy;
+     try{
+       legacy=modules.toLegacyChord({root:chord.root,quality:chord.quality,bass:chord.bass,notes:voicing.notes});
+     }catch{continue}
+     registerLegacyChord(chord.id,legacy.spanishName,legacy.englishName,legacy.l,legacy.r);
+     added=true;
+   }
+   if(added){renderSyncChordOptions();syncAddChordTrackedValue=syncAddChord.value}
+ }catch(error){
+   console.warn("No se pudieron cargar los acordes personalizados guardados.",error);
+ }
+}
+
+function setChordConstructorStatus(message,isError){
+ const el=document.getElementById("chordConstructorStatus");
+ el.textContent=message||"";
+ el.classList.toggle("error",!!isError);
+}
+
+function renderPitchGrid(container,selectedPitchClass,onSelect){
+ container.innerHTML="";
+ CONSTRUCTOR_ROOT_ORDER.forEach((spelling,pitchClass)=>{
+   const button=document.createElement("button");
+   button.type="button";
+   button.setAttribute("role","radio");
+   button.setAttribute("aria-checked",String(pitchClass===selectedPitchClass));
+   button.className="chord-constructor-pitch "+(spelling.includes("#")?"black-key":"white-key")+(pitchClass===selectedPitchClass?" selected":"");
+   button.textContent=CONSTRUCTOR_PITCH_ES[spelling];
+   button.onclick=()=>onSelect(pitchClass,spelling);
+   container.appendChild(button);
+ });
+}
+
+function makeQualityButton(quality,selected){
+ const button=document.createElement("button");
+ button.type="button";
+ button.setAttribute("role","radio");
+ button.setAttribute("aria-checked",String(selected));
+ button.className="chord-constructor-quality"+(selected?" selected":"");
+ button.textContent=quality;
+ button.onclick=()=>{
+   try{chordBuilderInstance.setQuality(quality)}catch(error){setChordConstructorStatus(error.message,true);return}
+   renderChordConstructorQualities();
+   refreshChordConstructorUI();
+ };
+ return button;
+}
+function renderChordConstructorQualities(){
+ const state=chordBuilderInstance.state();
+ const baseEl=document.getElementById("chordConstructorQuality");
+ const extEl=document.getElementById("chordConstructorQualityExtended");
+ baseEl.innerHTML="";extEl.innerHTML="";
+ CONSTRUCTOR_BASE_QUALITIES.forEach(quality=>baseEl.appendChild(makeQualityButton(quality,state.quality===quality)));
+ CONSTRUCTOR_EXTENDED_QUALITIES.forEach(quality=>extEl.appendChild(makeQualityButton(quality,state.quality===quality)));
+}
+
+function selectChordConstructorRoot(pitchClass,spelling){
+ try{chordBuilderInstance.setRoot({pitchClass,spelling})}catch(error){setChordConstructorStatus(error.message,true);return}
+ renderPitchGrid(document.getElementById("chordConstructorRoot"),pitchClass,selectChordConstructorRoot);
+ refreshChordConstructorUI();
+}
+function selectChordConstructorBass(pitchClass,spelling){
+ const state=chordBuilderInstance.state();
+ if(state.root&&state.root.pitchClass===pitchClass){
+   document.getElementById("chordConstructorBassToggle").checked=false;
+   document.getElementById("chordConstructorBass").hidden=true;
+   document.getElementById("chordConstructorBassHint").hidden=true;
+   chordBuilderInstance.setBass(null);
+   setChordConstructorStatus("Ese ya es el bajo del acorde.",false);
+   refreshChordConstructorUI();
+   return;
+ }
+ try{chordBuilderInstance.setBass({pitchClass,spelling})}catch(error){setChordConstructorStatus(error.message,true);return}
+ renderPitchGrid(document.getElementById("chordConstructorBass"),pitchClass,selectChordConstructorBass);
+ const hint=document.getElementById("chordConstructorBassHint");
+ hint.hidden=false;
+ hint.textContent=`Sonará ${CONSTRUCTOR_PITCH_ES[spelling]} en el bajo.`;
+ refreshChordConstructorUI();
+}
+
+function setChordConstructorHand(hand){
+ chordConstructorActiveHand=hand;
+ const left=document.getElementById("chordConstructorHandLeft"),right=document.getElementById("chordConstructorHandRight");
+ left.classList.toggle("active",hand==="left");left.setAttribute("aria-pressed",String(hand==="left"));
+ right.classList.toggle("active",hand==="right");right.setAttribute("aria-pressed",String(hand==="right"));
+}
+
+function toggleChordConstructorNote(noteString){
+ const match=noteString.match(/^([A-G]#?)(\d)$/);
+ if(!match)return;
+ const spelling=match[1],octave=+match[2],pitchClass=CONSTRUCTOR_SPELLING_TO_PITCH_CLASS[spelling];
+ const state=chordBuilderInstance.state();
+ const hand=chordConstructorActiveHand;
+ const existingIndex=state.notes.findIndex(n=>n.pitchClass===pitchClass&&n.octave===octave&&n.hand===hand);
+ if(existingIndex>=0){
+   chordBuilderInstance.removeNote(existingIndex);
+ }else{
+   if(hand==="left"){
+     // La mano izquierda es un único bajo: elegir otra reemplaza, no acumula.
+     const previousLeftIndex=state.notes.findIndex(n=>n.hand==="left");
+     if(previousLeftIndex>=0)chordBuilderInstance.removeNote(previousLeftIndex);
+   }
+   try{chordBuilderInstance.addNote({pitchClass,octave,spelling,hand})}
+   catch(error){setChordConstructorStatus(error.message,true);return}
+ }
+ refreshChordConstructorUI();
+}
+
+function renderChordConstructorKeyboard(){
+ const el=document.getElementById("chordConstructorKeyboard");
+ el.innerHTML="";
+ const state=chordBuilderInstance.state();
+ const leftNotes=new Set(state.notes.filter(n=>n.hand==="left").map(constructorNoteKey));
+ const rightNotes=new Set(state.notes.filter(n=>n.hand==="right").map(constructorNoteKey));
+ const addKey=(el2,note,isBlack)=>{
+   if(leftNotes.has(note)||rightNotes.has(note)){
+     const label=document.createElement("div");
+     label.className="label"+(isBlack?" black-label":"");
+     const base=note.match(/^([A-G]#?)/)[1];
+     label.textContent=CONSTRUCTOR_PITCH_ES[base]||base;
+     el2.appendChild(label);
+   }
+ };
+ constructorWhites.forEach(note=>{
+   const k=document.createElement("div");k.className="white";k.dataset.note=note;
+   k.setAttribute("role","button");k.tabIndex=0;
+   if(leftNotes.has(note))k.classList.add("left");
+   if(rightNotes.has(note))k.classList.add("right");
+   k.onclick=()=>toggleChordConstructorNote(note);
+   el.appendChild(k);
+   addKey(k,note,false);
+ });
+ constructorBlacks.forEach(x=>{
+   const k=document.createElement("div");k.className="black";k.dataset.note=x.note;k.style.left=`calc(var(--w)*${x.position})`;
+   k.setAttribute("role","button");k.tabIndex=0;
+   if(leftNotes.has(x.note))k.classList.add("left");
+   if(rightNotes.has(x.note))k.classList.add("right");
+   k.onclick=()=>toggleChordConstructorNote(x.note);
+   el.appendChild(k);
+   addKey(k,x.note,true);
+ });
+}
+
+function renderChordConstructorNotes(state){
+ const leftEl=document.getElementById("chordConstructorLeftNotes");
+ const rightEl=document.getElementById("chordConstructorRightNotes");
+ leftEl.innerHTML="";rightEl.innerHTML="";
+ state.notes.forEach((note,index)=>{
+   const chip=document.createElement("div");
+   chip.className="chord-constructor-chip "+(note.hand==="left"?"left":"right");
+   const label=document.createElement("span");
+   label.textContent=`${CONSTRUCTOR_PITCH_ES[note.spelling]||note.spelling}${note.octave}`;
+   const remove=document.createElement("button");
+   remove.type="button";remove.className="chord-constructor-chip-remove";remove.setAttribute("aria-label","Quitar nota");remove.textContent="✕";
+   remove.onclick=()=>{chordBuilderInstance.removeNote(index);refreshChordConstructorUI()};
+   chip.append(label,remove);
+   (note.hand==="left"?leftEl:rightEl).appendChild(chip);
+ });
+}
+
+function refreshChordConstructorUI(){
+ const {selectors}=chordConstructorModules;
+ const state=chordBuilderInstance.state();
+ document.getElementById("chordConstructorTitle").textContent=selectors.selectChordName(state)||"Nuevo acorde";
+ if(chordConstructorKeyboardExpanded)renderChordConstructorKeyboard();
+ renderChordConstructorNotes(state);
+ const complete=selectors.selectIsComplete(state);
+ document.getElementById("chordConstructorListen").disabled=!complete;
+ document.getElementById("chordConstructorSave").disabled=!complete;
+}
+
+async function openChordConstructor(){
+ await loadChordConstructorModules();
+ chordBuilderInstance=chordConstructorModules.createChordBuilder();
+ chordConstructorKeyboardExpanded=false;
+ document.getElementById("chordConstructorKeyboardWrap").hidden=true;
+ document.getElementById("chordConstructorToggleKeyboard").textContent="▸ Mostrar diagrama";
+ document.getElementById("chordConstructorQualityExtended").hidden=true;
+ document.getElementById("chordConstructorMoreQualities").textContent="▸ Más cualidades (3)";
+ document.getElementById("chordConstructorBassToggle").checked=false;
+ document.getElementById("chordConstructorBass").hidden=true;
+ document.getElementById("chordConstructorBassHint").hidden=true;
+ setChordConstructorHand("left");
+ renderPitchGrid(document.getElementById("chordConstructorRoot"),null,selectChordConstructorRoot);
+ renderChordConstructorQualities();
+ setChordConstructorStatus("",false);
+ refreshChordConstructorUI();
+ document.getElementById("chordConstructor").hidden=false;
+}
+function closeChordConstructor(){
+ document.getElementById("chordConstructor").hidden=true;
+ chordBuilderInstance=null;
+}
+
+document.getElementById("chordConstructorClose").onclick=closeChordConstructor;
+document.getElementById("chordConstructorCancel").onclick=closeChordConstructor;
+document.getElementById("chordConstructorHandLeft").onclick=()=>setChordConstructorHand("left");
+document.getElementById("chordConstructorHandRight").onclick=()=>setChordConstructorHand("right");
+document.getElementById("chordConstructorMoreQualities").onclick=()=>{
+ const extEl=document.getElementById("chordConstructorQualityExtended");
+ extEl.hidden=!extEl.hidden;
+ document.getElementById("chordConstructorMoreQualities").textContent=extEl.hidden?"▸ Más cualidades (3)":"▾ Menos cualidades";
+};
+document.getElementById("chordConstructorToggleKeyboard").onclick=()=>{
+ chordConstructorKeyboardExpanded=!chordConstructorKeyboardExpanded;
+ document.getElementById("chordConstructorKeyboardWrap").hidden=!chordConstructorKeyboardExpanded;
+ document.getElementById("chordConstructorToggleKeyboard").textContent=chordConstructorKeyboardExpanded?"▾ Ocultar diagrama":"▸ Mostrar diagrama";
+ if(chordConstructorKeyboardExpanded)renderChordConstructorKeyboard();
+};
+document.getElementById("chordConstructorBassToggle").onchange=e=>{
+ const bassGrid=document.getElementById("chordConstructorBass");
+ const hint=document.getElementById("chordConstructorBassHint");
+ if(e.target.checked){
+   bassGrid.hidden=false;
+   renderPitchGrid(bassGrid,null,selectChordConstructorBass);
+ }else{
+   bassGrid.hidden=true;hint.hidden=true;
+   chordBuilderInstance.setBass(null);
+   refreshChordConstructorUI();
+ }
+};
+document.getElementById("chordConstructorListen").onclick=async()=>{
+ const state=chordBuilderInstance.state();
+ const notes=state.notes.map(constructorNoteKey);
+ const audioRunning=await resumeAudio();
+ if(!audioRunning)return;
+ if(!pianoReady&&!pianoLoadFailed)await loadPiano();
+ if(pianoReady)playSampledChord(notes,4);
+ else playFallback(notes,4);
+};
+document.getElementById("chordConstructorSave").onclick=()=>{
+ const state=chordBuilderInstance.state();
+ document.getElementById("chordSaveName").value=chordConstructorModules.selectors.selectChordName(state)||"";
+ document.querySelector('input[name="chordSaveScope"][value="song"]').checked=true;
+ document.getElementById("chordSaveDialog").hidden=false;
+};
+document.getElementById("chordSaveCancel").onclick=()=>{document.getElementById("chordSaveDialog").hidden=true};
+document.getElementById("chordSaveConfirm").onclick=async()=>{
+ const nameInput=document.getElementById("chordSaveName");
+ const scope=document.querySelector('input[name="chordSaveScope"]:checked').value;
+ const state=chordBuilderInstance.state();
+ const name=nameInput.value.trim()||chordConstructorModules.selectors.selectChordName(state)||"Acorde";
+ const confirmButton=document.getElementById("chordSaveConfirm");
+ confirmButton.disabled=true;confirmButton.textContent="Guardando…";
+ try{
+   const {createChordFactory,openShadowDatabase,createChordRepository,createVoicingRepository,toLegacyChord}=chordConstructorModules;
+   const factory=createChordFactory();
+   const chord=factory.createChord(state);
+   const voicing=factory.createVoicing(chord.id,state,scope,name);
+   const legacy=toLegacyChord(state);
+   const db=await openShadowDatabase();
+   await createChordRepository().saveChord(db,chord);
+   await createVoicingRepository().saveVoicing(db,voicing);
+   registerLegacyChord(chord.id,legacy.spanishName,legacy.englishName,legacy.l,legacy.r);
+   renderSyncChordOptions();
+   syncAddChord.value=chord.id;
+   syncAddChordTrackedValue=chord.id;
+   document.getElementById("chordSaveDialog").hidden=true;
+   closeChordConstructor();
+ }catch(error){
+   setChordConstructorStatus(`No se pudo guardar: ${error.message}`,true);
+ }finally{
+   confirmButton.disabled=false;confirmButton.textContent="Guardar";
+ }
+};
+
 updateNotationToggle();updateLyricsNotesToggle();renderSyncChordOptions();renderSyncInversionOptions("E");initializeSongSync();updateSettingsSummary();updateNextPianoVisibility();initSections();buildSteps();render();renderFullSong();updateSessionSummary();updateTransportControls();loadCloudSongSync();
+syncAddChordTrackedValue=syncAddChord.value;
+hydrateCustomChords();
 </script>
 
 <!--

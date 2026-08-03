@@ -128,8 +128,7 @@ Dependencia: Entrega 0.
 
 ### Entrega 2 · constructor y biblioteca de acordes
 
-Estado: **Integrada en `main` (PR #7): núcleo, persistencia y audio. La interfaz
-está especificada (PR #19) y pendiente de implementar.**
+Estado: **Integrada en `main`: núcleo, persistencia, audio e interfaz.**
 
 Objetivo: permitir acordes y posiciones que no existan en la canción actual.
 
@@ -165,13 +164,32 @@ conectarla a `index.html`.
 Desde la PR #9 existe integración continua, de modo que este modo de fallo ya
 no puede repetirse en silencio.
 
-Pendiente (UI):
+Interfaz (3 de agosto de 2026):
 
-- [ ] Constructor visual en pantalla
-- [ ] Radio Biblioteca/Canción al guardar con descripciones
-- [ ] Filtro de tipo en selector ("Todos", "Biblioteca", "Canción")
-- [ ] Teclado expandible en iPad
-- [ ] Integración con interfaz de canción
+- [x] Constructor visual en pantalla, como hoja modal sobre Editar
+- [x] Punto de entrada: opción "＋ Crear acorde nuevo…" en el mismo selector
+      "Nuevo acorde" que ya usaba "＋ Añadir" — resuelve el apartado 16.1 de
+      `11-E2-INTERFAZ.md` sin esperar a la biblioteca de Entrega 3
+- [x] Radio Biblioteca/Canción al guardar con descripciones
+- [x] Teclado de Si1 a Do7 para construir la posición, colapsable
+- [x] Vista previa sonora reutilizando el motor de audio heredado
+- [x] Persistencia real vía ChordFactory + ChordRepository/VoicingRepository
+      en IndexedDB, hidratada al cargar la página
+- [x] Traducción al formato heredado (`legacy-chord-adapter.js`): cada acorde
+      construido se identifica internamente por su UUID, no por su símbolo,
+      porque el símbolo puede coincidir con uno de los 12 acordes fijos
+      (`Mi Mayor` produce el mismo `E` que ya existe). Guardarlo por símbolo
+      sobrescribía silenciosamente el acorde original hasta que se corrigió.
+
+No implementado en esta vuelta, por decisión de alcance:
+
+- [ ] Filtro de tipo en el selector de voicings ("Todos"/"Biblioteca"/"Canción")
+- [ ] Selector de dedo por nota (el dedo se numera automáticamente)
+- [ ] Rejilla de fundamental/bajo con la disposición exacta de teclado del
+      apartado 4 de `11-E2-INTERFAZ.md`; se implementó como paleta de 12
+      celdas etiquetadas, sin los huecos que imitan las teclas negras
+- [ ] Inversiones alternativas de un acorde construido (solo existe la
+      posición que se construyó)
 
 Dependencia: contratos de Chord y Voicing.
 

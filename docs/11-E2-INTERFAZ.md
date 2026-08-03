@@ -464,15 +464,24 @@ Nada pulsa, nada rebota, nada llama la atención sobre sí mismo. Todo desaparec
 Escrito explícitamente, porque la versión anterior de este archivo dio por
 especificado lo que no lo estaba:
 
-1. **El rango exacto de notas.** Se propone Si1–Do7 (MIDI 35–96) por ser el único que
-   concilia los documentos existentes, pero requiere confirmación musical y
-   resolver la contradicción 84/96 — issues #12 y #13.
-2. **Dónde se abre el constructor desde la canción.** Este documento define la hoja;
-   no define el punto de entrada en la interfaz de canción, porque depende de cómo
-   quede la vista de canción de E3.
-3. **Etiquetado de inversiones.** Fuera de E2 por decisión previa; el constructor no
-   muestra «1ª inversión» en ninguna parte.
+1. ~~**El rango exacto de notas.**~~ Resuelto: Si1–Do7 (MIDI 35–96), issues #12 y #13.
+2. ~~**Dónde se abre el constructor desde la canción.**~~ Resuelto el 3 de agosto de
+   2026: opción "＋ Crear acorde nuevo…" en el mismo selector "Nuevo acorde" del
+   panel de Editar que ya usaba "＋ Añadir". No esperó a la vista de canción de
+   E3 porque el punto de entrada no dependía de ella — solo de tener un lugar
+   donde el usuario ya está pidiendo un acorde para la canción.
+3. **Etiquetado de inversiones.** Sigue fuera de E2. Un acorde construido solo
+   tiene la posición que se construyó; el selector de inversión no ofrece
+   variantes que no existen (`renderSyncInversionOptions` las filtra).
 4. **Densidad en desktop ancho (> 1240 px).** La hoja se limita a 1040 px y se centra.
    No se ha diseñado un aprovechamiento mayor porque el uso real es en iPad.
+
+Implementado con dos simplificaciones deliberadas frente a este documento,
+para no ampliar el alcance de esta vuelta:
+
+- La rejilla de fundamental/bajo (apartado 4) es una paleta de 12 celdas
+  etiquetadas, no la disposición con huecos que imita las teclas negras.
+- No hay selector de dedo por nota (apartado 7.3); el dedo se asigna en
+  orden ascendente al traducir al formato heredado.
 
 Si algo de lo anterior se implementa, no será por seguir este documento.
