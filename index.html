@@ -3557,6 +3557,7 @@ document.getElementById("librarySongNameConfirm").onclick=async()=>{
    document.getElementById("librarySongNameDialog").hidden=true;
    modules.createActiveSongStore().setActiveSongId(song.id);
    await openSongWorkspace(song.id);
+   openWorkspaceImportDialog();
  }catch(error){
    setLibraryStatus(`No se pudo crear la canción: ${error.message}`,true);
  }finally{
@@ -3891,12 +3892,13 @@ async function importPastedSongText(rawText){
  else workspaceSong.sections.push(...newSections);
  return{sectionCount:newSections.length,chordCount:cache.size,approximateCount:approximateKeys.size};
 }
-document.getElementById("workspaceImportOpen").onclick=()=>{
+function openWorkspaceImportDialog(){
  document.getElementById("workspaceImportInput").value="";
  const status=document.getElementById("workspaceImportStatus");
  status.textContent="";status.classList.remove("error");
  document.getElementById("workspaceImportDialog").hidden=false;
-};
+}
+document.getElementById("workspaceImportOpen").onclick=openWorkspaceImportDialog;
 document.getElementById("workspaceImportCancel").onclick=()=>{
  document.getElementById("workspaceImportDialog").hidden=true;
 };
