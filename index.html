@@ -953,6 +953,23 @@ const voicingVariants={
    root:[["B3",1],["D#4",3],["F#4",5]],first:[["D#4",1],["F#4",2],["B4",5]],second:[["F#3",1],["B3",2],["D#4",5]]
  }
 };
+
+// Fase 2 del plan multi-canción (docs/plan-multi-cancion.md): congelar la
+// biblioteca de voicings actual. Estos 12 acordes son la referencia sonora
+// aprobada de "Mis 36" — ningún voicing aprobado se edita en sitio; para
+// darle otro carácter se crea una variante nueva. Esta copia congelada sirve
+// solo para detectar si una edición futura llegó a tocarlos por accidente.
+const VOICING_LIBRARY_SNAPSHOT=Object.freeze(JSON.parse(JSON.stringify({voicings,voicingVariants,defaultInversions})));
+function verifyVoicingLibraryIntegrity(){
+ const current=JSON.stringify({voicings,voicingVariants,defaultInversions});
+ const original=JSON.stringify(VOICING_LIBRARY_SNAPSHOT);
+ if(current!==original){
+   console.error("La biblioteca de voicings protegida no coincide con su copia original: algún cambio modificó un acorde aprobado de \"Mis 36\".");
+   return false;
+ }
+ return true;
+}
+
 function inversionText(id){
  if(notationMode==="en")return {root:"Root position",first:"1st inversion",second:"2nd inversion"}[id];
  return {root:"Fundamental",first:"1.ª inversión",second:"2.ª inversión"}[id];
@@ -1040,11 +1057,28 @@ makeSection("Coro final",[
 ])
 ];
 
+// Fase 1 del plan multi-canción (docs/plan-multi-cancion.md): modelo genérico
+// de canción. "Mis 36" pasa a ser la canción semilla del registro; el resto
+// del archivo sigue leyendo `sections` directamente porque es la misma
+// referencia que SONGS["mis-36"].sections, así que el editor puede seguir
+// mutándola en sitio sin que nada más cambie de comportamiento.
+const SONGS={
+ "mis-36":{
+   id:"mis-36",
+   title:"Mis 36",
+   artist:"",
+   originalKey:"E",
+   sourceText:null,
+   sections
+ }
+};
+let currentSongId="mis-36";
+function currentSong(){return SONGS[currentSongId]}
+
 // Copia de los valores predeterminados antes de que nada los toque. El editor
 // muta `sections` en sitio, así que a partir de aquí deja de ser el estado
 // original: lo que el usuario cambie viaja por songSync, no por estas
-// estructuras. Se clona para que la comprobación del motor nuevo compare
-// contra el mismo punto de partida que el fixture de las pruebas.
+// estructuras.
 const LEGACY_DEFAULTS=JSON.parse(JSON.stringify({voicings,defaultInversions,voicingVariants,sections}));
 
 const SONG_SYNC_KEY="mis36-song-sync-v1";
@@ -2711,7 +2745,7 @@ nextPianoToggle.onclick=()=>{
 };
 nextKeyboardWrap.addEventListener("scroll",()=>syncPianoScroll(nextKeyboardWrap,currentKeyboardWrap),{passive:true});
 currentKeyboardWrap.addEventListener("scroll",()=>syncPianoScroll(currentKeyboardWrap,nextKeyboardWrap),{passive:true});
-updateNotationToggle();updateLyricsNotesToggle();renderSyncChordOptions();renderSyncInversionOptions("E");initializeSongSync();updateSettingsSummary();updateNextPianoVisibility();initSections();buildSteps();render();renderFullSong();updateSessionSummary();updateTransportControls();loadCloudSongSync();
+verifyVoicingLibraryIntegrity();updateNotationToggle();updateLyricsNotesToggle();renderSyncChordOptions();renderSyncInversionOptions("E");initializeSongSync();updateSettingsSummary();updateNextPianoVisibility();initSections();buildSteps();render();renderFullSong();updateSessionSummary();updateTransportControls();loadCloudSongSync();
 </script>
 </body>
 </html>
