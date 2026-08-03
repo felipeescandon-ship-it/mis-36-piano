@@ -233,6 +233,19 @@ Completado:
       información, solo lectura). Autoguardado con debounce; cerrar el taller
       fuerza ese guardado pendiente para no perder la última edición en
       silencio. Sin reproducción todavía.
+- [x] E3.4 (segunda vuelta) · "Pegar letra y acordes": interpreta una
+      tablatura de texto (encabezados `[Sección]`, acordes sobre la letra,
+      pasajes instrumentales entre paréntesis) y arma una propuesta editable
+      de secciones/líneas/acordes en el taller — no reemplaza la edición
+      manual, la acelera. `song-text-parser.js` decide la estructura,
+      `chord-text-parser.js` interpreta cada símbolo (incluye notación
+      brasileña "7M" = maj7) y `chord-auto-voicing.js` genera una posición de
+      piano dentro de Si1–Do7 para cualquier acorde que no exista todavía en
+      la biblioteca; si ya existe uno equivalente (misma fundamental,
+      cualidad y bajo) lo reutiliza en lugar de duplicar. La alineación
+      texto→palabra es una aproximación por columna, no una lectura musical
+      exacta — se corrige igual que cualquier acorde colocado a mano, con el
+      selector de posición que ya existía.
 
 Quedan fuera de esta primera vuelta de E3.4, sin bloquearla:
 

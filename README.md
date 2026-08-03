@@ -20,10 +20,10 @@ plataforma capaz de:
 - Aplicación actual: `index.html`
 - API actual: `api/song-sync.js`
 - Plataforma multicanción: **Entregas 0, 1 y 2 completas (D-021); Entrega 3 en
-  curso** — biblioteca de canciones ("Piano Studio"), import/export y taller de
-  edición para canciones nuevas ya funcionan; falta reproducción (Tocar) para
-  esas canciones
-- Pruebas: **175**, ejecutadas automáticamente en cada pull request
+  curso** — biblioteca de canciones ("Piano Studio"), import/export, taller de
+  edición y "pegar letra y acordes" para canciones nuevas ya funcionan; falta
+  reproducción (Tocar) para esas canciones
+- Pruebas: **195**, ejecutadas automáticamente en cada pull request
 - Cuestión abierta que condiciona lo siguiente: issue
   [#16](https://github.com/felipeescandon-ship-it/mis-36-piano/issues/16) — `src/` está
   probado pero no se ejecuta en producción

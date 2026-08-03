@@ -350,6 +350,47 @@ por acorde editable (se asigna 1 pulso fijo) y Práctica para canciones nuevas.
 
 Fecha: 3 de agosto de 2026.
 
+### D-023 · "Pegar letra y acordes" en el taller de canción
+
+Escribir una canción línea por línea desde cero en el taller (E3.4) era
+demasiado lento comparado con cómo la gente ya tiene sus canciones: copiadas
+de un cancionero, con acordes escritos arriba de la letra en texto plano. Se
+agregó un botón "📋 Pegar letra y acordes" que interpreta ese texto y arma una
+propuesta editable — no reemplaza el editor manual, lo acelera como punto de
+partida.
+
+División en tres módulos puros, cada uno con pruebas propias en `test/`:
+
+- `song-text-parser.js` decide la estructura: encabezados `[Sección]`, qué
+  línea es "de acordes" (todos sus tokens parsean como acorde) y se empareja
+  con la línea de letra inmediatamente siguiente, y qué línea entre paréntesis
+  es un pasaje instrumental sin letra propia (se le asignan palabras de
+  relleno "·" para poder anclar cada acorde a su propia posición).
+- `chord-text-parser.js` interpreta cada símbolo suelto ("Am/G", "F6",
+  "F7M(2/4+)") en fundamental + cualidad + bajo alternativo. Reconoce la
+  notación brasileña "7M" como `maj7` incluso con anotaciones decorativas
+  entre paréntesis — un defecto real apareció aquí: esas anotaciones podían
+  contener una barra ("2/4") que se confundía con el separador de bajo
+  alternativo antes de limpiarse, rompiendo el símbolo completo. Se corrigió
+  quitando las anotaciones decorativas antes de aplicar la forma
+  fundamental/cualidad/bajo, no después.
+- `chord-auto-voicing.js` genera una posición de piano automática (notas
+  reales, no solo el nombre) para cualquier acorde que no exista todavía,
+  dentro del registro Si1–Do7 que ya impone `validateNote`. Si un acorde
+  equivalente (misma fundamental, cualidad y bajo) ya está en la biblioteca —
+  construido a mano o importado antes—, se reutiliza en vez de duplicar.
+
+La alineación de cada acorde con su palabra es una aproximación por columna
+de texto, no una lectura musical exacta: el formato de texto libre no
+garantiza monospaciado real, y la persona ajusta la posición después con el
+mismo selector que ya usa para acordes puestos a mano. Verificado con
+Playwright pegando la tablatura completa de "Let It Be" (3 secciones, acordes
+con bajo alternativo y pasajes instrumentales entre paréntesis): la letra, los
+7 acordes distintos y su ubicación sobreviven a cerrar el taller y recargar la
+página.
+
+Fecha: 3 de agosto de 2026.
+
 ## Decisiones que requieren prototipo
 
 ### D-P02 · Rango y estrategia de muestras de piano

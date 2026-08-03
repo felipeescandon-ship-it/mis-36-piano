@@ -515,6 +515,7 @@ display:flex;flex-direction:column;gap:8px;min-height:150px;text-align:left}
 .workspace-add-chord select{min-height:36px;border-radius:8px;border:1px solid var(--line);padding:0 8px;font-size:13px;max-width:220px}
 .workspace-letra-line{padding:10px 0;border-bottom:1px dashed var(--line);line-height:1.9}
 .workspace-letra-chip{display:inline-block;background:var(--blueSoft);color:var(--blue);font-weight:900;font-size:11px;padding:2px 6px;border-radius:6px;margin:0 3px;vertical-align:middle}
+.workspace-toolbar{display:flex;gap:8px;flex-wrap:wrap}
 </style>
 </head>
 <body>
@@ -860,13 +861,37 @@ display:flex;flex-direction:column;gap:8px;min-height:150px;text-align:left}
     </div>
     <div id="workspaceEditPane" class="workspace-pane">
       <div id="workspaceSections"></div>
-      <button id="workspaceAddSection" class="secondary" type="button">+ Sección</button>
+      <div class="workspace-toolbar">
+        <button id="workspaceAddSection" class="secondary" type="button">+ Sección</button>
+        <button id="workspaceImportOpen" class="secondary" type="button">📋 Pegar letra y acordes</button>
+      </div>
       <p id="workspaceChordHint" class="chord-constructor-hint" hidden>Todavía no construiste ningún acorde. Abrí Mis 36 → Editar → "＋ Añadir" → "Crear acorde nuevo…" para tener acordes disponibles aquí.</p>
     </div>
     <div id="workspaceLyricsPane" class="workspace-pane" hidden>
       <div id="workspaceLyricsView"></div>
     </div>
     <div id="workspaceStatus" class="chord-constructor-status" aria-live="polite"></div>
+  </div>
+</div>
+
+<div id="workspaceImportDialog" class="chord-constructor-overlay" hidden>
+  <div class="chord-constructor-sheet chord-save-sheet" role="dialog" aria-modal="true" aria-labelledby="workspaceImportTitle">
+    <div id="workspaceImportTitle" class="chord-constructor-section-title">Pegar letra y acordes</div>
+    <p class="chord-constructor-hint">
+      Pegá una tablatura con acordes arriba de la letra, como la copiarías de un
+      cancionero. Se reconocen encabezados entre corchetes (<code>[Estribillo]</code>)
+      y acordes sueltos entre paréntesis para pasajes instrumentales. Es una
+      propuesta: después la ajustás en Editar como cualquier otra línea.
+    </p>
+    <label class="chord-save-name-label">
+      <span>Texto pegado</span>
+      <textarea id="workspaceImportInput" rows="12" style="width:100%;font-family:monospace;font-size:13px"></textarea>
+    </label>
+    <div id="workspaceImportStatus" class="chord-constructor-status" aria-live="polite"></div>
+    <div class="chord-constructor-footer">
+      <button id="workspaceImportCancel" class="secondary" type="button">Cancelar</button>
+      <button id="workspaceImportConfirm" class="primary" type="button">Analizar y agregar</button>
+    </div>
   </div>
 </div>
 
@@ -3354,7 +3379,7 @@ let libraryArchivedCache=[];
 
 async function loadSongLibraryModules(){
  if(songLibraryModules)return songLibraryModules;
- const [factoryModule,repoModule,portabilityModule,activeStoreModule,shadowDbModule,chordRepoModule,voicingRepoModule,validationModule]=await Promise.all([
+ const [factoryModule,repoModule,portabilityModule,activeStoreModule,shadowDbModule,chordRepoModule,voicingRepoModule,validationModule,songTextParserModule,chordAutoVoicingModule]=await Promise.all([
    import("./src/application/song-library/song-factory.js"),
    import("./src/infrastructure/song-repository.js"),
    import("./src/application/song-library/song-portability.js"),
@@ -3363,6 +3388,8 @@ async function loadSongLibraryModules(){
    import("./src/infrastructure/chord-repository.js"),
    import("./src/infrastructure/voicing-repository.js"),
    import("./src/domain/validation.js"),
+   import("./src/application/song-library/song-text-parser.js"),
+   import("./src/application/song-library/chord-auto-voicing.js"),
  ]);
  songLibraryModules={
    createSongFactory:factoryModule.createSongFactory,
@@ -3375,6 +3402,8 @@ async function loadSongLibraryModules(){
    createChordRepository:chordRepoModule.createChordRepository,
    createVoicingRepository:voicingRepoModule.createVoicingRepository,
    validateSong:validationModule.validateSong,
+   parseSongText:songTextParserModule.parseSongText,
+   buildAutoChordAndVoicing:chordAutoVoicingModule.buildAutoChordAndVoicing,
  };
  return songLibraryModules;
 }
@@ -3798,6 +3827,100 @@ document.getElementById("workspaceSections").addEventListener("click",event=>{
    renderWorkspaceEdit();scheduleWorkspaceSave();
  }
 });
+
+// --- Pegar letra y acordes (E3.4, primera vuelta de "propuesta editable"):
+// interpreta una tablatura de texto y arma secciones/líneas/acordes reales,
+// reutilizando acordes ya construidos cuando coinciden y generando una
+// posición automática (chord-auto-voicing.js) para los que no existen
+// todavía. Nunca reemplaza contenido con trabajo real: solo sustituye la
+// sección vacía que trae toda canción nueva.
+function chordMatchesToken(chord,token){
+ if(chord.root.pitchClass!==token.rootPitchClass||chord.quality!==token.quality)return false;
+ if(!chord.bass)return token.bassPitchClass===null||token.bassPitchClass===undefined;
+ return token.bassPitchClass!=null&&chord.bass.pitchClass===token.bassPitchClass;
+}
+async function resolveChordForToken(token,cache,modules,db,chordRepo,voicingRepo){
+ const key=`${token.rootPitchClass}|${token.quality}|${token.bassPitchClass??""}`;
+ if(cache.has(key))return cache.get(key).ref;
+ const existingChord=workspaceLibraryChords.find(chord=>chordMatchesToken(chord,token));
+ const existingVoicing=existingChord&&workspaceLibraryVoicings.find(v=>v.chordId===existingChord.id);
+ if(existingChord&&existingVoicing){
+   const ref={chordId:existingChord.id,voicingId:existingVoicing.id,voicingRevision:existingVoicing.revision};
+   cache.set(key,{ref,approximate:token.approximate});
+   return ref;
+ }
+ const{chord,voicing}=modules.buildAutoChordAndVoicing(token,{scope:"song"});
+ await chordRepo.saveChord(db,chord);
+ await voicingRepo.saveVoicing(db,voicing);
+ workspaceLibraryChords.push(chord);
+ workspaceLibraryVoicings.push(voicing);
+ const ref={chordId:chord.id,voicingId:voicing.id,voicingRevision:voicing.revision};
+ cache.set(key,{ref,approximate:token.approximate});
+ return ref;
+}
+function isWorkspaceEffectivelyEmpty(){
+ const only=workspaceSong.sections;
+ return only.length===1&&only[0].lines.length===1&&!only[0].events.length&&!only[0].lines[0].text.trim();
+}
+async function importPastedSongText(rawText){
+ const modules=await loadSongLibraryModules();
+ const parsed=modules.parseSongText(rawText);
+ if(!parsed.sections.length)throw new Error("No se reconoció ninguna sección ni línea de letra.");
+ const db=await modules.openShadowDatabase();
+ const chordRepo=modules.createChordRepository(),voicingRepo=modules.createVoicingRepository();
+ const cache=new Map();
+ const approximateKeys=new Set();
+ const newSections=[];
+ for(const section of parsed.sections){
+   const sectionRecord={id:crypto.randomUUID(),name:section.name,lines:[],events:[]};
+   for(const line of section.lines){
+     const lineId=crypto.randomUUID();
+     sectionRecord.lines.push({id:lineId,text:line.text});
+     for(const placement of line.chords){
+       if(!placement.token)continue;
+       const ref=await resolveChordForToken(placement.token,cache,modules,db,chordRepo,voicingRepo);
+       if(placement.token.approximate)approximateKeys.add(ref.chordId);
+       sectionRecord.events.push({id:crypto.randomUUID(),lineId,anchor:placement.anchor,position:0,beats:1,chord:ref});
+     }
+   }
+   renumberSectionPositions(sectionRecord);
+   newSections.push(sectionRecord);
+ }
+ if(isWorkspaceEffectivelyEmpty())workspaceSong.sections=newSections;
+ else workspaceSong.sections.push(...newSections);
+ return{sectionCount:newSections.length,chordCount:cache.size,approximateCount:approximateKeys.size};
+}
+document.getElementById("workspaceImportOpen").onclick=()=>{
+ document.getElementById("workspaceImportInput").value="";
+ const status=document.getElementById("workspaceImportStatus");
+ status.textContent="";status.classList.remove("error");
+ document.getElementById("workspaceImportDialog").hidden=false;
+};
+document.getElementById("workspaceImportCancel").onclick=()=>{
+ document.getElementById("workspaceImportDialog").hidden=true;
+};
+document.getElementById("workspaceImportConfirm").onclick=async()=>{
+ const status=document.getElementById("workspaceImportStatus");
+ const confirmButton=document.getElementById("workspaceImportConfirm");
+ const text=document.getElementById("workspaceImportInput").value;
+ if(!text.trim()){status.textContent="Pegá algo de texto primero.";status.classList.add("error");return;}
+ confirmButton.disabled=true;confirmButton.textContent="Analizando…";
+ status.classList.remove("error");status.textContent="Analizando…";
+ try{
+   const summary=await importPastedSongText(text);
+   renderWorkspaceEdit();
+   scheduleWorkspaceSave();
+   document.getElementById("workspaceImportDialog").hidden=true;
+   let message=`Se agregaron ${summary.sectionCount} sección(es) y ${summary.chordCount} acorde(s) distinto(s).`;
+   if(summary.approximateCount)message+=` ${summary.approximateCount} de esos acordes usaron una cualidad aproximada — conviene revisarlos.`;
+   setWorkspaceStatus(message);
+ }catch(error){
+   status.textContent=`No se pudo interpretar: ${error.message}`;
+   status.classList.add("error");
+ }finally{
+   confirmButton.disabled=false;confirmButton.textContent="Analizar y agregar";
+ }
+};
 
 updateNotationToggle();updateLyricsNotesToggle();renderSyncChordOptions();renderSyncInversionOptions("E");initializeSongSync();updateSettingsSummary();updateNextPianoVisibility();initSections();buildSteps();render();renderFullSong();updateSessionSummary();updateTransportControls();loadCloudSongSync();
 syncAddChordTrackedValue=syncAddChord.value;
