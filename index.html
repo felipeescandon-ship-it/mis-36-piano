@@ -25,6 +25,8 @@ padding:16px 22px;box-shadow:var(--shadow)}
 .app-header h1{margin:2px 0 4px;font-size:clamp(28px,4vw,42px)}
 .app-header p{margin:0;color:#d8e7fa}
 .eyebrow{color:#8fc2ff;font-size:11px;font-weight:900;letter-spacing:.14em;text-transform:uppercase}
+.song-selector-label{display:flex;align-items:center;gap:8px;margin-top:6px;font-size:12px;font-weight:800;color:#d8e7fa;letter-spacing:.03em;text-transform:uppercase}
+.song-selector-label select{font-family:inherit;font-size:14px;font-weight:700;text-transform:none;color:#fff;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.3);border-radius:10px;padding:6px 10px}
 .notation-toggle{min-width:76px;min-height:52px;flex:0 0 auto;padding:9px 13px;border:1px solid rgba(255,255,255,.26);border-radius:16px;background:rgba(255,255,255,.10);color:#fff;font-size:15px;font-weight:900;letter-spacing:.02em}
 .notation-toggle:hover{background:rgba(255,255,255,.17)}
 .toolbar{display:grid;gap:10px;background:#fff;border:1px solid var(--line);
@@ -424,8 +426,11 @@ button.song-line-end{padding:3px 8px}
 <header class="app-header">
   <div>
     <span class="eyebrow">Guía de acompañamiento</span>
-    <h1>Mis 36</h1>
+    <h1 id="songTitle">Mis 36</h1>
     <p>Acordes claros para tocar, acompañar y cantar.</p>
+    <label class="song-selector-label" for="songSelector">Canción
+      <select id="songSelector" aria-label="Elegir canción"></select>
+    </label>
   </div>
   <button id="notation" class="notation-toggle" type="button" aria-label="Usar nombres de notas en inglés" title="Usar nombres de notas en inglés">Do · Re</button>
 </header>
@@ -738,6 +743,8 @@ const next=document.getElementById("next");
 const sectionSelect=document.getElementById("sectionSelect");
 const goSectionStart=document.getElementById("goSectionStart");
 const notation=document.getElementById("notation");
+const songTitle=document.getElementById("songTitle");
+const songSelector=document.getElementById("songSelector");
 const exportSongSync=document.getElementById("exportSongSync");
 const importSongSync=document.getElementById("importSongSync");
 const importSongSyncFile=document.getElementById("importSongSyncFile");
@@ -1206,16 +1213,40 @@ const SONGS={
 let currentSongId="mis-36";
 function currentSong(){return SONGS[currentSongId]}
 
-// Vista previa temporal para escuchar/aprobar una canción nueva (por ejemplo
-// ?song=viveme) antes de que exista el catálogo real (Fase 3) o la API
-// genérica (Fase 4). Es de solo lectura a propósito: no toca songSync ni la
-// nube, así que nunca puede corromper los datos guardados de "Mis 36".
-const previewSongId=new URLSearchParams(location.search).get("song");
-const isPreviewingOtherSong=Boolean(previewSongId&&previewSongId!=="mis-36"&&SONGS[previewSongId]);
-if(isPreviewingOtherSong){
- currentSongId=previewSongId;
- sections=SONGS[currentSongId].sections;
+// Fase 3 del plan multi-canción (docs/plan-multi-cancion.md): catálogo
+// dinámico. Cada canción tiene su propio almacenamiento namespaced; solo
+// "mis-36" sincroniza con la nube hasta que exista la API genérica (Fase 4).
+const CATALOG_KEY="piano-catalog-v1";
+const LAST_SONG_KEY="piano-last-song";
+function songStorageKey(songId,suffix){return `piano-song:${songId}:${suffix}`}
+function songHasCloudSync(songId){return songId==="mis-36"}
+function loadCatalog(){
+ try{
+   const saved=JSON.parse(localStorage.getItem(CATALOG_KEY)||"null");
+   if(Array.isArray(saved)&&saved.every(id=>SONGS[id]))return saved;
+ }catch{}
+ return Object.keys(SONGS);
 }
+function migrateLegacyMis36Storage(){
+ const legacyMap={
+   "mis36-song-sync-v1":songStorageKey("mis-36","sync-v1"),
+   "mis36-cloud-revision":songStorageKey("mis-36","cloud-revision"),
+   "mis36-cloud-dirty":songStorageKey("mis-36","cloud-dirty")
+ };
+ Object.entries(legacyMap).forEach(([legacyKey,newKey])=>{
+   try{
+     const legacyValue=localStorage.getItem(legacyKey);
+     if(legacyValue!==null&&localStorage.getItem(newKey)===null){
+       localStorage.setItem(newKey,legacyValue);
+     }
+   }catch{}
+ });
+}
+migrateLegacyMis36Storage();
+const songCatalog=loadCatalog();
+currentSongId=readPreference(LAST_SONG_KEY,"mis-36");
+if(!SONGS[currentSongId])currentSongId="mis-36";
+sections=SONGS[currentSongId].sections;
 
 // Copia de los valores predeterminados antes de que nada los toque. El editor
 // muta `sections` en sitio, así que a partir de aquí deja de ser el estado
@@ -1223,10 +1254,10 @@ if(isPreviewingOtherSong){
 // estructuras.
 const LEGACY_DEFAULTS=JSON.parse(JSON.stringify({voicings,defaultInversions,voicingVariants,sections}));
 
-const SONG_SYNC_KEY="mis36-song-sync-v1";
-const CLOUD_REVISION_KEY="mis36-cloud-revision";
-const CLOUD_DIRTY_KEY="mis36-cloud-dirty";
-const hadLocalSongSync=Boolean(readPreference(SONG_SYNC_KEY,""));
+let SONG_SYNC_KEY=songStorageKey(currentSongId,"sync-v1");
+let CLOUD_REVISION_KEY=songStorageKey(currentSongId,"cloud-revision");
+let CLOUD_DIRTY_KEY=songStorageKey(currentSongId,"cloud-dirty");
+let hadLocalSongSync=Boolean(readPreference(SONG_SYNC_KEY,""));
 let cloudRevision=readPreference(CLOUD_REVISION_KEY,"");
 let cloudSaveTimer=null,cloudRequestRunning=false,cloudRemoteDocument=null;
 let cloudChangeGeneration=0,cloudSaveQueued=false;
@@ -1296,6 +1327,56 @@ function initializeSongSync(){
    }
  }catch{}
 }
+function updateSongIdentityUi(){
+ const song=currentSong();
+ songTitle.textContent=song.title;
+ document.title=`${song.title} · Canción completa en piano`;
+ songSelector.value=currentSongId;
+}
+function initSongSelector(){
+ songSelector.innerHTML="";
+ songCatalog.forEach(songId=>{
+   const song=SONGS[songId];
+   if(!song)return;
+   const option=document.createElement("option");
+   option.value=songId;
+   option.textContent=song.title;
+   songSelector.appendChild(option);
+ });
+ songSelector.value=currentSongId;
+ songSelector.onchange=()=>switchToSong(songSelector.value);
+}
+function switchToSong(songId){
+ if(songId===currentSongId||!SONGS[songId])return;
+ stopAuto();
+ if(cloudSaveTimer){clearTimeout(cloudSaveTimer);cloudSaveTimer=null}
+ currentSongId=songId;
+ sections=SONGS[songId].sections;
+ SONG_SYNC_KEY=songStorageKey(songId,"sync-v1");
+ CLOUD_REVISION_KEY=songStorageKey(songId,"cloud-revision");
+ CLOUD_DIRTY_KEY=songStorageKey(songId,"cloud-dirty");
+ hadLocalSongSync=Boolean(readPreference(SONG_SYNC_KEY,""));
+ cloudRevision=readPreference(CLOUD_REVISION_KEY,"");
+ cloudRequestRunning=false;cloudRemoteDocument=null;cloudSaveQueued=false;
+ cloudChangeGeneration++;
+ deletedSongEvents.clear();
+ editorUndoStack=[];editorRedoStack=[];
+ selectedSyncEvent=null;addingSyncChord=null;movingSyncEvent=false;
+ sectionIndex=0;stepIndex=0;
+ showCloudChoice(false);
+ savePreference(LAST_SONG_KEY,songId);
+ updateSongIdentityUi();
+ initializeSongSync();
+ initSections();
+ buildSteps();
+ render();
+ renderFullSong();
+ updateSessionSummary();
+ updateTransportControls();
+ updateEditorHistory();
+ if(songHasCloudSync(songId))loadCloudSongSync();
+ else setCloudStatus("Nube: disponible próximamente para esta canción","warning");
+}
 function songSyncSnapshot(){
  const saved={version:4,events:{},deleted:[...deletedSongEvents],added:[]};
  sections.forEach((section,si)=>section.events.forEach((event,position)=>{
@@ -1312,7 +1393,6 @@ function songSyncSnapshot(){
  return saved;
 }
 function saveSongSync(syncCloud=true){
- if(isPreviewingOtherSong)return;
  const saved=songSyncSnapshot();
  try{
    localStorage.setItem(SONG_SYNC_KEY,JSON.stringify(saved));
@@ -1320,7 +1400,7 @@ function saveSongSync(syncCloud=true){
  }catch{
    setLocalSaveStatus("Dispositivo: no fue posible guardar","error");
  }
- if(syncCloud)scheduleCloudSave();
+ if(syncCloud&&songHasCloudSync(currentSongId))scheduleCloudSave();
 }
 function setLocalSaveStatus(textValue,state=""){
  syncSaveStatus.textContent=textValue;
@@ -1371,13 +1451,13 @@ function songSyncExportPayload(){
  return {
    format:"mis-36-piano-ajustes",
    version:1,
-   song:"Mis 36",
+   song:currentSong().title,
    exportedAt:new Date().toISOString(),
    songSync:songSyncSnapshot()
  };
 }
 function validatedImportedSongSync(payload){
- if(!payload||payload.format!=="mis-36-piano-ajustes"||payload.song!=="Mis 36"||payload.version!==1)throw new Error("El archivo no corresponde a los ajustes de Mis 36.");
+ if(!payload||payload.format!=="mis-36-piano-ajustes"||payload.song!==currentSong().title||payload.version!==1)throw new Error(`El archivo no corresponde a los ajustes de "${currentSong().title}".`);
  const data=payload.songSync;
  if(!data||data.version!==4||!data.events||typeof data.events!=="object"||Array.isArray(data.events))throw new Error("La versión del archivo no es compatible.");
  if(!Array.isArray(data.added)||!Array.isArray(data.deleted))throw new Error("El archivo contiene listas de cambios no válidas.");
@@ -1426,7 +1506,7 @@ async function exportSongSyncFile(){
    try{
      const file=new File([json],filename,{type:"application/json"});
      if(!navigator.share||!navigator.canShare?.({files:[file]}))throw error;
-     await navigator.share({title:"Ajustes de Mis 36",files:[file]});
+     await navigator.share({title:`Ajustes de ${currentSong().title}`,files:[file]});
      songDataStatus.textContent="Ajustes compartidos.";
    }catch(shareError){
      if(shareError?.name==="AbortError"){songDataStatus.textContent="Exportación cancelada.";return}
@@ -1463,7 +1543,7 @@ function validatedCloudDocument(documentValue){
  const songSync=validatedImportedSongSync({
    format:"mis-36-piano-ajustes",
    version:1,
-   song:"Mis 36",
+   song:currentSong().title,
    songSync:documentValue.songSync
  });
  return {...documentValue,songSync};
@@ -1491,7 +1571,7 @@ async function cloudFetch(resource,options={}){
  finally{clearTimeout(timeout)}
 }
 async function saveCloudSongSync(force=false){
- if(isPreviewingOtherSong)return false;
+ if(!songHasCloudSync(currentSongId))return false;
  if(cloudRequestRunning){
    cloudSaveQueued=true;
    return false;
@@ -1556,7 +1636,7 @@ async function saveCloudSongSync(force=false){
  }
 }
 async function loadCloudSongSync(forceRefresh=false){
- if(isPreviewingOtherSong){setCloudStatus("Nube: no disponible en la vista previa","warning");return false;}
+ if(!songHasCloudSync(currentSongId)){setCloudStatus("Nube: disponible próximamente para esta canción","warning");return false;}
  if(cloudRequestRunning&&!forceRefresh)return false;
  cloudRequestRunning=true;
  cloudSyncNow.disabled=true;
@@ -2264,6 +2344,9 @@ function loadSection(i){
  stopAuto();buildSteps();render();updateFullSongPosition();
 }
 function initSections(){
+ sectionSelect.innerHTML="";
+ editorSectionSelect.innerHTML="";
+ sectionChecks.innerHTML="";
  sections.forEach((s,i)=>{
    const o=document.createElement("option");
    o.value=i;o.textContent=s.name;
@@ -2713,7 +2796,7 @@ document.addEventListener("keydown",event=>{
 });
 document.addEventListener("visibilitychange",()=>{
  if(!document.hidden&&audioCtx&&audioCtx.state!=="running")setAudioStatus("Toca un control para reactivar el audio");
- if(!document.hidden&&!isPreviewingOtherSong)loadCloudSongSync();
+ if(!document.hidden&&songHasCloudSync(currentSongId))loadCloudSongSync();
 });
 
 playMode.onchange=()=>{
@@ -2893,7 +2976,7 @@ nextPianoToggle.onclick=()=>{
 };
 nextKeyboardWrap.addEventListener("scroll",()=>syncPianoScroll(nextKeyboardWrap,currentKeyboardWrap),{passive:true});
 currentKeyboardWrap.addEventListener("scroll",()=>syncPianoScroll(currentKeyboardWrap,nextKeyboardWrap),{passive:true});
-verifyVoicingLibraryIntegrity();updateNotationToggle();updateLyricsNotesToggle();renderSyncChordOptions();renderSyncInversionOptions("E");if(isPreviewingOtherSong)assignDefaultAnchors();else initializeSongSync();updateSettingsSummary();updateNextPianoVisibility();initSections();buildSteps();render();renderFullSong();updateSessionSummary();updateTransportControls();if(!isPreviewingOtherSong)loadCloudSongSync();
+verifyVoicingLibraryIntegrity();updateNotationToggle();updateLyricsNotesToggle();renderSyncChordOptions();renderSyncInversionOptions("E");initializeSongSync();updateSettingsSummary();updateNextPianoVisibility();initSongSelector();initSections();buildSteps();render();renderFullSong();updateSessionSummary();updateTransportControls();updateSongIdentityUi();if(songHasCloudSync(currentSongId))loadCloudSongSync();else setCloudStatus("Nube: disponible próximamente para esta canción","warning");
 </script>
 </body>
 </html>
