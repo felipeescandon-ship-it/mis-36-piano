@@ -19,9 +19,8 @@ plataforma capaz de:
 - Repositorio: <https://github.com/felipeescandon-ship-it/mis-36-piano>
 - Aplicación actual: `index.html`
 - API actual: `api/song-sync.js`
-- Plataforma multicanción: **Entregas 0 y 1 completas; Entrega 2 integrada en
-  `main` salvo su interfaz, ya especificada y pendiente de implementar**
-- Pruebas: **137**, ejecutadas automáticamente en cada pull request
+- Plataforma multicanción: **Entregas 0, 1 y 2 completas (D-021)**
+- Pruebas: **152**, ejecutadas automáticamente en cada pull request
 - Cuestión abierta que condiciona lo siguiente: issue
   [#16](https://github.com/felipeescandon-ship-it/mis-36-piano/issues/16) — `src/` está
   probado pero no se ejecuta en producción

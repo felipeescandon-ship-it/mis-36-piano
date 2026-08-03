@@ -276,6 +276,32 @@ cruzado ambos registros.
 
 Fecha: 1 de agosto de 2026.
 
+### D-021 · La Entrega 2 queda cerrada
+
+El constructor de acordes tenía núcleo, persistencia y audio integrados desde
+julio; faltaba la interfaz. Se implementó el 3 de agosto de 2026: hoja modal
+sobre Editar, con punto de entrada en el mismo selector "Nuevo acorde" que ya
+usaba "＋ Añadir" — resolviendo el apartado 16.1 de `11-E2-INTERFAZ.md` sin
+esperar a la vista de canción de Entrega 3.
+
+Verificado en navegador (Playwright/Chromium): construir un acorde, guardarlo
+con ambos alcances, colocarlo en la letra y que sobreviva a recargar la
+página. Durante esa verificación apareció un defecto real: el símbolo
+generado para un acorde nuevo puede coincidir con uno de los 12 fijos
+(`Mi Mayor` produce el mismo `E` que ya existe), y guardarlo por símbolo
+sobrescribía silenciosamente el original. Se corrigió identificando cada
+acorde por su UUID internamente, separado del texto que se muestra.
+
+Quedan fuera de esta entrega, sin bloquearla: el filtro Todos/Biblioteca/
+Canción del selector de voicings (`11-E2-INTERFAZ.md`, apartado 11), el
+selector de dedo por nota, la disposición exacta de teclado en la rejilla de
+fundamental/bajo, y las inversiones alternativas de un acorde construido. El
+criterio para posponerlos: ninguno impide que un acorde nuevo se construya,
+se guarde y se reutilice hoy; todos importan más cuando haya volumen de
+acordes guardados que los necesite.
+
+Fecha: 3 de agosto de 2026.
+
 ## Decisiones que requieren prototipo
 
 ### D-P02 · Rango y estrategia de muestras de piano

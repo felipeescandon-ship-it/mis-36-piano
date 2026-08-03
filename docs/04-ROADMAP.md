@@ -24,7 +24,7 @@ acordes ilimitados. Por eso:
 | Especificación multicanción | **Completada** |
 | Arquitectura y contratos | **Entrega 0 completada (D-020)** |
 | Motor multicanción | **Entrega 1 completada** |
-| Constructor de acordes | **Entrega 2 integrada salvo interfaz, ya especificada** |
+| Constructor de acordes | **Entrega 2 completada (D-021)** |
 | Biblioteca de canciones | **No iniciada (Entrega 3)** |
 | Migración de producción | **No iniciada (Entrega 4)** |
 | Integración continua | **Activa desde la PR #9 y obligatoria para integrar en `main`** |
@@ -128,7 +128,7 @@ Dependencia: Entrega 0.
 
 ### Entrega 2 · constructor y biblioteca de acordes
 
-Estado: **Integrada en `main`: núcleo, persistencia, audio e interfaz.**
+Estado: **Completada (D-021).**
 
 Objetivo: permitir acordes y posiciones que no existan en la canción actual.
 
@@ -181,15 +181,18 @@ Interfaz (3 de agosto de 2026):
       (`Mi Mayor` produce el mismo `E` que ya existe). Guardarlo por símbolo
       sobrescribía silenciosamente el acorde original hasta que se corrigió.
 
-No implementado en esta vuelta, por decisión de alcance:
+Quedan fuera de esta entrega, sin bloquear su cierre — ver D-021:
 
-- [ ] Filtro de tipo en el selector de voicings ("Todos"/"Biblioteca"/"Canción")
-- [ ] Selector de dedo por nota (el dedo se numera automáticamente)
-- [ ] Rejilla de fundamental/bajo con la disposición exacta de teclado del
-      apartado 4 de `11-E2-INTERFAZ.md`; se implementó como paleta de 12
-      celdas etiquetadas, sin los huecos que imitan las teclas negras
-- [ ] Inversiones alternativas de un acorde construido (solo existe la
-      posición que se construyó)
+- Filtro de tipo en el selector de voicings ("Todos"/"Biblioteca"/"Canción") y
+  el fondo `--libraryTint` que los distingue (`11-E2-INTERFAZ.md`, apartado 11).
+  Los acordes construidos ya se reutilizan hoy; lo que falta es distinguirlos
+  visualmente cuando haya volumen suficiente para que importe.
+- Selector de dedo por nota (el dedo se numera automáticamente).
+- Rejilla de fundamental/bajo con la disposición exacta de teclado del
+  apartado 4 de `11-E2-INTERFAZ.md`; se implementó como paleta de 12 celdas
+  etiquetadas, sin los huecos que imitan las teclas negras.
+- Inversiones alternativas de un acorde construido (solo existe la posición
+  que se construyó).
 
 Dependencia: contratos de Chord y Voicing.
 
