@@ -2747,29 +2747,40 @@ updateNotationToggle();updateLyricsNotesToggle();renderSyncChordOptions();render
   <div id="motorUniversalContent"></div>
 </div>
 <script type="module">
-if(new URLSearchParams(location.search).get("motor")==="universal"){
- const container=document.getElementById("motorUniversalContainer");
- const content=document.getElementById("motorUniversalContent");
- if(container){
-   container.style.display="block";
-   try{
-     const {verifyLiveEquivalence}=await import("./src/application/verify-live-equivalence.js");
-     const report=await verifyLiveEquivalence(window.mis36LegacySnapshot());
-     window.mis36EquivalenceReport=report;
-     content.textContent=JSON.stringify(report,null,2);
-     console[report.ok?"info":"error"](
-       report.ok
-         ?`Motor universal: equivalencia confirmada contra los datos vivos (${report.counts.events} eventos, ${report.elapsedMs} ms).`
-         :"Motor universal: la equivalencia NO se cumple.",
-       report
-     );
-   }catch(error){
-     window.mis36EquivalenceReport={ok:false,error:{message:String(error)}};
-     content.textContent=`ERROR: ${String(error)}\n\n${error.stack||""}`;
-     console.error("Motor universal: la comprobación no pudo ejecutarse.",error);
-   }
-   container.onclick=()=>{container.style.display="none"};
+const params=new URLSearchParams(location.search);
+const motorParam=params.get("motor");
+const container=document.getElementById("motorUniversalContainer");
+const content=document.getElementById("motorUniversalContent");
+
+console.log("Motor param detected:",motorParam);
+
+if(motorParam==="universal" && container){
+ container.style.display="block";
+ content.textContent="Comprobando motor universal... por favor espera.";
+ console.log("Starting motor universal verification");
+
+ try{
+   console.log("Importing verifyLiveEquivalence");
+   const {verifyLiveEquivalence}=await import("./src/application/verify-live-equivalence.js");
+   console.log("Getting snapshot");
+   const snapshot=window.mis36LegacySnapshot();
+   console.log("Running verification");
+   const report=await verifyLiveEquivalence(snapshot);
+   console.log("Verification complete:",report);
+   window.mis36EquivalenceReport=report;
+   content.textContent=`Resultado:\n${"=".repeat(40)}\n\n${JSON.stringify(report,null,2)}`;
+   console[report.ok?"info":"error"](
+     report.ok
+       ?`Motor universal: equivalencia confirmada (${report.counts.events} eventos, ${report.elapsedMs}ms)`
+       :"Motor universal: equivalencia NO se cumple",
+     report
+   );
+ }catch(error){
+   console.error("Motor universal error:",error);
+   window.mis36EquivalenceReport={ok:false,error:{message:String(error)}};
+   content.textContent=`ERROR en motor universal:\n\n${String(error)}\n\n${error.stack||"No stack"}`;
  }
+ container.onclick=()=>{container.style.display="none"};
 }
 </script>
 </body>
