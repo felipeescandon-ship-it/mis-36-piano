@@ -6,9 +6,6 @@
   "engines": {
     "node": "24.x"
   },
-  "scripts": {
-    "test": "node --test"
-  },
   "dependencies": {
     "@vercel/blob": "2.6.1"
   }
