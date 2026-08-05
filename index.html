@@ -1084,7 +1084,7 @@ const makeSection=(name,rows)=>({
    uid:`${line}:${chordIndex}`,chord,lyric,line,beats:4,inversion:defaultInversions[chord]
  })))
 });
-let sections=[
+const mis36Sections=[
 makeSection("Introducción",[
  ["Introducción instrumental","E","F#","A","E","C#m","F#","Am"],
  ["Entrada: Esto no es solo un atajo","E"]
@@ -1319,11 +1319,10 @@ makeSection("Final",[
 ];
 
 // Fase 1 del plan multi-canción (docs/plan-multi-cancion.md): modelo genérico
-// de canción. "Mis 36" pasa a ser la canción semilla del registro; el resto
-// del archivo sigue leyendo `sections` directamente porque, mientras no se
-// previsualice otra canción, es la misma referencia que
-// SONGS["mis-36"].sections, así que el editor puede seguir mutándola en
-// sitio sin que nada más cambie de comportamiento.
+// de canción. "Mis 36" pasa a ser la canción semilla del registro. `SONGS`
+// guarda solo semillas de solo lectura (nunca se mutan); `sections` es un
+// clon de trabajo por canción (ver `cloneSongSections`), para que cambiar de
+// canción y volver no arrastre mutaciones de una sesión de edición anterior.
 const SONGS={
  "mis-36":{
    id:"mis-36",
@@ -1331,7 +1330,7 @@ const SONGS={
    artist:"",
    originalKey:"E",
    sourceText:null,
-   sections
+   sections:mis36Sections
  },
  "viveme":{
    id:"viveme",
@@ -1352,10 +1351,14 @@ const SONGS={
 };
 let currentSongId="mis-36";
 function currentSong(){return SONGS[currentSongId]}
+function cloneSongSections(songId){return JSON.parse(JSON.stringify(SONGS[songId].sections))}
+let sections=null;
 
-// Fase 3 del plan multi-canción (docs/plan-multi-cancion.md): catálogo
-// dinámico. Cada canción tiene su propio almacenamiento namespaced; solo
-// "mis-36" sincroniza con la nube hasta que exista la API genérica (Fase 4).
+// Fase 3 del plan multi-canción (docs/plan-multi-cancion.md): cada canción
+// tiene su propio almacenamiento namespaced; solo "mis-36" sincroniza con la
+// nube hasta que exista la API genérica (Fase 4). El catálogo (`loadCatalog`)
+// todavía solo ordena canciones que existen como constante en `SONGS` —
+// aceptar canciones que solo viven en almacenamiento es trabajo de la Fase 4.
 const CATALOG_KEY="piano-catalog-v1";
 const LAST_SONG_KEY="piano-last-song";
 function songStorageKey(songId,suffix){return `piano-song:${songId}:${suffix}`}
@@ -1386,13 +1389,7 @@ migrateLegacyMis36Storage();
 const songCatalog=loadCatalog();
 currentSongId=readPreference(LAST_SONG_KEY,"mis-36");
 if(!SONGS[currentSongId])currentSongId="mis-36";
-sections=SONGS[currentSongId].sections;
-
-// Copia de los valores predeterminados antes de que nada los toque. El editor
-// muta `sections` en sitio, así que a partir de aquí deja de ser el estado
-// original: lo que el usuario cambie viaja por songSync, no por estas
-// estructuras.
-const LEGACY_DEFAULTS=JSON.parse(JSON.stringify({voicings,defaultInversions,voicingVariants,sections}));
+sections=cloneSongSections(currentSongId);
 
 let SONG_SYNC_KEY=songStorageKey(currentSongId,"sync-v1");
 let CLOUD_REVISION_KEY=songStorageKey(currentSongId,"cloud-revision");
@@ -1491,7 +1488,7 @@ function switchToSong(songId){
  stopAuto();
  if(cloudSaveTimer){clearTimeout(cloudSaveTimer);cloudSaveTimer=null}
  currentSongId=songId;
- sections=SONGS[songId].sections;
+ sections=cloneSongSections(songId);
  SONG_SYNC_KEY=songStorageKey(songId,"sync-v1");
  CLOUD_REVISION_KEY=songStorageKey(songId,"cloud-revision");
  CLOUD_DIRTY_KEY=songStorageKey(songId,"cloud-dirty");

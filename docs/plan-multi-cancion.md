@@ -113,28 +113,50 @@ silenciosa.
 ### Fase 3 — Migración de "Mis 36" y catálogo dinámico
 
 - "Mis 36" se convierte al schema de la Fase 1 y se copia como primera
-  entrada del **catálogo dinámico** (fuente de verdad real, no el registro
-  estático en el HTML).
+  entrada del catálogo.
 - Claves de estado renombradas a un prefijo neutral versionado
   (`piano-song:*`), namespaceadas por `songId`.
 - Migración automática: si existen las claves viejas y no las nuevas, se
   copian una sola vez.
 - Selector de canción en el header. La app abre la última canción usada, o
   "Mis 36" la primera vez.
+- **Ajustado tras revisión de Fase 4:** el catálogo entregado en esta fase
+  todavía solo ordena canciones que existen como constante en el HTML
+  (`loadCatalog()` descarta cualquier id ajeno a `SONGS`) — no es aún fuente
+  de verdad real. Ese salto (aceptar canciones que solo existen en
+  almacenamiento) se hace recién en la Fase 4, junto con el cambio de
+  formato de sincronización que lo hace posible. También se corrigió en esta
+  base un bug de mutación: `sections` pasó de ser la misma referencia que la
+  semilla de "Mis 36" (mutada en sitio en cada sesión) a un clon de trabajo
+  por canción (`cloneSongSections`), para que cambiar de canción y volver no
+  arrastre estado de una sesión de edición anterior.
 
-### Fase 4 — API genérica (sin listas blancas por canción)
+### Fase 4 — API genérica y catálogo real (sin listas blancas por canción)
 
+- El documento sincronizado deja de ser un **diff de overrides** contra una
+  canción hardcodeada (formato `songSync` actual, ilegible sin el código) y
+  pasa a ser **la canción completa**: `{id, title, artist, originalKey,
+  sections:[{name, lines, events}], sourceText, revision, updatedAt}`. Este
+  cambio es el que permite que la Fase 6 (importador) guarde canciones que no
+  existen en el HTML, sin inventar un segundo formato ni migrar el primero.
+- `SONGS` pasa a ser semilla de solo lectura; el catálogo persistido
+  (`loadCatalog()`) acepta canciones que solo existen en `localStorage`/Blob.
 - `api/song-sync.js` deja de depender de `SECTION_LINE_COUNTS`/
-  `ALLOWED_CHORDS` fijos. Valida **estructura**, no contenido conocido:
-  tipos, límites de tamaño, rangos numéricos razonables, símbolo de acorde
-  como string acotado (largo máximo, charset permitido).
+  `ALLOWED_CHORDS` fijos. Valida **estructura** derivada del propio
+  documento (tipos, límites de tamaño, rangos numéricos, símbolo de acorde
+  como string acotado en largo y charset), no una lista cerrada de
+  contenido conocido.
 - Cada canción: documento propio (`songs/<songId>/current.json` +
-  `songs/<songId>/history/...`).
+  `songs/<songId>/history/...`), y el `PUT` escribe de verdad `current.json`
+  en cada guardado — hoy solo escribe en `history/` y cada lectura lista el
+  prefijo completo para encontrar el blob más reciente, un costo que crece
+  sin límite con la cantidad de guardados históricos.
 - Conflictos por revisión: se extiende el mecanismo que ya existe hoy, por
   canción individual.
 - Fallback de lectura: si `songs/mis-36/current.json` no existe, se lee
-  `mis36/current.json` (ruta actual en producción) para no perder el
-  historial existente.
+  `mis36/current.json` (ruta actual en producción, formato diff viejo) y se
+  convierte a canción completa aplicando los overrides sobre la semilla, sin
+  tocar el blob viejo.
 
 ### Fase 5 — Sincronización del catálogo
 
@@ -244,32 +266,23 @@ Bm7b5                 3
 los acordes teóricamente posibles. Esta lista es la única fuente de qué
 construir; no hay taxonomía pre-declarada de familias a llenar.
 
-### Fase 3 — Taller mínimo de voicings
+### Fase 3 — Expandir según el repertorio elegido
 
-Herramienta interna simple, no forma parte del cancionero:
-
-- Elegir un acorde aprobado como referencia.
-- Duplicar y transponer automáticamente a la nueva fundamental.
-- Ajustar notas/octavas/reparto entre manos a mano.
-- Escuchar el acorde aislado y en contexto (progresión o canción real).
-- Guardar como aprobado, o descartar.
-
-Sin comparador visual, sin control de tempo/sustain en vivo, sin estados de
-borrador separados, sin editor de digitación — se agrega después solo si
-hace falta.
-
-### Fase 4 — Expandir según el repertorio elegido
-
-Para cada acorde de la lista de la Fase 2, en orden de frecuencia:
+No hizo falta construir una herramienta interna de taller: los 9 acordes de
+KM0 (Fase 4 original, ver historial de commits) se agregaron directamente en
+`voicings`/`voicingVariants`/`defaultInversions`, verificando cada uno por
+aritmética de semitonos contra un acorde ya aprobado de la misma familia
+antes de escucharlo. El proceso real, por acorde de la lista de la Fase 2 en
+orden de frecuencia:
 
 1. Identificar su calidad exacta.
 2. Elegir un acorde aprobado de la misma familia (o, si es la primera vez que
    aparece esa familia, construirlo desde cero por teoría estándar, igual
    que se hizo con los 12 originales).
-3. Duplicar y transponer.
+3. Duplicar y transponer por aritmética de semitonos, a mano.
 4. Ajustar registro, octavas, reparto entre manos.
-5. Escucharlo aislado, en 2-3 progresiones, y en la canción real donde
-   aparece.
+5. Escucharlo tocando la canción real donde aparece (la aprobación aislada o
+   en progresiones sueltas queda como paso opcional, no obligatorio).
 6. Aprobarlo → queda disponible para toda la biblioteca (con su alias si
    corresponde).
 
@@ -277,7 +290,7 @@ Una propuesta nunca sobrescribe un voicing aprobado; para cambiarlo se crea
 una variante nueva. No se construyen acordes que el repertorio elegido no
 use.
 
-### Fase 5 — Variantes (solo bajo demanda)
+### Fase 4 — Variantes (solo bajo demanda)
 
 Cada acorde tiene una variante principal obligatoria. Se agrega una segunda
 variante (conducción cercana) solo si una canción real la necesita.
@@ -296,7 +309,9 @@ Un voicing se aprueba solo si:
 - No cruza las manos accidentalmente y es razonablemente tocable.
 - Enlaza bien con los acordes vecinos y suena coherente con "Mis 36" (mismo
   piano, sustain, dinámica, reverberación).
-- Funciona dentro de la canción real, no solo aislado.
+- Se verificó por aritmética de semitonos contra un acorde ya aprobado de la
+  misma familia, y se escuchó tocando la canción real donde aparece (no hace
+  falta un paso previo aislado si la canción real ya lo confirma).
 
 ### Definición de "listo" (Parte B)
 
@@ -314,9 +329,8 @@ Un voicing se aprueba solo si:
 ```
 Congelar los 12 originales
 → elegir repertorio real y priorizar por frecuencia
-→ taller mínimo de voicings
 → expandir solo lo que el repertorio pide, por orden de frecuencia
-→ escuchar y aprobar en contexto real
+  (aritmética de semitonos + escuchar en la canción real)
 → variantes solo si una canción real lo exige
 ```
 
