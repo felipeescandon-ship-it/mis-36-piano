@@ -196,6 +196,52 @@ silenciosa.
 - Borrado suave (`deleted:true` en el manifiesto) + deshacer inmediato
   (toast). Sin papelera navegable en v1.
 
+### Prerrequisito de la Fase 6 — acordes pendientes, sin caída
+
+Al empezar a construir el importador se confirmó un hallazgo crítico: la app
+**no tenía ningún camino de degradación** para un acorde fuera de la
+biblioteca curada. `resolveVoicing()` asumía siempre `voicings[chord]`
+presente; con un acorde desconocido lanzaba `TypeError` sin captura en
+`render()`, y los validadores del cliente descartaban o rechazaban esos
+eventos en silencio. El criterio de éxito #3 de este plan ("degrada
+elegantemente") era aspiracional, no implementado — y el criterio #2 pide
+justamente probar con una canción real que use acordes que "Mis 36" nunca
+tocó, el escenario que rompía la app.
+
+**Implementado como prerrequisito, antes del parser:**
+
+- `resolveVoicing(chord,inversion)` devuelve un objeto "pendiente"
+  (`{l:null,r:[],inv:"",inversion:"root",pending:true}`) en vez de explotar
+  cuando el acorde no está en `voicings`/`voicingVariants`. Único punto de
+  cambio que cubre casi todos los sitios de lectura (teclado, notas,
+  digitación), porque todos consumen su forma `{l,r,inv}`.
+- `playChord` ve `pending` y no reproduce nada, pero respeta los `beats` del
+  evento — el resto de la canción no se desincroniza, el silencio ocupa
+  exactamente el lugar del acorde que falta.
+- `chordText`, `noteText`, `keyHint` devuelven el símbolo original o un
+  marcador neutro (`"—"`) en vez de la cadena `"undefined"`.
+- Los validadores del cliente (`applyFullDocument`, `applyLegacyDiff`,
+  `validatedSongDocument`) dejan de exigir pertenencia a la biblioteca:
+  solo exigen que el símbolo tenga forma válida (mismo patrón que ya usaba
+  el servidor desde la Fase 4) y que la inversión sea una de las tres reales
+  (`root`/`first`/`second`, con `"root"` como default seguro). Un acorde
+  pendiente sobrevive guardar, cargar, sincronizar y exportar sin perderse.
+- Marcado visible: en la vista Letra el botón del acorde pendiente se ve con
+  borde ámbar y la palabra "pendiente"; en la guía de Práctica y en el
+  detalle de acorde se explica que ese cambio no se puede practicar/sonar
+  todavía, en vez de mostrar datos vacíos sin explicación.
+- Descartado deliberadamente: generar un voicing por fórmula para acordes
+  desconocidos. Resolvería el silencio, pero contradice dos decisiones ya
+  tomadas ("no se reemplaza por un motor genérico", "nunca por generación
+  algorítmica silenciosa" en la Parte B) y haría sonar acordes nunca
+  aprobados por oído.
+- Verificado: `resolveVoicing`/`chordText`/`render`/`playChord` con un
+  acorde inventado no lanzan error; el acorde pendiente sobrevive
+  guardado→recarga y sincronización entre "dos dispositivos" sin
+  descartarse; `verifyVoicingLibraryIntegrity()` sigue pasando (los 12
+  originales, intactos); un acorde ya aprobado (`E`) resuelve exactamente
+  igual que antes del cambio.
+
 ### Fase 6 — Importador (copiar y pegar, acotado)
 
 Cobertura v1, en orden de prioridad:

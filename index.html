@@ -236,6 +236,9 @@ body:not(.song-editing) .song-editor-actions{display:none}
 .song-chord.current-song-chord[aria-current="true"]{box-shadow:0 1px 0 rgba(11,111,244,.08)}
 .song-chord.next-song-chord:not(.current-song-chord)::after{content:"";position:absolute;left:9px;bottom:3px;width:16px;height:2px;border-radius:2px;background:#9a5700}
 .song-chord.loop-song-chord{box-shadow:inset 0 -3px 0 #8b5cf6}
+.song-chord.pending-chord{border-left-color:var(--amber);opacity:.78}
+.song-chord.pending-chord .song-chord-name{color:var(--amber)}
+.song-chord.pending-chord .song-chord-notes::after{content:"pendiente";font-style:italic}
 .song-word-row{display:flex;gap:6px clamp(9px,.9vw,13px);flex-wrap:wrap;align-items:flex-end}
 .song-word-cell{display:grid;grid-template-rows:auto auto;justify-items:start;min-width:0;max-width:100%}
 .song-phrase-cell{flex:0 1 auto;width:max-content}
@@ -1072,7 +1075,16 @@ function inversionText(id){
  if(notationMode==="en")return {root:"Root position",first:"1st inversion",second:"2nd inversion"}[id];
  return {root:"Fundamental",first:"1.ª inversión",second:"2.ª inversión"}[id];
 }
+// Un acorde "pendiente" es uno que la canción usa pero que la biblioteca
+// curada todavía no tiene (por ejemplo, recién llegado de una canción nueva).
+// No es un error: es el estado normal previo a construir su voicing a mano.
+// La app lo conserva, lo muestra y lo cuenta, pero no lo hace sonar — nunca
+// inventa un voicing por fórmula (ver docs/plan-multi-cancion.md, Parte B).
+function chordIsPending(chord){return !voicings[chord]||!voicingVariants[chord]}
+const PENDING_VOICING=Object.freeze({l:null,r:[],inv:"",inversion:"root",pending:true});
+const PENDING_CHORD_HINT="Acorde pendiente · todavía no tiene posición en la biblioteca, no suena";
 function resolveVoicing(chord,inversion){
+ if(chordIsPending(chord))return PENDING_VOICING;
  const id=voicingVariants[chord]?.[inversion]?inversion:defaultInversions[chord];
  return {...voicings[chord],r:voicingVariants[chord][id],inv:inversionText(id),inversion:id};
 }
@@ -1415,6 +1427,15 @@ function assignDefaultAnchors(targetSections=sections){
    });
  });
 }
+// Un acorde puede llegar a la sincronización sin estar todavía en la
+// biblioteca curada (ver PENDING_VOICING más arriba): se guarda tal cual en
+// vez de descartarlo, así no se pierde nada mientras se construye su
+// voicing. Estas dos funciones son el equivalente cliente de lo que ya
+// valida el servidor (api/song-sync.js): forma del símbolo, no pertenencia
+// a la biblioteca.
+const CHORD_SYMBOL_PATTERN=/^[A-Za-z0-9#b°+/]{1,16}$/;
+function isWellFormedChordSymbol(value){return typeof value==="string"&&CHORD_SYMBOL_PATTERN.test(value)}
+function resolvedInversion(chord,inversion){return voicingVariants[chord]?.[inversion]?inversion:(defaultInversions[chord]||"root")}
 // Aplica el formato viejo de sincronización (diff de overrides contra la
 // canción semilla, versiones 2-4 del plan pre-Fase 4) sobre un array de
 // secciones ya clonado. Devuelve las claves de eventos originales borrados,
@@ -1426,14 +1447,14 @@ function applyLegacyDiff(targetSections,saved){
  if(saved.version>=3&&Array.isArray(saved.added)){
    saved.added.forEach(value=>{
      const section=targetSections[value.section];
-     if(!section||!voicings[value.chord]||typeof value.uid!=="string"||!value.uid.startsWith("custom:"))return;
+     if(!section||!isWellFormedChordSymbol(value.chord)||typeof value.uid!=="string"||!value.uid.startsWith("custom:"))return;
      if(section.events.some(event=>event.uid===value.uid))return;
      const line=Number.isInteger(value.line)?Math.min(Math.max(value.line,0),section.lines.length-1):0;
      section.events.push({
        uid:value.uid,chord:value.chord,line,lyric:section.lines[line],
        anchor:Number.isInteger(value.anchor)?value.anchor:0,
        beats:Number.isFinite(+value.beats)&&+value.beats>0?+value.beats:4,
-       inversion:voicingVariants[value.chord]?.[value.inversion]?value.inversion:defaultInversions[value.chord]
+       inversion:resolvedInversion(value.chord,value.inversion)
      });
    });
  }
@@ -1442,8 +1463,8 @@ function applyLegacyDiff(targetSections,saved){
  targetSections.forEach((section,si)=>{
    section.events.forEach((event,defaultPosition)=>{
      const value=overrides[syncEventKey(si,event)];
-     if(value&&voicings[value.chord])event.chord=value.chord;
-     event.inversion=value&&voicingVariants[event.chord]?.[value.inversion]?value.inversion:(event.inversion||defaultInversions[event.chord]);
+     if(value&&isWellFormedChordSymbol(value.chord))event.chord=value.chord;
+     event.inversion=resolvedInversion(event.chord,value?.inversion??event.inversion);
      if(value&&Number.isInteger(value.line))event.line=Math.min(Math.max(value.line,0),section.lines.length-1);
      event.lyric=section.lines[event.line];
      const maxAnchor=lyricWords(event.lyric).length;
@@ -1496,14 +1517,14 @@ function applyFullDocument(targetSections,saved){
    if(!section||!Array.isArray(savedSection?.events))return;
    section.events=savedSection.events.filter(value=>(
      value&&typeof value.uid==="string"&&value.uid.length<=100&&
-     voicings[value.chord]&&
+     isWellFormedChordSymbol(value.chord)&&
      Number.isInteger(value.line)&&value.line>=0&&value.line<section.lines.length&&
      Number.isInteger(value.anchor)&&
      Number.isFinite(+value.beats)&&+value.beats>0
    )).map(value=>({
      uid:value.uid,
      chord:value.chord,
-     inversion:voicingVariants[value.chord]?.[value.inversion]?value.inversion:defaultInversions[value.chord],
+     inversion:resolvedInversion(value.chord,value.inversion),
      line:value.line,
      anchor:Math.min(Math.max(value.anchor,0),lyricWords(section.lines[value.line]).length),
      beats:+value.beats,
@@ -1646,9 +1667,12 @@ function songSyncExportPayload(){
    songSync:songDocumentSnapshot()
  };
 }
+const ALLOWED_INVERSIONS=new Set(["root","first","second"]);
 // Valida un documento completo (v5) contra la canción actualmente cargada:
 // mismas comprobaciones estructurales que usa la nube, más los límites de
-// línea/acorde reales de `sections` (la semilla en curso).
+// línea real de `sections` (la semilla en curso). El acorde solo se exige
+// bien formado, no que ya esté en la biblioteca — un acorde pendiente es
+// válido (ver PENDING_VOICING) y se guarda tal cual para completarlo después.
 function validatedSongDocument(data){
  if(!data||data.version!==5||!Array.isArray(data.sections)||data.sections.length>sections.length)throw new Error("El documento de la canción no es válido.");
  data.sections.forEach((savedSection,si)=>{
@@ -1656,8 +1680,8 @@ function validatedSongDocument(data){
    if(!section||!Array.isArray(savedSection?.events)||savedSection.events.length>500)throw new Error("El documento de la canción no es válido.");
    savedSection.events.forEach(value=>{
      if(!value||typeof value.uid!=="string"||value.uid.length>100)throw new Error("El documento contiene un identificador no válido.");
-     if(!voicings[value.chord])throw new Error("El documento contiene un acorde no reconocido.");
-     if(!voicingVariants[value.chord]?.[value.inversion])throw new Error("El documento contiene una inversión no reconocida.");
+     if(!isWellFormedChordSymbol(value.chord))throw new Error("El documento contiene un símbolo de acorde no válido.");
+     if(!ALLOWED_INVERSIONS.has(value.inversion))throw new Error("El documento contiene una inversión no reconocida.");
      if(!Number.isInteger(value.line)||value.line<0||value.line>=section.lines.length)throw new Error("El documento contiene una posición no válida.");
      if(!Number.isInteger(value.anchor)||value.anchor<0||value.anchor>500)throw new Error("El documento contiene un ancla no válida.");
      if(!Number.isFinite(+value.beats)||+value.beats<=0||+value.beats>32)throw new Error("El documento contiene una duración no válida.");
@@ -2043,9 +2067,13 @@ const blacks=[];
 whites.forEach((w,i)=>{const n=w.slice(0,-1),o=w.slice(-1);if(i<whites.length-1&&blackAfter[n])blacks.push({note:blackAfter[n]+o,position:i+1})});
 
 function baseNote(note){return note.match(/^([A-G]#?)/)[1]}
-function noteText(note,chord=null){const physical=baseNote(note),spell=chord&&voicings[chord]?.spell,n=spell?.[note]||spell?.[physical]||physical;return notationMode==="es"?NOTE_ES[n]:n}
-function keyHint(note,chord){const physical=baseNote(note),spell=chord&&voicings[chord]?.spell,written=spell?.[note]||spell?.[physical];if(!written)return "";return notationMode==="es"?` (tecla ${NOTE_ES[physical]})`:` (${physical} key)`}
-function chordText(chord){return notationMode==="es"?CHORD_ES[chord]:chord}
+// note es null cuando el acorde está pendiente (PENDING_VOICING.l/r vacíos):
+// no hay nota real que nombrar todavía.
+function noteText(note,chord=null){if(note===null)return "—";const physical=baseNote(note),spell=chord&&voicings[chord]?.spell,n=spell?.[note]||spell?.[physical]||physical;return notationMode==="es"?NOTE_ES[n]:n}
+function keyHint(note,chord){if(note===null)return "";const physical=baseNote(note),spell=chord&&voicings[chord]?.spell,written=spell?.[note]||spell?.[physical];if(!written)return "";return notationMode==="es"?` (tecla ${NOTE_ES[physical]})`:` (${physical} key)`}
+// Un acorde pendiente no tiene traducción al español todavía: se muestra su
+// símbolo original tal como llegó, en vez de "undefined".
+function chordText(chord){return notationMode==="es"?(CHORD_ES[chord]||chord):chord}
 function renderChordNotes(element,notes){
  element.replaceChildren(...notes.map(note=>{
    const chip=document.createElement("span");
@@ -2171,6 +2199,7 @@ function nextDifferentLyric(si,ei){
 }
 function lyricsCueDetail(event){
  const voicing=resolveVoicing(event.chord,event.inversion);
+ if(voicing.pending)return PENDING_CHORD_HINT;
  const notes=lyricsChordNotes(event);
  const noteDetail=showLyricsChordNotes?`Notas MD: ${notes.join(" – ")} · `:"";
  return `${noteDetail}Posición MD: ${voicing.inv} · Bajo: ${noteText(voicing.l,event.chord)}`;
@@ -2287,9 +2316,18 @@ function updatePracticeGuide(){
    practiceStart.disabled=true;
    return;
  }
- practiceStart.disabled=false;
  const currentVoicing=resolveVoicing(currentEvent.chord,currentEvent.inversion);
  const nextVoicing=resolveVoicing(nextEvent.chord,nextEvent.inversion);
+ // Sin las dos posiciones no hay movimiento de dedos que describir ni cambio
+ // que practicar: se nombra el par y se explica por qué está deshabilitado.
+ if(currentVoicing.pending||nextVoicing.pending){
+   practiceRoute.textContent=`${chordText(currentEvent.chord)} → ${chordText(nextEvent.chord)}`;
+   const pendingNames=[...new Set([currentEvent.chord,nextEvent.chord].filter(chordIsPending))].map(chordText);
+   practiceMovement.textContent=`${pendingNames.join(" y ")} ${pendingNames.length>1?"están pendientes":"está pendiente"}: sin posición en la biblioteca todavía, este cambio no se puede practicar.`;
+   practiceStart.disabled=true;
+   return;
+ }
+ practiceStart.disabled=false;
  const currentByFinger=new Map(currentVoicing.r.map(([note,finger])=>[String(finger),note]));
  const nextByFinger=new Map(nextVoicing.r.map(([note,finger])=>[String(finger),note]));
  const held=[],moved=[];
@@ -2354,8 +2392,8 @@ function render(){
  const vc=resolveVoicing(cur,event.inversion),vn=resolveVoicing(next,nextEvent.inversion);
  renderChordNotes(currentNotes,vc.r.map(([note])=>noteText(note,cur)));
  renderChordNotes(nextNotes,vn.r.map(([note])=>noteText(note,next)));
- currentSub.textContent=`MI: ${noteText(vc.l,cur)} (5) · MD: ${vc.r.map(x=>noteText(x[0],cur)+keyHint(x[0],cur)).join("–")} (${vc.r.map(x=>x[1]).join("–")}) · Posición MD: ${vc.inv}`;
- nextSub.textContent=`MI: ${noteText(vn.l,next)} (5) · MD: ${vn.r.map(x=>noteText(x[0],next)+keyHint(x[0],next)).join("–")} (${vn.r.map(x=>x[1]).join("–")}) · Posición MD: ${vn.inv}`;
+ currentSub.textContent=vc.pending?PENDING_CHORD_HINT:`MI: ${noteText(vc.l,cur)} (5) · MD: ${vc.r.map(x=>noteText(x[0],cur)+keyHint(x[0],cur)).join("–")} (${vc.r.map(x=>x[1]).join("–")}) · Posición MD: ${vc.inv}`;
+ nextSub.textContent=vn.pending?PENDING_CHORD_HINT:`MI: ${noteText(vn.l,next)} (5) · MD: ${vn.r.map(x=>noteText(x[0],next)+keyHint(x[0],next)).join("–")} (${vn.r.map(x=>x[1]).join("–")}) · Posición MD: ${vn.inv}`;
  keyboard(currentKeyboard,cur,false,next,event.inversion,nextEvent.inversion);
  keyboard(nextKeyboard,next,true,null,nextEvent.inversion);
  updateLyricsCue();
@@ -2412,16 +2450,19 @@ function renderFullSong(){
          if(si===upcoming.section&&item.step===upcoming.step)chordButton.classList.add("next-song-chord");
          if(isLoopPosition(si,item.step))chordButton.classList.add("loop-song-chord");
          if(songEditMode&&selectedSyncEvent?.section===si&&selectedSyncEvent?.step===item.step)chordButton.classList.add("selected-edit");
+         const isPending=chordIsPending(item.event.chord);
+         if(isPending)chordButton.classList.add("pending-chord");
          const chordNotes=lyricsChordNotes(item.event);
          renderLyricsChordLabel(chordButton,item.event);
          const anchorDescription=anchor<words.length
            ?`${notationMode==="es"?"sobre la palabra":"over the word"} “${words[anchor]}”`
            :(notationMode==="es"?"al final de la línea":"at the end of the line");
-         chordButton.setAttribute("aria-label",songEditMode
+         const pendingSuffix=isPending?(notationMode==="es"?". Pendiente: sin posición en la biblioteca, no suena todavía":". Pending: no library voicing yet, silent for now"):"";
+         chordButton.setAttribute("aria-label",(songEditMode
            ?`Seleccionar ${chordText(item.event.chord)} en ${sectionData.name}, línea ${lineIndex+1}`
            :showLyricsChordNotes
              ?`${notationMode==="es"?"Acorde":"Chord"} ${spokenMusicName(chordText(item.event.chord))}. ${notationMode==="es"?"Notas":"Notes"}: ${spokenMusicList(chordNotes)}. ${anchorDescription}.`
-             :`${notationMode==="es"?"Acorde":"Chord"} ${spokenMusicName(chordText(item.event.chord))}, ${anchorDescription}.`);
+             :`${notationMode==="es"?"Acorde":"Chord"} ${spokenMusicName(chordText(item.event.chord))}, ${anchorDescription}.`)+pendingSuffix);
          chordButton.onclick=()=>{
            if(songEditMode){selectSyncEvent(si,item.step);playChord(item.event.chord,item.event.inversion,item.event.beats)}
            else showLyricsChordPreview(si,item.step,chordButton);
@@ -2744,6 +2785,10 @@ function playFallback(notes,beats=4){
  activeAudioGroup={master,sources};
 }
 async function playChord(chord,inversion=null,beats=4){
+ // Acorde pendiente: no suena, pero la reproducción sigue su curso normal.
+ // El silencio ocupa los mismos beats, así que el resto de la canción no se
+ // desincroniza y el hueco se escucha donde realmente está.
+ if(chordIsPending(chord))return;
  const audioRunning=await resumeAudio();
  if(!audioRunning)return;
  const v=resolveVoicing(chord,inversion),notes=[v.l,...v.r.map(x=>x[0])];
