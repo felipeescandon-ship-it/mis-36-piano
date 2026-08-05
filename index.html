@@ -534,6 +534,7 @@ button.song-line-end{padding:3px 8px}
       <input id="importSongSyncFile" type="file" accept=".json,application/json" hidden>
       <span id="songDataStatus" class="data-status" aria-live="polite"></span>
       <span id="cloudStatus" class="data-status" aria-live="polite">Nube: comprobando…</span>
+      <span id="catalogSyncStatus" class="data-status" aria-live="polite"></span>
     </div>
   </div>
 </div>
@@ -801,6 +802,7 @@ const cloudSyncNow=document.getElementById("cloudSyncNow");
 const cloudUseLocal=document.getElementById("cloudUseLocal");
 const cloudUseRemote=document.getElementById("cloudUseRemote");
 const cloudStatus=document.getElementById("cloudStatus");
+const catalogSyncStatus=document.getElementById("catalogSyncStatus");
 const pianoViewButton=document.getElementById("pianoViewButton");
 const lyricsViewButton=document.getElementById("lyricsViewButton");
 const openEditor=document.getElementById("openEditor");
@@ -2103,6 +2105,159 @@ async function cloudFetch(resource,options={}){
  const timeout=setTimeout(()=>controller.abort(),12000);
  try{return await fetch(resource,{...options,signal:controller.signal})}
  finally{clearTimeout(timeout)}
+}
+// ---- Fase 5 del plan multi-canción: sincronización del catálogo ----
+// El manifiesto es solo el índice (quién existe, en qué orden, borrado o
+// no) — el contenido de cada canción sigue viajando por su propio
+// documento (/api/song-sync?songId=...), sin cambios. Igual mecanismo de
+// revisión que ya usa la sincronización por canción, aplicado a un único
+// documento global en vez de uno por canción.
+const CATALOG_CLOUD_REVISION_KEY="piano-catalog-cloud-revision";
+let catalogCloudRevision=readPreference(CATALOG_CLOUD_REVISION_KEY,"");
+let catalogRequestRunning=false,catalogSaveTimer=null;
+function setCatalogSyncStatus(textValue,state=""){
+ if(!catalogSyncStatus)return;
+ catalogSyncStatus.textContent=textValue;
+ catalogSyncStatus.className="data-status"+(state?" "+state:"");
+}
+function buildCatalogManifest(){
+ const nowIso=new Date().toISOString();
+ return {
+   entries:songCatalog.map((songId,order)=>{
+     const song=songMeta(songId);
+     if(!song)return null;
+     return {
+       songId,
+       title:song.title||"",
+       artist:song.artist||"",
+       originalKey:song.originalKey||"",
+       order,
+       revision:readPreference(songStorageKey(songId,"cloud-revision"),""),
+       updatedAt:nowIso,
+       deleted:false
+     };
+   }).filter(Boolean)
+ };
+}
+async function saveCatalogToCloud(force=false){
+ if(catalogRequestRunning)return false;
+ catalogRequestRunning=true;
+ setCatalogSyncStatus("Catálogo: sincronizando…","warning");
+ try{
+   const response=await cloudFetch("/api/catalog-sync",{
+     method:"PUT",
+     headers:{"Content-Type":"application/json"},
+     body:JSON.stringify({manifest:buildCatalogManifest(),baseRevision:catalogCloudRevision||null,force})
+   });
+   const result=await response.json().catch(()=>({}));
+   if(response.status===409){
+     catalogRequestRunning=false;
+     return await loadCatalogFromCloud(true);
+   }
+   if(response.status===503){setCatalogSyncStatus("Catálogo: nube pendiente de activar","warning");return false}
+   if(response.status===429){
+     if(catalogSaveTimer)clearTimeout(catalogSaveTimer);
+     catalogSaveTimer=setTimeout(()=>saveCatalogToCloud(force),1600);
+     return false;
+   }
+   if(!response.ok)throw new Error(result.message||result.error||"No fue posible guardar el catálogo.");
+   catalogCloudRevision=result.revision;
+   savePreference(CATALOG_CLOUD_REVISION_KEY,catalogCloudRevision);
+   setCatalogSyncStatus("Catálogo: sincronizado","ready");
+   return true;
+ }catch(error){
+   console.warn("Catalog cloud save unavailable",error);
+   setCatalogSyncStatus("Catálogo: sin conexión","error");
+   return false;
+ }finally{
+   catalogRequestRunning=false;
+ }
+}
+// Trae una canción que el manifiesto conoce pero que este dispositivo
+// todavía no tiene (importada desde otro dispositivo). Solo entiende el
+// formato nuevo por canción (piano-song-cloud-v1) — el formato legado de
+// "mis-36" nunca puede llegar por esta vía porque esa canción ya existe
+// localmente siempre (es una semilla hardcodeada).
+async function materializeRemoteSong(entry){
+ try{
+   const response=await cloudFetch(`/api/song-sync?songId=${encodeURIComponent(entry.songId)}`,{cache:"no-store",headers:{"Accept":"application/json"}});
+   if(!response.ok)return false;
+   const result=await response.json().catch(()=>({}));
+   if(!result||result.empty||result.format!=="piano-song-cloud-v1")return false;
+   const song=result.song;
+   if(!song||song.version!==5||!Array.isArray(song.sections))return false;
+   localStorage.setItem(songStorageKey(entry.songId,"sync-v1"),JSON.stringify(song));
+   localStorage.setItem(songStorageKey(entry.songId,"cloud-revision"),result.revision);
+   dynamicSongs[entry.songId]={
+     id:entry.songId,title:entry.title,artist:entry.artist,
+     originalKey:entry.originalKey,sourceText:null,createdAt:entry.updatedAt
+   };
+   return true;
+ }catch{return false}
+}
+async function loadCatalogFromCloud(forceRefresh=false){
+ if(catalogRequestRunning&&!forceRefresh)return false;
+ catalogRequestRunning=true;
+ setCatalogSyncStatus("Catálogo: comprobando…");
+ try{
+   const response=await cloudFetch("/api/catalog-sync",{cache:"no-store",headers:{"Accept":"application/json"}});
+   const result=await response.json().catch(()=>({}));
+   if(response.status===503){setCatalogSyncStatus("Catálogo: nube pendiente de activar","warning");return false}
+   if(response.status===404&&result.empty){
+     catalogRequestRunning=false;
+     if(songCatalog.length)return await saveCatalogToCloud(true);
+     setCatalogSyncStatus("Catálogo: nube vacía","warning");
+     return false;
+   }
+   if(!response.ok)throw new Error(result.error||"No fue posible leer el catálogo.");
+   if(result.format!=="piano-catalog-cloud-v1"||!result.manifest||!Array.isArray(result.manifest.entries)){
+     throw new Error("El catálogo de la nube no es válido.");
+   }
+   const remoteEntries=result.manifest.entries;
+   let changed=false;
+   for(const entry of remoteEntries){
+     // El borrado suave (deleted:true) todavía no lo produce nada — la
+     // Fase 8 construye la acción de borrar. El campo ya viaja en el
+     // manifiesto para no tener que cambiar el formato después.
+     if(entry.deleted)continue;
+     if(!songExists(entry.songId)){
+       if(await materializeRemoteSong(entry)){
+         if(!songCatalog.includes(entry.songId))songCatalog.push(entry.songId);
+         changed=true;
+       }
+     }else if(dynamicSongs[entry.songId]){
+       const local=dynamicSongs[entry.songId];
+       if(local.title!==entry.title||local.artist!==entry.artist||local.originalKey!==entry.originalKey){
+         dynamicSongs[entry.songId]={...local,title:entry.title,artist:entry.artist,originalKey:entry.originalKey};
+         changed=true;
+       }
+     }
+   }
+   if(changed)saveDynamicSongs();
+   const orderedRemoteIds=remoteEntries.filter(entry=>!entry.deleted).sort((a,b)=>a.order-b.order).map(entry=>entry.songId);
+   const remaining=songCatalog.filter(id=>!orderedRemoteIds.includes(id));
+   const reordered=[...orderedRemoteIds.filter(id=>songCatalog.includes(id)),...remaining];
+   if(JSON.stringify(reordered)!==JSON.stringify(songCatalog)){
+     songCatalog=reordered;
+     changed=true;
+   }
+   if(changed){
+     persistCatalog();
+     initSongSelector();
+   }
+   catalogCloudRevision=result.revision;
+   savePreference(CATALOG_CLOUD_REVISION_KEY,catalogCloudRevision);
+   setCatalogSyncStatus("Catálogo: sincronizado","ready");
+   const localOnlyIds=songCatalog.filter(id=>!remoteEntries.some(entry=>entry.songId===id));
+   if(localOnlyIds.length){catalogRequestRunning=false;return await saveCatalogToCloud(false)}
+   return true;
+ }catch(error){
+   console.warn("Catalog cloud load unavailable",error);
+   setCatalogSyncStatus("Catálogo: sin conexión","error");
+   return false;
+ }finally{
+   catalogRequestRunning=false;
+ }
 }
 async function saveCloudSongSync(force=false){
  if(!songHasCloudSync(currentSongId))return false;
@@ -3626,6 +3781,7 @@ importSave.onclick=()=>{
  switchToSong(songId);
  initSongSelector();
  setMainView("edit");
+ saveCatalogToCloud();
 };
 lyricsNotesToggle.onclick=()=>{
  showLyricsChordNotes=!showLyricsChordNotes;
@@ -3651,6 +3807,7 @@ nextPianoToggle.onclick=()=>{
 nextKeyboardWrap.addEventListener("scroll",()=>syncPianoScroll(nextKeyboardWrap,currentKeyboardWrap),{passive:true});
 currentKeyboardWrap.addEventListener("scroll",()=>syncPianoScroll(currentKeyboardWrap,nextKeyboardWrap),{passive:true});
 verifyVoicingLibraryIntegrity();updateNotationToggle();updateLyricsNotesToggle();renderSyncChordOptions();renderSyncInversionOptions("E");initializeSongSync();updateSettingsSummary();updateNextPianoVisibility();initSongSelector();initSections();buildSteps();render();renderFullSong();updateSessionSummary();updateTransportControls();updateSongIdentityUi();if(songHasCloudSync(currentSongId))loadCloudSongSync();else setCloudStatus("Nube: disponible próximamente para esta canción","warning");
+loadCatalogFromCloud();
 </script>
 </body>
 </html>

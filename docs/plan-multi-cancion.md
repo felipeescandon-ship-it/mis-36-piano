@@ -196,6 +196,38 @@ silenciosa.
 - Borrado suave (`deleted:true` en el manifiesto) + deshacer inmediato
   (toast). Sin papelera navegable en v1.
 
+**Implementado** (se hizo después de la Fase 6+7, no antes, porque recién
+con el importador el catálogo tiene canciones reales que puedan divergir
+entre dispositivos — antes de eso hubiera sido infraestructura sin nada que
+ejercitar). Notas de la implementación real:
+
+- `api/catalog-sync.js`: mismo mecanismo de revisión que ya usa
+  `api/song-sync.js` (conflicto por `baseRevision`, historial inmutable),
+  aplicado a un único documento global (`catalog/current.json` +
+  `catalog/history/...`) en vez de uno por canción. Valida solo la forma del
+  manifiesto — nunca toca el contenido de una canción, que sigue viajando
+  por su propio endpoint.
+- El manifiesto no incluye `deleted:true` desde ningún productor todavía
+  (no existe la acción de borrar — eso es la Fase 8). El campo ya viaja en
+  el esquema y el cliente ya lo respeta si aparece, para no tener que tocar
+  el formato otra vez cuando se construya el borrado.
+- Al abrir la app (o al importar una canción nueva): se publica/consulta el
+  manifiesto. Una canción del manifiesto que no existe localmente se
+  materializa completa (`materializeRemoteSong`): se trae su documento vía
+  `/api/song-sync?songId=...` (el mismo endpoint de siempre) y se guarda
+  como canción dinámica, exactamente como si se hubiera importado en este
+  dispositivo. Una canción local que el manifiesto todavía no conoce
+  (recién creada, sin publicar) dispara su propia publicación.
+- Estados visibles en la interfaz: "Catálogo: sincronizando…" / "Catálogo:
+  sincronizado" / "Catálogo: sin conexión" (mismo patrón de texto que ya
+  usa la sincronización por canción).
+- Verificado con un servidor mock: catálogo publicado tras importar una
+  canción en un "dispositivo A"; un "dispositivo B" completamente
+  limpio (sin nada en `localStorage`) la descubre y materializa sola al
+  abrir la app, sin haber visitado esa canción nunca; conflicto de revisión
+  simulado (alguien más publica mientras se estaba por guardar) se
+  resuelve solo, sin intervención ni error visible.
+
 ### Prerrequisito de la Fase 6 — acordes pendientes, sin caída
 
 Al empezar a construir el importador se confirmó un hallazgo crítico: la app
