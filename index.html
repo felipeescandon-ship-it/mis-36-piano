@@ -125,6 +125,10 @@ border:1px solid rgba(0,0,0,.08)}
 display:grid;place-items:center;color:#fff;font-weight:900;z-index:7;border:2px solid #fff}
 .finger.left-f{background:var(--green)}.finger.right-f{background:var(--blue)}.finger.preview-f{background:var(--amber)}
 .finger.black-f{bottom:8px}
+.white.left.hand-inactive,.white.right.hand-inactive{background:linear-gradient(#eef2f8,#dbe3ee)}
+.black.left.hand-inactive,.black.right.hand-inactive{background:#5b6576}
+.finger.hand-inactive{background:#8b96a6;opacity:.55}
+.label.hand-inactive{opacity:.55}
 #nextKeyboardWrap[hidden]{display:none}
 .current{border-color:#b8d4f3;box-shadow:0 16px 38px rgba(21,95,192,.13)}
 .current .card-titlebar,.current>h2{background:linear-gradient(90deg,#f3f8ff,#fff)}
@@ -677,6 +681,14 @@ button.song-line-end{padding:3px 8px}
     </div>
     <div class="practice-controls">
       <label class="practice-setting">
+        <span>Manos</span>
+        <select id="practiceHands">
+          <option value="both" selected>Ambas manos</option>
+          <option value="left">Solo mano izquierda</option>
+          <option value="right">Solo mano derecha</option>
+        </select>
+      </label>
+      <label class="practice-setting">
         <span>Repeticiones</span>
         <select id="practiceRepetitions">
           <option value="2">2 veces</option>
@@ -895,6 +907,7 @@ const practiceGuide=document.getElementById("practiceGuide");
 const practiceClose=document.getElementById("practiceClose");
 const practiceRoute=document.getElementById("practiceRoute");
 const practiceMovement=document.getElementById("practiceMovement");
+const practiceHands=document.getElementById("practiceHands");
 const practiceRepetitions=document.getElementById("practiceRepetitions");
 const practiceCountIn=document.getElementById("practiceCountIn");
 const practiceStart=document.getElementById("practiceStart");
@@ -926,6 +939,8 @@ if(!["es","en"].includes(notationMode))notationMode="es";
 let keyboardViewMode=readPreference("mis36-keyboard-mode","preview");
 if(!["current","preview"].includes(keyboardViewMode))keyboardViewMode="preview";
 let sustainViewMode=readPreference("mis36-sustain-mode","natural");
+let practiceHandMode=readPreference("mis36-practice-hands","both");
+if(!["both","left","right"].includes(practiceHandMode))practiceHandMode="both";
 let showNextPiano=readPreference("mis36-show-next-piano","false")==="true";
 let syncEditorCollapsed=readPreference("mis36-editor-collapsed","true")!=="false";
 let showLyricsChordNotes=readPreference("mis36-lyrics-show-chord-notes","true")!=="false";
@@ -2746,31 +2761,33 @@ function renderSyncInversionOptions(chord,selectedId=defaultInversions[chord]){
 function midi(note){const m=note.match(/^([A-G]#?)(\d)$/),s={C:0,"C#":1,D:2,"D#":3,E:4,F:5,"F#":6,G:7,"G#":8,A:9,"A#":10,B:11};return(+m[2]+1)*12+s[m[1]]}
 function frequency(note){return 440*Math.pow(2,(midi(note)-69)/12)}
 
-function keyboard(el,chord,preview,nextChord=null,inversion=null,nextInversion=null){
+function keyboard(el,chord,preview,nextChord=null,inversion=null,nextInversion=null,handFocus="both"){
  const v=resolveVoicing(chord,inversion),left=[v.l],right=v.r.map(x=>x[0]),fingers=Object.fromEntries(v.r);
+ const leftOff=handFocus==="right",rightOff=handFocus==="left";
  el.innerHTML="";
  whites.forEach(note=>{
    const k=document.createElement("div");k.className="white";k.dataset.note=note;
-   if(left.includes(note))k.classList.add("left");
-   if(right.includes(note))k.classList.add(preview?"preview":"right");
+   if(left.includes(note))k.classList.add("left",...leftOff?["hand-inactive"]:[]);
+   if(right.includes(note))k.classList.add(preview?"preview":"right",...rightOff?["hand-inactive"]:[]);
    el.appendChild(k);
-   if(left.includes(note))marker(k,note,"5","left",false,chord);
-   if(right.includes(note))marker(k,note,fingers[note],preview?"preview":"right",false,chord);
+   if(left.includes(note))marker(k,note,"5","left",false,chord,leftOff);
+   if(right.includes(note))marker(k,note,fingers[note],preview?"preview":"right",false,chord,rightOff);
  });
  blacks.forEach(x=>{
    const k=document.createElement("div");k.className="black";k.dataset.note=x.note;k.style.left=`calc(var(--w)*${x.position})`;
-   if(left.includes(x.note))k.classList.add("left");
-   if(right.includes(x.note))k.classList.add(preview?"preview":"right");
-   if(left.includes(x.note))marker(k,x.note,"5","left",true,chord);
-   if(right.includes(x.note))marker(k,x.note,fingers[x.note],preview?"preview":"right",true,chord);
+   if(left.includes(x.note))k.classList.add("left",...leftOff?["hand-inactive"]:[]);
+   if(right.includes(x.note))k.classList.add(preview?"preview":"right",...rightOff?["hand-inactive"]:[]);
+   if(left.includes(x.note))marker(k,x.note,"5","left",true,chord,leftOff);
+   if(right.includes(x.note))marker(k,x.note,fingers[x.note],preview?"preview":"right",true,chord,rightOff);
    el.appendChild(k);
  });
- if(nextChord&&!preview&&keyboardViewMode!=="current")renderUpcoming(el,chord,nextChord,inversion,nextInversion);
+ if(nextChord&&!preview&&keyboardViewMode!=="current")renderUpcoming(el,chord,nextChord,inversion,nextInversion,handFocus);
 }
-function renderUpcoming(el,currentChord,nextChord,currentInversion,nextInversion){
+function renderUpcoming(el,currentChord,nextChord,currentInversion,nextInversion,handFocus="both"){
  const current=resolveVoicing(currentChord,currentInversion),upcoming=resolveVoicing(nextChord,nextInversion);
  const keyFor=note=>[...el.children].find(child=>child.dataset.note===note);
- if(upcoming.l!==current.l)keyFor(upcoming.l)?.classList.add("upcoming");
+ if(handFocus!=="right"&&upcoming.l!==current.l)keyFor(upcoming.l)?.classList.add("upcoming");
+ if(handFocus==="left")return;
  const currentRight=new Map(current.r.map(([note,finger])=>[note,String(finger)]));
  upcoming.r.forEach(([note,finger])=>{
    const key=keyFor(note);
@@ -2782,13 +2799,16 @@ function renderUpcoming(el,currentChord,nextChord,currentInversion,nextInversion
    key.classList.add("upcoming");
  });
 }
-function marker(k,note,finger,type,isBlack,chord){
- const l=document.createElement("div");l.className="label"+(isBlack?" black-label":"");l.textContent=noteText(note,chord);l.title=noteText(note,chord)+keyHint(note,chord);k.appendChild(l);
- const f=document.createElement("div");f.className="finger "+(type==="left"?"left-f":type==="preview"?"preview-f":"right-f")+(isBlack?" black-f":"");f.textContent=finger;k.appendChild(f);
+function marker(k,note,finger,type,isBlack,chord,inactive=false){
+ const l=document.createElement("div");l.className="label"+(isBlack?" black-label":"")+(inactive?" hand-inactive":"");l.textContent=noteText(note,chord);l.title=noteText(note,chord)+keyHint(note,chord);k.appendChild(l);
+ const f=document.createElement("div");f.className="finger "+(type==="left"?"left-f":type==="preview"?"preview-f":"right-f")+(isBlack?" black-f":"")+(inactive?" hand-inactive":"");f.textContent=finger;k.appendChild(f);
 }
 let sectionIndex=0,stepIndex=0,timer=null,cueTimer=null,audioCtx=null,isAutoPlaying=false,isPlaybackPaused=false,isTransitionLoop=false,lyricsFollowPlayback=true;
 let playQueue=[],queueIndex=0;
 let transitionPracticeCompleted=0,transitionPracticeTotal=4,transitionPracticeStart=null;
+// El foco de mano solo aplica durante el loop de práctica de una transición:
+// fuera de él (reproducción normal, edición, vista previa) siempre son ambas manos.
+function activeHandFocus(){return isTransitionLoop&&practiceHandMode!=="both"?practiceHandMode:"both"}
 let pianoSamples=[],pianoLoading=null,pianoReady=false,pianoLoadFailed=false,pianoPreloadStarted=false,reverbNode=null,activeAudioGroup=null;
 const PIANO_BASE="https://tonejs.github.io/audio/salamander/";
 const PIANO_FILES={
@@ -2976,9 +2996,11 @@ function updatePracticeGuide(){
  });
  practiceRoute.textContent=`${chordText(currentEvent.chord)} → ${chordText(nextEvent.chord)}`;
  const directions=[];
- directions.push(held.length?`Mantén ${held.join(" y ")}.`:"La mano derecha cambia de forma completa.");
- if(moved.length)directions.push(`Mueve ${moved.join("; ")}.`);
- directions.push(`Mano izquierda: ${noteText(currentVoicing.l,currentEvent.chord)} → ${noteText(nextVoicing.l,nextEvent.chord)}, con dedo 5.`);
+ if(practiceHandMode!=="left"){
+   directions.push(held.length?`Mantén ${held.join(" y ")}.`:"La mano derecha cambia de forma completa.");
+   if(moved.length)directions.push(`Mueve ${moved.join("; ")}.`);
+ }
+ if(practiceHandMode!=="right")directions.push(`Mano izquierda: ${noteText(currentVoicing.l,currentEvent.chord)} → ${noteText(nextVoicing.l,nextEvent.chord)}, con dedo 5.`);
  practiceMovement.textContent=directions.join(" ");
 }
 let displayedLyric="",lyricTransitionTimer=null;
@@ -3028,8 +3050,9 @@ function render(){
  renderChordNotes(nextNotes,vn.r.map(([note])=>noteText(note,next)));
  currentSub.textContent=vc.pending?PENDING_CHORD_HINT:`MI: ${noteText(vc.l,cur)} (5) · MD: ${vc.r.map(x=>noteText(x[0],cur)+keyHint(x[0],cur)).join("–")} (${vc.r.map(x=>x[1]).join("–")}) · Posición MD: ${vc.inv}`;
  nextSub.textContent=vn.pending?PENDING_CHORD_HINT:`MI: ${noteText(vn.l,next)} (5) · MD: ${vn.r.map(x=>noteText(x[0],next)+keyHint(x[0],next)).join("–")} (${vn.r.map(x=>x[1]).join("–")}) · Posición MD: ${vn.inv}`;
- keyboard(currentKeyboard,cur,false,next,event.inversion,nextEvent.inversion);
- keyboard(nextKeyboard,next,true,null,nextEvent.inversion);
+ const handFocus=activeHandFocus();
+ keyboard(currentKeyboard,cur,false,next,event.inversion,nextEvent.inversion,handFocus);
+ keyboard(nextKeyboard,next,true,null,nextEvent.inversion,null,handFocus);
  updateLyricsCue();
  updatePracticeGuide();
  sectionName.textContent=s.name;sectionCount.textContent=`${s.events.length} cambios de acorde`;
@@ -3418,21 +3441,23 @@ function playFallback(notes,beats=4){
  notes.forEach((n,i)=>{const o=ctx.createOscillator(),g=ctx.createGain();sources.push(o);o.type=i===0?"sine":"triangle";o.frequency.value=frequency(n);g.gain.value=i===0?.7:.32;o.connect(g);g.connect(master);o.start(now);o.stop(now+duration+.1)});
  activeAudioGroup={master,sources};
 }
-async function playChord(chord,inversion=null,beats=4){
+async function playChord(chord,inversion=null,beats=4,handFocus="both"){
  // Acorde pendiente: no suena, pero la reproducción sigue su curso normal.
  // El silencio ocupa los mismos beats, así que el resto de la canción no se
  // desincroniza y el hueco se escucha donde realmente está.
  if(chordIsPending(chord))return;
  const audioRunning=await resumeAudio();
  if(!audioRunning)return;
- const v=resolveVoicing(chord,inversion),notes=[v.l,...v.r.map(x=>x[0])];
+ const v=resolveVoicing(chord,inversion);
+ const notes=handFocus==="left"?[v.l]:handFocus==="right"?v.r.map(x=>x[0]):[v.l,...v.r.map(x=>x[0])];
+ if(!notes.length)return;
  if(!pianoReady&&!pianoLoadFailed)await loadPiano();
  if(pianoReady)playSampledChord(notes,beats);
  else playFallback(notes,beats);
 }
 async function playCurrent(){
  const event=currentSection().events[stepIndex];
- return playChord(event.chord,event.inversion,event.beats);
+ return playChord(event.chord,event.inversion,event.beats,activeHandFocus());
 }
 function stopAuto(){
  const wasPracticing=isTransitionLoop;
@@ -4030,8 +4055,15 @@ lyricsNotesToggle.onclick=()=>{
 bpm.oninput=e=>{bpmOut.textContent=e.target.value;updateSettingsSummary()};
 keyboardMode.value=keyboardViewMode;
 sustainMode.value=sustainViewMode;
+practiceHands.value=practiceHandMode;
 keyboardMode.onchange=e=>{keyboardViewMode=e.target.value;savePreference("mis36-keyboard-mode",keyboardViewMode);updateSettingsSummary();render()};
 sustainMode.onchange=e=>{sustainViewMode=e.target.value;savePreference("mis36-sustain-mode",sustainViewMode);updateSettingsSummary()};
+practiceHands.onchange=e=>{
+ practiceHandMode=e.target.value;
+ savePreference("mis36-practice-hands",practiceHandMode);
+ updatePracticeGuide();
+ if(isTransitionLoop)render();
+};
 nextPianoToggle.onclick=()=>{
  showNextPiano=!showNextPiano;
  savePreference("mis36-show-next-piano",String(showNextPiano));
