@@ -255,11 +255,65 @@ Cobertura v1, en orden de prioridad:
 El detector es un borrador, no tiene que ser perfecto — `sourceText` se
 guarda siempre para comparar contra la interpretación.
 
+**Implementado**, junto con la Fase 7 en una sola entrega (como preveía el
+orden de ejecución). Notas de la implementación real:
+
+- **Catálogo dinámico real, resuelto acá** (quedaba pendiente de la Fase 4):
+  `SONGS` sigue siendo semillas de solo lectura; una canción importada vive
+  enteramente en `dynamicSongs` (metadata: título/artista/tonalidad/
+  `sourceText`) + su documento completo v5 en la misma clave de
+  sincronización que usa cualquier canción (`piano-song:<id>:sync-v1`). No
+  hizo falta una semilla en código: el documento completo *es* la canción.
+  `songMeta`/`songExists` unifican ambos orígenes en el resto del archivo.
+  `loadCatalog()` ahora sí acepta y persiste ids que solo viven en
+  almacenamiento.
+- El parser (`parseSongText`) cubre las 4 prioridades. Encontró un bug real
+  durante las pruebas: el patrón de acorde permisivo (necesario para aceptar
+  símbolos reales como `Bm7b5` o `D7M`) también hacía matchear palabras
+  cortas como "Coro" o "Final" (`C`+`oro`, `F`+`inal`), rompiendo la
+  detección de encabezados de sección. Se resolvió con un segundo patrón
+  más estricto (`SOLO_CHORD_TOKEN_PATTERN`, limitado a calidades de acorde
+  reales conocidas) usado solo para decidir si una línea `[Palabra]` sola es
+  un acorde suelto entre corchetes o un encabezado — el patrón permisivo
+  se sigue usando donde el contexto ya desambigua (línea entera de acordes,
+  o `[C]` pegado a una palabra).
+- Un acorde que el parser detecta pero que la biblioteca no reconoce se
+  guarda como pendiente (Prerrequisito de arriba) — nunca bloquea ni
+  descarta la importación.
+- **Fase 7 simplificada deliberadamente:** en vez de construir una vista de
+  revisión paralela, el flujo de guardado abre la canción importada
+  directamente en el editor ya existente (Letra + "Editar acordes y letra")
+  — reasignar secciones, mover/cambiar/añadir/quitar acordes y corregir
+  letra ya son cosas que ese editor sabe hacer. Lo que sí es nuevo es la
+  vista previa *antes* de guardar (`#importPanel`): confirmar
+  título/artista/tonalidad, ver el conteo de acordes detectados separados
+  en "pendientes" vs "ya en la biblioteca", y un vistazo a las primeras
+  líneas de cada sección. `sourceText` se guarda siempre en
+  `dynamicSongs[id].sourceText`, aunque todavía no hay una UI para volver a
+  mostrarlo en paralelo del editor — eso se agrega después si hace falta en
+  la práctica.
+- Verificado con un servidor mock: análisis con texto vacío y sin título
+  (mensajes claros, sin guardar nada); colisión de título con "Mis 36" →
+  `mis-36-2` sin pisar la canción original; guardado→apertura en modo
+  edición sin errores; sincronización con la nube de una canción importada
+  (antes solo sincronizaba "Mis 36"); acorde pendiente detectado y marcado
+  visualmente en la vista Letra de la canción recién importada.
+- **Limitación conocida, heredada de que la Fase 5 no existe todavía:** el
+  catálogo (`piano-catalog-v1`) es local a cada dispositivo. Una canción
+  importada en un dispositivo no aparece automáticamente en otro hasta que
+  la Fase 5 (manifiesto sincronizado) exista — su documento sí sincroniza
+  desde ya, solo falta que el catálogo lo anuncie.
+
 ### Fase 7 — Revisión visual antes de guardar
 
 Vista de edición previa: confirmar título/artista/tonalidad, revisar y
 reasignar secciones, mover/cambiar/añadir/quitar acordes, corregir letra, ver
 `sourceText` en paralelo. Nada entra al catálogo sin pasar por acá.
+
+**Implementado junto con la Fase 6** (ver notas arriba) — reutilizando el
+editor existente en vez de una vista paralela, con la vista previa del
+importador cubriendo la confirmación de título/artista/tonalidad y el
+resumen de acordes antes de guardar.
 
 ### Fase 8 — Red de seguridad mínima
 

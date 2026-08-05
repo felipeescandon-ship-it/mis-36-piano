@@ -239,6 +239,21 @@ body:not(.song-editing) .song-editor-actions{display:none}
 .song-chord.pending-chord{border-left-color:var(--amber);opacity:.78}
 .song-chord.pending-chord .song-chord-name{color:var(--amber)}
 .song-chord.pending-chord .song-chord-notes::after{content:"pendiente";font-style:italic}
+.import-panel-body{display:grid;gap:12px}
+.import-fields{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px}
+.import-fields input{font:inherit;padding:8px 10px;border:1px solid var(--line);border-radius:9px;background:#f3f6fa;color:var(--ink)}
+.import-textarea-label textarea{width:100%;min-height:220px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:13px;line-height:1.55;padding:10px;border:1px solid var(--line);border-radius:10px;background:#f3f6fa;color:var(--ink);resize:vertical}
+.import-actions{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.import-preview{border-top:1px solid var(--line);padding-top:12px;font-size:13px;color:var(--muted);display:grid;gap:10px}
+.import-preview h3{margin:0 0 4px;font-size:14px;color:var(--ink)}
+.import-summary-chords{display:flex;flex-wrap:wrap;gap:6px}
+.import-chord-tag{display:inline-flex;align-items:center;background:var(--blueSoft);color:var(--blue);border-radius:7px;padding:2px 7px;font-weight:800;font-size:12px}
+.import-chord-tag.pending{background:var(--amberSoft);color:var(--amber)}
+.import-preview-sections{display:grid;gap:8px;max-height:320px;overflow-y:auto}
+.import-preview-section{border:1px solid var(--line);border-radius:10px;padding:8px 10px}
+.import-preview-section h4{margin:0 0 4px;font-size:13px;color:var(--ink)}
+.import-preview-line{margin:2px 0;line-height:1.5}
+.import-preview-line .import-chord-tag{margin-right:4px}
 .song-word-row{display:flex;gap:6px clamp(9px,.9vw,13px);flex-wrap:wrap;align-items:flex-end}
 .song-word-cell{display:grid;grid-template-rows:auto auto;justify-items:start;min-width:0;max-width:100%}
 .song-phrase-cell{flex:0 1 auto;width:max-content}
@@ -508,6 +523,7 @@ button.song-line-end{padding:3px 8px}
 
     <div class="settings-actions">
       <button id="openEditor" class="secondary" type="button">✎ Editar acordes y letra</button>
+      <button id="openImporter" class="secondary" type="button">＋ Nueva canción</button>
       <button id="exportSongSync" class="secondary" type="button" hidden>↓ Exportar ajustes</button>
       <button id="importSongSync" class="secondary" type="button" hidden>↧ Importar ajustes</button>
       <button id="cloudSyncNow" class="secondary" type="button">☁ Sincronizar ahora</button>
@@ -661,6 +677,33 @@ button.song-line-end{padding:3px 8px}
   </div>
 </section>
 
+<section id="importPanel" class="card practice-guide" aria-labelledby="importPanelTitle" hidden>
+  <div class="practice-guide-head">
+    <div>
+      <span class="lyrics-eyebrow">Cancionero</span>
+      <h2 id="importPanelTitle">Nueva canción</h2>
+    </div>
+    <button id="importPanelClose" class="secondary" type="button">Cerrar</button>
+  </div>
+  <div class="practice-guide-body import-panel-body">
+    <div class="import-fields">
+      <label class="section-control"><span>Título</span><input id="importTitle" type="text" maxlength="120" placeholder="Título de la canción"></label>
+      <label class="section-control"><span>Artista</span><input id="importArtist" type="text" maxlength="120" placeholder="Artista (opcional)"></label>
+      <label class="section-control"><span>Tonalidad</span><input id="importKey" type="text" maxlength="20" placeholder="ej. G, Am"></label>
+    </div>
+    <label class="section-control import-textarea-label">
+      <span>Letra con acordes (pegar tal cual, con "Tono:" y secciones entre corchetes si las tiene)</span>
+      <textarea id="importText" rows="14" placeholder="[Estrofa 1]&#10;C          G          Am         F&#10;Letra de la primera línea aquí"></textarea>
+    </label>
+    <div class="import-actions">
+      <button id="importAnalyze" class="secondary" type="button">Analizar</button>
+      <button id="importSave" class="primary" type="button" disabled>Guardar y abrir</button>
+      <span id="importStatus" class="data-status" aria-live="polite"></span>
+    </div>
+    <div id="importPreview" class="import-preview" hidden></div>
+  </div>
+</section>
+
 <div class="stack">
 <section class="card current">
 <h2 class="now-heading">
@@ -759,6 +802,17 @@ const cloudStatus=document.getElementById("cloudStatus");
 const pianoViewButton=document.getElementById("pianoViewButton");
 const lyricsViewButton=document.getElementById("lyricsViewButton");
 const openEditor=document.getElementById("openEditor");
+const openImporter=document.getElementById("openImporter");
+const importPanel=document.getElementById("importPanel");
+const importPanelClose=document.getElementById("importPanelClose");
+const importTitle=document.getElementById("importTitle");
+const importArtist=document.getElementById("importArtist");
+const importKey=document.getElementById("importKey");
+const importText=document.getElementById("importText");
+const importAnalyze=document.getElementById("importAnalyze");
+const importSave=document.getElementById("importSave");
+const importStatus=document.getElementById("importStatus");
+const importPreview=document.getElementById("importPreview");
 const lyricsPlaybackDock=document.getElementById("lyricsPlaybackDock");
 const resumeLyricsFollow=document.getElementById("resumeLyricsFollow");
 const lyricsFollowStatus=document.getElementById("lyricsFollowStatus");
@@ -1362,28 +1416,59 @@ const SONGS={
  }
 };
 let currentSongId="mis-36";
-function currentSong(){return SONGS[currentSongId]}
-function cloneSongSections(songId){return JSON.parse(JSON.stringify(SONGS[songId].sections))}
+// Fase 6 del plan multi-canción: el catálogo deja de ser solo las canciones
+// hardcodeadas en `SONGS`. Una canción importada no tiene entrada en el
+// código — su metadata (título, artista, tonalidad, texto original) vive en
+// `dynamicSongs` (localStorage), y su letra/acordes viven directamente en el
+// documento de sincronización de la Fase 4 (no hace falta una semilla en
+// `SONGS`: el documento completo ES la canción). `songMeta`/`songExists`
+// unifican ambos orígenes para que el resto del archivo no tenga que
+// distinguir "hardcodeada" de "importada".
+const DYNAMIC_SONGS_KEY="piano-dynamic-songs-v1";
+function loadDynamicSongs(){
+ try{
+   const saved=JSON.parse(localStorage.getItem(DYNAMIC_SONGS_KEY)||"{}");
+   return saved&&typeof saved==="object"&&!Array.isArray(saved)?saved:{};
+ }catch{return {}}
+}
+function saveDynamicSongs(){try{localStorage.setItem(DYNAMIC_SONGS_KEY,JSON.stringify(dynamicSongs))}catch{}}
+let dynamicSongs=loadDynamicSongs();
+function songExists(songId){return Boolean(SONGS[songId])||Boolean(dynamicSongs[songId])}
+function songMeta(songId){return SONGS[songId]||dynamicSongs[songId]||null}
+function currentSong(){return songMeta(currentSongId)}
+// Para una canción hardcodeada, la semilla clonada trae su letra/estructura
+// de siempre. Para una importada no hay semilla: `sections` arranca vacío y
+// `initializeSongSync`/`applyFullDocument` la construyen entera a partir del
+// documento guardado (que el importador escribe directamente al crearla).
+function cloneSongSections(songId){
+ const seed=SONGS[songId];
+ return seed?JSON.parse(JSON.stringify(seed.sections)):[];
+}
 let sections=null;
 
 // Fase 3 del plan multi-canción (docs/plan-multi-cancion.md): cada canción
 // tiene su propio almacenamiento namespaced. Desde la Fase 4, la API de
 // sincronización es genérica por canción (`songId`) y todas las canciones
-// del catálogo sincronizan. El catálogo (`loadCatalog`) todavía solo ordena
-// canciones que existen como constante en `SONGS` — aceptar canciones que
-// solo viven en almacenamiento queda para cuando exista el importador
-// (Fase 6), que es quien realmente las produce.
+// del catálogo sincronizan. Desde la Fase 6, el catálogo (`loadCatalog`)
+// también acepta canciones que solo viven en almacenamiento.
 const CATALOG_KEY="piano-catalog-v1";
 const LAST_SONG_KEY="piano-last-song";
 function songStorageKey(songId,suffix){return `piano-song:${songId}:${suffix}`}
-function songHasCloudSync(songId){return Boolean(SONGS[songId])}
+function songHasCloudSync(songId){return songExists(songId)}
 function loadCatalog(){
+ const knownIds=[...Object.keys(SONGS),...Object.keys(dynamicSongs)];
+ const knownSet=new Set(knownIds);
  try{
    const saved=JSON.parse(localStorage.getItem(CATALOG_KEY)||"null");
-   if(Array.isArray(saved)&&saved.every(id=>SONGS[id]))return saved;
+   if(Array.isArray(saved)){
+     const ordered=saved.filter(id=>knownSet.has(id));
+     knownIds.forEach(id=>{if(!ordered.includes(id))ordered.push(id)});
+     return ordered;
+   }
  }catch{}
- return Object.keys(SONGS);
+ return knownIds;
 }
+function persistCatalog(){try{localStorage.setItem(CATALOG_KEY,JSON.stringify(songCatalog))}catch{}}
 function migrateLegacyMis36Storage(){
  const legacyMap={
    "mis36-song-sync-v1":songStorageKey("mis-36","sync-v1"),
@@ -1400,9 +1485,9 @@ function migrateLegacyMis36Storage(){
  });
 }
 migrateLegacyMis36Storage();
-const songCatalog=loadCatalog();
+let songCatalog=loadCatalog();
 currentSongId=readPreference(LAST_SONG_KEY,"mis-36");
-if(!SONGS[currentSongId])currentSongId="mis-36";
+if(!songExists(currentSongId))currentSongId="mis-36";
 sections=cloneSongSections(currentSongId);
 
 let SONG_SYNC_KEY=songStorageKey(currentSongId,"sync-v1");
@@ -1513,8 +1598,16 @@ function legacyDiffToDocument(songId,diffData){
 // eventos del documento ya es la verdad completa.
 function applyFullDocument(targetSections,saved){
  saved.sections.forEach((savedSection,si)=>{
-   const section=targetSections[si];
-   if(!section||!Array.isArray(savedSection?.events))return;
+   // Una canción hardcodeada ya trae la sección en su índice (la semilla
+   // clonada). Una importada no tiene semilla: la sección misma (nombre y
+   // letra) viene del documento guardado, no del código.
+   let section=targetSections[si];
+   if(!section){
+     if(!savedSection||typeof savedSection.name!=="string"||!Array.isArray(savedSection.lines))return;
+     section={name:savedSection.name,lines:savedSection.lines.map(String),events:[]};
+     targetSections[si]=section;
+   }
+   if(!Array.isArray(savedSection?.events))return;
    section.events=savedSection.events.filter(value=>(
      value&&typeof value.uid==="string"&&value.uid.length<=100&&
      isWellFormedChordSymbol(value.chord)&&
@@ -1531,6 +1624,193 @@ function applyFullDocument(targetSections,saved){
      lyric:section.lines[value.line]
    }));
  });
+}
+// ---- Fase 6 del plan multi-canción: importador (copiar y pegar) ----
+// Detector deliberadamente imperfecto ("borrador, no tiene que ser
+// perfecto" — docs/plan-multi-cancion.md): cubre, en orden de prioridad,
+// acordes encima de la letra por columna, acordes inline [C]palabra,
+// progresiones instrumentales sueltas, y limpieza de "Tono:"/secciones entre
+// corchetes/marcas de formato (**C**). `sourceText` se conserva siempre para
+// comparar contra lo interpretado. Un acorde que la biblioteca no reconoce
+// se guarda igual, como pendiente (ver PENDING_VOICING) — nunca se descarta.
+const CHORD_TOKEN_PATTERN=/^[A-G](#|b)?([A-Za-z0-9°ø+-]{0,4})?(\/[A-G](#|b)?)?$/;
+// El patrón de arriba es deliberadamente permisivo (para no rechazar
+// símbolos reales como "Bm7b5" o "D7M"), pero eso hace que una palabra corta
+// como "Coro" o "Final" (C+oro, F+inal) también matchee. Sirve para
+// detectar acordes dentro de una línea ya sabida como línea-de-acordes o
+// como tag inline, pero NO para decidir si "[Palabra]" sola en su línea es
+// un acorde suelto o un encabezado de sección — ahí hace falta un patrón
+// estricto, limitado a calidades de acorde reales conocidas.
+const SOLO_CHORD_TOKEN_PATTERN=/^[A-G](#|b)?(maj7|maj9|maj|min7|min|mmaj7|m7b5|m7|m9|m6|m11|m13|m|dim7|dim|aug|sus2|sus4|sus|add9|add2|add11|6|7|9|11|13|5|4|2|°|ø)?(\/[A-G](#|b)?)?$/;
+function stripChordBrackets(token){return token.replace(/^\[|\]$/g,"")}
+function isChordToken(token){return CHORD_TOKEN_PATTERN.test(stripChordBrackets(token))}
+function isChordLine(line){
+ const tokens=line.trim().split(/\s+/).filter(Boolean);
+ return tokens.length>0&&tokens.every(isChordToken);
+}
+function stripFormattingMarks(line){
+ return line.replace(/\*\*(.*?)\*\*/g,"$1").replace(/__(.*?)__/g,"$1");
+}
+function tokenizeChordLineWithColumns(line){
+ const tokens=[];
+ const tokenRe=/\S+/g;
+ let match;
+ while((match=tokenRe.exec(line))){
+   if(isChordToken(match[0]))tokens.push({chord:stripChordBrackets(match[0]),column:match.index});
+ }
+ return tokens;
+}
+function wordAnchorsFromLyric(lyric){
+ const anchors=[];
+ const tokenRe=/\S+/g;
+ let match,wordIndex=0;
+ while((match=tokenRe.exec(lyric))){anchors.push({index:wordIndex,column:match.index});wordIndex++}
+ return anchors;
+}
+function nearestWordIndex(anchors,column){
+ if(!anchors.length)return 0;
+ let best=anchors[0];
+ anchors.forEach(anchor=>{if(anchor.column<=column)best=anchor});
+ return best.index;
+}
+// Acordes inline `[C]palabra`: cada corchete se ancla a la palabra que le
+// sigue inmediatamente (o al final de la línea si no hay ninguna después).
+function extractInlineChords(line){
+ const events=[];
+ const parts=[];
+ let wordIndex=0,pending=[];
+ const tokenRe=/(\[[^[\]\n]+\])|(\S+)|(\s+)/g;
+ let match;
+ while((match=tokenRe.exec(line))){
+   if(match[1]){
+     const inner=stripChordBrackets(match[1]);
+     if(isChordToken(inner))pending.push(inner);
+     continue;
+   }
+   if(match[2]){
+     pending.forEach(chord=>events.push({chord,anchor:wordIndex}));
+     pending=[];
+     parts.push(match[2]);
+     wordIndex++;
+     continue;
+   }
+   parts.push(" ");
+ }
+ if(pending.length)pending.forEach(chord=>events.push({chord,anchor:Math.max(wordIndex-1,0)}));
+ return {lyric:parts.join("").replace(/\s+/g," ").trim(),inlineEvents:events};
+}
+let importUidCounter=0;
+function makeImportedEvent(chord,line,anchor){
+ importUidCounter++;
+ return {uid:`imported:${Date.now().toString(36)}:${importUidCounter}`,chord,inversion:resolvedInversion(chord,null),line,anchor,beats:4};
+}
+// Convierte el texto pegado en {originalKey, sections, sourceText}. `sections`
+// queda en la misma forma que usa el resto de la app (name/lines/events),
+// lista para revisarse en el editor existente — el importador no construye
+// una vista de revisión paralela, reutiliza Letra + Editar.
+function parseSongText(raw){
+ const sourceText=raw;
+ let originalKey=null;
+ const cleanedLines=[];
+ raw.split(/\r?\n/).forEach(line=>{
+   const stripped=stripFormattingMarks(line).replace(/\s+$/,"");
+   const keyMatch=stripped.match(/^\s*(?:tono|tonalidad|key)\s*:\s*(.+)$/i);
+   if(keyMatch){originalKey=keyMatch[1].trim();return}
+   cleanedLines.push(stripped);
+ });
+
+ const parsedSections=[];
+ let current=null,pending=[];
+ function flushPending(){
+   if(pending.length&&current){
+     const lineIndex=current.lines.length;
+     current.lines.push("");
+     pending.forEach((token,i)=>current.events.push(makeImportedEvent(token.chord,lineIndex,i)));
+   }
+   pending=[];
+ }
+ function ensureSection(name){
+   current={name:name||`Sección ${parsedSections.length+1}`,lines:[],events:[]};
+   parsedSections.push(current);
+ }
+ cleanedLines.forEach(line=>{
+   const trimmed=line.trim();
+   if(!trimmed){flushPending();return}
+   const headerMatch=trimmed.match(/^\[([^[\]]+)\]$/);
+   if(headerMatch&&!SOLO_CHORD_TOKEN_PATTERN.test(headerMatch[1].trim())){
+     flushPending();
+     ensureSection(headerMatch[1].trim());
+     return;
+   }
+   if(!current)ensureSection(null);
+   if(isChordLine(line)){
+     flushPending();
+     pending=tokenizeChordLineWithColumns(line);
+     return;
+   }
+   const{lyric,inlineEvents}=extractInlineChords(line);
+   const lineIndex=current.lines.length;
+   current.lines.push(lyric);
+   if(pending.length){
+     const anchors=wordAnchorsFromLyric(lyric);
+     pending.forEach(token=>current.events.push(makeImportedEvent(token.chord,lineIndex,nearestWordIndex(anchors,token.column))));
+     pending=[];
+   }
+   inlineEvents.forEach(ev=>current.events.push(makeImportedEvent(ev.chord,lineIndex,ev.anchor)));
+ });
+ flushPending();
+ return {originalKey,sections:parsedSections,sourceText};
+}
+function summarizeParsedSong(parsed){
+ const chordCounts=new Map();
+ parsed.sections.forEach(section=>section.events.forEach(event=>{
+   chordCounts.set(event.chord,(chordCounts.get(event.chord)||0)+1);
+ }));
+ const pendingChords=[...chordCounts.keys()].filter(chordIsPending);
+ const recognizedChords=[...chordCounts.keys()].filter(chord=>!chordIsPending(chord));
+ const eventsCount=[...chordCounts.values()].reduce((total,count)=>total+count,0);
+ return {sectionsCount:parsed.sections.length,eventsCount,chordCounts,pendingChords,recognizedChords};
+}
+function slugifyTitle(title){
+ const base=title.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/[^a-z0-9]+/g,"-").replace(/^-+|-+$/g,"");
+ return base||"cancion";
+}
+function uniqueSongId(title){
+ const base=slugifyTitle(title);
+ let candidate=base,suffix=2;
+ while(songExists(candidate)){candidate=`${base}-${suffix}`;suffix++}
+ return candidate;
+}
+// Guarda una canción recién parseada como canción dinámica: su documento
+// completo va directo a la clave de sincronización de la Fase 4 (no hay
+// semilla en SONGS que aplicarle), su metadata a `dynamicSongs`, y su id al
+// catálogo. Queda lista para sincronizar con la nube igual que cualquier
+// otra canción (songHasCloudSync ya no distingue origen).
+function saveImportedSong(parsed,meta){
+ const songId=uniqueSongId(meta.title||"Canción sin título");
+ const document={
+   version:5,
+   sections:parsed.sections.map(section=>({
+     name:section.name,
+     lines:section.lines,
+     events:section.events.map(event=>({
+       uid:event.uid,chord:event.chord,inversion:event.inversion,
+       line:event.line,anchor:event.anchor,beats:event.beats
+     }))
+   }))
+ };
+ try{localStorage.setItem(songStorageKey(songId,"sync-v1"),JSON.stringify(document))}catch{}
+ dynamicSongs[songId]={
+   id:songId,
+   title:meta.title||"Canción sin título",
+   artist:meta.artist||"",
+   originalKey:meta.originalKey||parsed.originalKey||"",
+   sourceText:parsed.sourceText,
+   createdAt:new Date().toISOString()
+ };
+ saveDynamicSongs();
+ if(!songCatalog.includes(songId)){songCatalog.push(songId);persistCatalog()}
+ return songId;
 }
 function initializeSongSync(){
  assignDefaultAnchors();
@@ -1562,7 +1842,7 @@ function updateSongIdentityUi(){
 function initSongSelector(){
  songSelector.innerHTML="";
  songCatalog.forEach(songId=>{
-   const song=SONGS[songId];
+   const song=songMeta(songId);
    if(!song)return;
    const option=document.createElement("option");
    option.value=songId;
@@ -1573,7 +1853,7 @@ function initSongSelector(){
  songSelector.onchange=()=>switchToSong(songSelector.value);
 }
 function switchToSong(songId){
- if(songId===currentSongId||!SONGS[songId])return;
+ if(songId===currentSongId||!songExists(songId))return;
  stopAuto();
  if(cloudSaveTimer){clearTimeout(cloudSaveTimer);cloudSaveTimer=null}
  currentSongId=songId;
@@ -3236,6 +3516,115 @@ importSongSyncFile.onchange=async()=>{
 pianoViewButton.onclick=()=>setMainView("piano");
 lyricsViewButton.onclick=()=>setMainView("lyrics");
 openEditor.onclick=()=>setMainView("edit");
+let lastParsedSong=null;
+function renderImportPreview(parsed){
+ const summary=summarizeParsedSong(parsed);
+ importPreview.innerHTML="";
+ if(!summary.sectionsCount||!summary.eventsCount){
+   importPreview.hidden=false;
+   const empty=document.createElement("p");
+   empty.textContent="No se detectó ninguna sección con acordes. Revisá el formato del texto pegado.";
+   importPreview.appendChild(empty);
+   return;
+ }
+ const headline=document.createElement("h3");
+ headline.textContent=`${summary.sectionsCount} secciones · ${summary.eventsCount} acordes detectados`;
+ importPreview.appendChild(headline);
+ if(summary.pendingChords.length){
+   const pendingLine=document.createElement("p");
+   pendingLine.innerHTML=`<strong>${summary.pendingChords.length} acorde${summary.pendingChords.length>1?"s":""} pendiente${summary.pendingChords.length>1?"s":""}</strong> (sin posición en la biblioteca todavía — se guardan igual, no sonarán hasta que se agreguen):`;
+   importPreview.appendChild(pendingLine);
+   const tagRow=document.createElement("div");
+   tagRow.className="import-summary-chords";
+   summary.pendingChords.forEach(chord=>{
+     const tag=document.createElement("span");
+     tag.className="import-chord-tag pending";
+     tag.textContent=`${chord} ×${summary.chordCounts.get(chord)}`;
+     tagRow.appendChild(tag);
+   });
+   importPreview.appendChild(tagRow);
+ }
+ if(summary.recognizedChords.length){
+   const recognizedLine=document.createElement("p");
+   recognizedLine.textContent="Ya en la biblioteca:";
+   importPreview.appendChild(recognizedLine);
+   const tagRow=document.createElement("div");
+   tagRow.className="import-summary-chords";
+   summary.recognizedChords.forEach(chord=>{
+     const tag=document.createElement("span");
+     tag.className="import-chord-tag";
+     tag.textContent=`${chordText(chord)} ×${summary.chordCounts.get(chord)}`;
+     tagRow.appendChild(tag);
+   });
+   importPreview.appendChild(tagRow);
+ }
+ const sectionsBox=document.createElement("div");
+ sectionsBox.className="import-preview-sections";
+ parsed.sections.forEach(section=>{
+   const box=document.createElement("div");
+   box.className="import-preview-section";
+   const title=document.createElement("h4");
+   title.textContent=`${section.name} · ${section.lines.length} líneas`;
+   box.appendChild(title);
+   section.lines.slice(0,4).forEach((lineText,lineIndex)=>{
+     const lineEvents=section.events.filter(event=>event.line===lineIndex);
+     const row=document.createElement("div");
+     row.className="import-preview-line";
+     lineEvents.forEach(event=>{
+       const tag=document.createElement("span");
+       tag.className="import-chord-tag"+(chordIsPending(event.chord)?" pending":"");
+       tag.textContent=event.chord;
+       row.appendChild(tag);
+     });
+     const text=document.createElement("span");
+     text.textContent=lineText||"(línea instrumental)";
+     row.appendChild(text);
+     box.appendChild(row);
+   });
+   if(section.lines.length>4){
+     const more=document.createElement("div");
+     more.className="import-preview-line";
+     more.textContent=`… ${section.lines.length-4} líneas más`;
+     box.appendChild(more);
+   }
+   sectionsBox.appendChild(box);
+ });
+ importPreview.appendChild(sectionsBox);
+ importPreview.hidden=false;
+}
+openImporter.onclick=()=>{
+ importPanel.hidden=!importPanel.hidden;
+ if(!importPanel.hidden)importPanel.scrollIntoView({behavior:scrollBehavior(),block:"start"});
+};
+importPanelClose.onclick=()=>{importPanel.hidden=true};
+importAnalyze.onclick=()=>{
+ const raw=importText.value;
+ if(!raw.trim()){importStatus.textContent="Pegá primero la letra con acordes.";return}
+ lastParsedSong=parseSongText(raw);
+ if(!importTitle.value.trim()&&lastParsedSong.originalKey&&!importKey.value.trim())importKey.value=lastParsedSong.originalKey;
+ renderImportPreview(lastParsedSong);
+ const summary=summarizeParsedSong(lastParsedSong);
+ importSave.disabled=!summary.sectionsCount||!summary.eventsCount;
+ importStatus.textContent=importSave.disabled?"No se detectó nada para guardar.":"Revisá la vista previa antes de guardar.";
+};
+importSave.onclick=()=>{
+ if(!lastParsedSong){importStatus.textContent="Analizá el texto primero.";return}
+ const meta={
+   title:importTitle.value.trim(),
+   artist:importArtist.value.trim(),
+   originalKey:importKey.value.trim()
+ };
+ if(!meta.title){importStatus.textContent="Ponele un título antes de guardar.";return}
+ const songId=saveImportedSong(lastParsedSong,meta);
+ importPanel.hidden=true;
+ importText.value="";importTitle.value="";importArtist.value="";importKey.value="";
+ lastParsedSong=null;
+ importPreview.hidden=true;
+ importStatus.textContent="";
+ switchToSong(songId);
+ initSongSelector();
+ setMainView("edit");
+};
 lyricsNotesToggle.onclick=()=>{
  showLyricsChordNotes=!showLyricsChordNotes;
  savePreference("mis36-lyrics-show-chord-notes",String(showLyricsChordNotes));
