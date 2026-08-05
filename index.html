@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex,nofollow,noarchive">
-<title>Mis 36 · Canción completa en piano</title>
+<title>Piano Estudio</title>
 <style>
 :root{
   --bg:#f4f7fb;--panel:#fff;--ink:#152033;--muted:#526178;
@@ -24,6 +24,7 @@ box-shadow:0 8px 24px rgba(7,26,51,.25)}
 padding:16px 22px;box-shadow:var(--shadow)}
 .app-header h1{margin:2px 0 4px;font-size:clamp(28px,4vw,42px)}
 .app-header p{margin:0;color:#d8e7fa}
+.current-song-name{margin:0 0 4px;font-size:clamp(18px,2.6vw,26px);font-weight:800;color:#bcdcff}
 .eyebrow{color:#8fc2ff;font-size:11px;font-weight:900;letter-spacing:.14em;text-transform:uppercase}
 .song-selector-label{display:flex;align-items:center;gap:8px;margin-top:6px;font-size:12px;font-weight:800;color:#d8e7fa;letter-spacing:.03em;text-transform:uppercase}
 .song-selector-label select{font-family:inherit;font-size:14px;font-weight:700;text-transform:none;color:#fff;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.3);border-radius:10px;padding:6px 10px}
@@ -444,7 +445,8 @@ button.song-line-end{padding:3px 8px}
 <header class="app-header">
   <div>
     <span class="eyebrow">Guía de acompañamiento</span>
-    <h1 id="songTitle">Mis 36</h1>
+    <h1>Piano Estudio</h1>
+    <h2 id="songTitle" class="current-song-name">Mis 36</h2>
     <p>Acordes claros para tocar, acompañar y cantar.</p>
     <label class="song-selector-label" for="songSelector">Canción
       <select id="songSelector" aria-label="Elegir canción"></select>
@@ -1836,7 +1838,7 @@ function initializeSongSync(){
 function updateSongIdentityUi(){
  const song=currentSong();
  songTitle.textContent=song.title;
- document.title=`${song.title} · Canción completa en piano`;
+ document.title=`${song.title} · Piano Estudio`;
  songSelector.value=currentSongId;
 }
 function initSongSelector(){

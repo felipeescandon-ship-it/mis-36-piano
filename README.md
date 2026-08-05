@@ -1,6 +1,8 @@
-# Mis 36 · piano
+# Piano Estudio
 
-Aplicación web para acompañar, seguir la letra y practicar "Mis 36" en piano.
+Cancionero personal: aplicación web para acompañar, seguir la letra y
+practicar canciones en piano. "Mis 36" fue la canción original de la app y
+sigue siendo la canción semilla del catálogo.
 
 - Producción: <https://mis-36-piano.vercel.app/>
 - Repositorio: <https://github.com/felipeescandon-ship-it/mis-36-piano>
