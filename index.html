@@ -318,6 +318,11 @@ button.song-line-end{padding:3px 8px}
 .practice-controls{display:flex;align-items:end;gap:8px;flex-wrap:wrap;justify-content:flex-end}
 .practice-setting{display:grid;gap:4px;color:#526178;font-size:12px;font-weight:800}
 .practice-status{grid-column:1/-1;padding:9px 11px;border-radius:10px;background:#f4f0ff;color:#4f3496;font-weight:850}
+.practice-chooser-body{display:flex!important;flex-wrap:wrap;align-items:flex-end;gap:16px}
+.practice-chooser-select{flex:1 1 260px;min-width:0}
+.practice-chooser-select select{width:100%}
+.practice-chooser-full{display:flex;flex-direction:column;gap:5px;flex:1 1 260px}
+.practice-chooser-full .sub{margin:0;color:var(--muted);font-size:12.5px}
 .song-editor-actions{display:flex;gap:8px;align-items:end;justify-content:flex-end;flex-wrap:wrap}
 .editor-section-jump{display:grid;gap:4px;color:#526178;font-size:12px;font-weight:800}
 .editor-section-jump select{min-width:160px;padding-block:8px}
@@ -798,6 +803,25 @@ body.screen-practicar #transitionLoop{display:none}
 </div>
 </section>
 
+<section id="practiceChooser" class="card practice-guide" aria-labelledby="practiceChooserTitle" hidden>
+  <div class="practice-guide-head">
+    <div>
+      <span class="lyrics-eyebrow">Practicar</span>
+      <h2 id="practiceChooserTitle">¿Qué querés practicar?</h2>
+    </div>
+  </div>
+  <div class="practice-guide-body practice-chooser-body">
+    <label class="section-control practice-chooser-select">
+      <span>Una transición</span>
+      <select id="practiceTransitionSelect" aria-label="Elegir transición a practicar"></select>
+    </label>
+    <div class="practice-chooser-full">
+      <button id="practiceFullSongButton" class="secondary" type="button">▶ Toda la canción, tempo reducido</button>
+      <span id="practiceFullSongNote" class="sub"></span>
+    </div>
+  </div>
+</section>
+
 <section id="practiceGuide" class="card practice-guide" aria-labelledby="practiceGuideTitle" hidden>
   <div class="practice-guide-head">
     <div>
@@ -1030,6 +1054,10 @@ const nextBadge=document.getElementById("nextBadge");
 const nextPianoToggle=document.getElementById("nextPianoToggle");
 const nextKeyboardWrap=document.getElementById("nextKeyboardWrap");
 const nextKeyboard=document.getElementById("nextKeyboard");
+const practiceChooser=document.getElementById("practiceChooser");
+const practiceTransitionSelect=document.getElementById("practiceTransitionSelect");
+const practiceFullSongButton=document.getElementById("practiceFullSongButton");
+const practiceFullSongNote=document.getElementById("practiceFullSongNote");
 const practiceGuide=document.getElementById("practiceGuide");
 const practiceClose=document.getElementById("practiceClose");
 const practiceRoute=document.getElementById("practiceRoute");
@@ -3268,6 +3296,10 @@ function render(){
  [...steps.children].forEach((el,i)=>{el.classList.toggle("current-step",i===stepIndex);el.classList.toggle("next-step",nextPos.section===sectionIndex&&i===nextPos.step)});
  updatePlaybackHighlight();
  if(document.body.classList.contains("view-structure"))renderStructureMap();
+ if(!practiceChooser.hidden){
+   const key=`${sectionIndex}:${stepIndex}`;
+   if([...practiceTransitionSelect.options].some(o=>o.value===key))practiceTransitionSelect.value=key;
+ }
 }
 function updatePlaybackHighlight(){
  document.body.classList.toggle("auto-playing",isAutoPlaying);
@@ -3520,16 +3552,48 @@ function setActiveScreen(screen){
  tocarBody.hidden=screen==="cancionero";
  if(screen==="cancionero"){
    stopAuto();
-   if(isTransitionLoop)stopAuto();
+   practiceChooser.hidden=true;
    practiceGuide.hidden=true;
    renderSongList();
  }else if(screen==="tocar"){
-   if(!practiceGuide.hidden){if(isTransitionLoop)stopAuto();practiceGuide.hidden=true}
+   practiceChooser.hidden=true;
+   if(!practiceGuide.hidden){stopAuto();practiceGuide.hidden=true}
  }else if(screen==="practicar"){
    setMainView("piano");
+   practiceChooser.hidden=false;
+   renderPracticeTransitionOptions();
+   updatePracticeFullSongNote();
    openPracticeGuide();
  }
  window.scrollTo({top:0,behavior:scrollBehavior()});
+}
+// Chooser de Practicar: elegir una transición puntual de cualquier parte de
+// la canción (no solo la que quedó activa en Tocar), o disparar la canción
+// completa a tempo reducido. Reutiliza el mismo motor de siempre — no hay
+// un segundo camino de reproducción.
+function renderPracticeTransitionOptions(){
+ practiceTransitionSelect.innerHTML="";
+ sections.forEach((section,si)=>{
+   const group=document.createElement("optgroup");
+   group.label=section.name;
+   section.events.forEach((event,ei)=>{
+     const next=nextLinearPosition(si,ei);
+     if(!next)return;
+     const nextEvent=sections[next.section].events[next.step];
+     const option=document.createElement("option");
+     option.value=`${si}:${ei}`;
+     option.textContent=`${chordText(event.chord)} → ${chordText(nextEvent.chord)}`;
+     group.appendChild(option);
+   });
+   if(group.childElementCount)practiceTransitionSelect.appendChild(group);
+ });
+ practiceTransitionSelect.value=`${sectionIndex}:${stepIndex}`;
+}
+function practiceReducedTempo(){
+ return Math.max(45,Math.round((+bpm.value*0.75)/5)*5);
+}
+function updatePracticeFullSongNote(){
+ practiceFullSongNote.textContent=`Se toca a ${practiceReducedTempo()} BPM (75% del tempo actual, ${bpm.value} BPM).`;
 }
 function buildSteps(){
  steps.innerHTML="";const s=currentSection();
@@ -4315,7 +4379,25 @@ lyricsNotesToggle.onclick=()=>{
    if(previewEvent)lyricsPreviewDetail.textContent=lyricsCueDetail(previewEvent);
  }
 };
-bpm.oninput=e=>{bpmOut.textContent=e.target.value;updateSettingsSummary()};
+bpm.oninput=e=>{bpmOut.textContent=e.target.value;updateSettingsSummary();if(!practiceChooser.hidden)updatePracticeFullSongNote()};
+practiceTransitionSelect.onchange=()=>{
+ const [si,ei]=practiceTransitionSelect.value.split(":").map(Number);
+ stopAuto();
+ sectionIndex=si;stepIndex=ei;
+ sectionSelect.value=sectionIndex;
+ updateSessionSummary();
+ buildSteps();render();updateFullSongPosition();playCurrent();
+ openPracticeGuide();
+ practiceGuide.scrollIntoView({behavior:scrollBehavior(),block:"center"});
+};
+practiceFullSongButton.onclick=()=>{
+ const reduced=practiceReducedTempo();
+ bpm.value=reduced;bpmOut.textContent=reduced;updateSettingsSummary();
+ playMode.value="full";
+ stopAuto();
+ practiceGuide.hidden=true;
+ startAuto();
+};
 keyboardMode.value=keyboardViewMode;
 sustainMode.value=sustainViewMode;
 practiceHands.value=practiceHandMode;
