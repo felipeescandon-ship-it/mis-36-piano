@@ -358,6 +358,39 @@ restaurar, papelera con recuperación tardía. El historial en Blob ya se
 genera solo; la UI para navegarlo se agrega después si hace falta en la
 práctica.
 
+**Implementado.** Notas de la implementación real:
+
+- Borrar una canción (`deleteSong`) nunca purga nada: solo la saca de
+  `songCatalog` (deja de listarse) y la agrega a `deletedSongIds`
+  (persistido en `localStorage`, propagado en el manifiesto de la Fase 5
+  con `deleted:true`). Su metadata y su documento completo siguen
+  intactos — es lo que hace que deshacer sea instantáneo y sin pérdida:
+  `undoDeleteSong` solo reinserta el id donde estaba.
+- No se puede borrar la última canción del cancionero (`songCatalog.length
+  <= 1`) — la app siempre necesita al menos una para mostrar algo.
+- El toast de "Deshacer" dura 8 segundos; pasado ese tiempo el borrado ya
+  se publicó en la nube (`saveCatalogToCloud` se dispara al borrar) y otros
+  dispositivos lo van a replicar en su próxima sincronización del
+  catálogo — deshacerlo después de eso ya no es "inmediato", es agregarla
+  de nuevo.
+- El borrado se propaga entre dispositivos reutilizando exactamente el
+  mismo mecanismo de reconciliación de la Fase 5: un dispositivo que
+  sincroniza y ve `deleted:true` para una canción que todavía tenía
+  visible, la saca de su propio catálogo (y si era la canción actual,
+  cambia a otra).
+- Exportar/importar el cancionero completo (`piano-estudio-cancionero`,
+  distinto del export/import por canción que ya existía desde antes):
+  incluye todas las canciones del catálogo *y* las borradas
+  (`deletedSongIds`), con su metadata y su documento completo. Importar
+  reemplaza el catálogo local completo tras confirmar — es la red de
+  seguridad manual si falla la nube o la sincronización.
+- Verificado: borrar y deshacer una canción que no es la actual y una que
+  sí lo es; intento de borrar la única canción restante (bloqueado con
+  aviso, sin cambios); el borrado en un dispositivo se propaga a otro que
+  nunca tuvo esa canción localmente; exportar el cancionero completo
+  (incluida una canción importada) e importarlo en un dispositivo nuevo,
+  con el contenido real de la canción intacto.
+
 ### Fuera de la v1
 
 Importar desde URL, buscar canciones desde la app, cuentas/permisos,

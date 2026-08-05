@@ -255,6 +255,11 @@ body:not(.song-editing) .song-editor-actions{display:none}
 .import-preview-section h4{margin:0 0 4px;font-size:13px;color:var(--ink)}
 .import-preview-line{margin:2px 0;line-height:1.5}
 .import-preview-line .import-chord-tag{margin-right:4px}
+.delete-toast{position:fixed;left:50%;bottom:max(18px,env(safe-area-inset-bottom));transform:translateX(-50%);
+z-index:95;display:flex;align-items:center;gap:12px;padding:10px 14px;border-radius:14px;
+background:var(--navy);color:#fff;box-shadow:0 12px 34px rgba(7,26,51,.3);max-width:calc(100vw - 32px)}
+.delete-toast[hidden]{display:none}
+.delete-toast button{white-space:nowrap}
 .song-word-row{display:flex;gap:6px clamp(9px,.9vw,13px);flex-wrap:wrap;align-items:flex-end}
 .song-word-cell{display:grid;grid-template-rows:auto auto;justify-items:start;min-width:0;max-width:100%}
 .song-phrase-cell{flex:0 1 auto;width:max-content}
@@ -526,6 +531,7 @@ button.song-line-end{padding:3px 8px}
     <div class="settings-actions">
       <button id="openEditor" class="secondary" type="button">✎ Editar acordes y letra</button>
       <button id="openImporter" class="secondary" type="button">＋ Nueva canción</button>
+      <button id="deleteSongButton" class="danger" type="button">🗑 Borrar canción</button>
       <button id="exportSongSync" class="secondary" type="button" hidden>↓ Exportar ajustes</button>
       <button id="importSongSync" class="secondary" type="button" hidden>↧ Importar ajustes</button>
       <button id="cloudSyncNow" class="secondary" type="button">☁ Sincronizar ahora</button>
@@ -536,7 +542,18 @@ button.song-line-end{padding:3px 8px}
       <span id="cloudStatus" class="data-status" aria-live="polite">Nube: comprobando…</span>
       <span id="catalogSyncStatus" class="data-status" aria-live="polite"></span>
     </div>
+    <div class="settings-actions">
+      <button id="exportCancionero" class="secondary" type="button">↓ Exportar cancionero completo</button>
+      <button id="importCancionero" class="secondary" type="button">↧ Importar cancionero completo</button>
+      <input id="importCancioneroFile" type="file" accept=".json,application/json" hidden>
+      <span id="cancioneroStatus" class="data-status" aria-live="polite"></span>
+    </div>
   </div>
+</div>
+
+<div id="deleteToast" class="delete-toast" hidden role="status" aria-live="assertive">
+  <span id="deleteToastText"></span>
+  <button id="deleteToastUndo" class="secondary" type="button">Deshacer</button>
 </div>
 
 <div id="lyricsPlaybackDock" class="lyrics-playback-dock" role="group" aria-label="Modo interpretación" hidden>
@@ -817,6 +834,14 @@ const importAnalyze=document.getElementById("importAnalyze");
 const importSave=document.getElementById("importSave");
 const importStatus=document.getElementById("importStatus");
 const importPreview=document.getElementById("importPreview");
+const deleteSongButton=document.getElementById("deleteSongButton");
+const deleteToast=document.getElementById("deleteToast");
+const deleteToastText=document.getElementById("deleteToastText");
+const deleteToastUndo=document.getElementById("deleteToastUndo");
+const exportCancionero=document.getElementById("exportCancionero");
+const importCancionero=document.getElementById("importCancionero");
+const importCancioneroFile=document.getElementById("importCancioneroFile");
+const cancioneroStatus=document.getElementById("cancioneroStatus");
 const lyricsPlaybackDock=document.getElementById("lyricsPlaybackDock");
 const resumeLyricsFollow=document.getElementById("resumeLyricsFollow");
 const lyricsFollowStatus=document.getElementById("lyricsFollowStatus");
@@ -1437,6 +1462,20 @@ function loadDynamicSongs(){
 }
 function saveDynamicSongs(){try{localStorage.setItem(DYNAMIC_SONGS_KEY,JSON.stringify(dynamicSongs))}catch{}}
 let dynamicSongs=loadDynamicSongs();
+// Fase 8: borrado suave. Un id borrado sale de `songCatalog` (no aparece en
+// el selector) pero su metadata y su documento se conservan intactos — el
+// borrado es recuperable con "Deshacer" mientras dure el toast, y el
+// manifiesto de la Fase 5 propaga `deleted:true` para que otros
+// dispositivos también lo oculten. Nunca se purga nada de verdad en v1.
+const DELETED_SONGS_KEY="piano-deleted-songs-v1";
+function loadDeletedSongIds(){
+ try{
+   const saved=JSON.parse(localStorage.getItem(DELETED_SONGS_KEY)||"[]");
+   return Array.isArray(saved)?saved.filter(id=>typeof id==="string"):[];
+ }catch{return []}
+}
+function saveDeletedSongIds(){try{localStorage.setItem(DELETED_SONGS_KEY,JSON.stringify(deletedSongIds))}catch{}}
+let deletedSongIds=loadDeletedSongIds();
 function songExists(songId){return Boolean(SONGS[songId])||Boolean(dynamicSongs[songId])}
 function songMeta(songId){return SONGS[songId]||dynamicSongs[songId]||null}
 function currentSong(){return songMeta(currentSongId)}
@@ -1460,7 +1499,7 @@ const LAST_SONG_KEY="piano-last-song";
 function songStorageKey(songId,suffix){return `piano-song:${songId}:${suffix}`}
 function songHasCloudSync(songId){return songExists(songId)}
 function loadCatalog(){
- const knownIds=[...Object.keys(SONGS),...Object.keys(dynamicSongs)];
+ const knownIds=[...Object.keys(SONGS),...Object.keys(dynamicSongs)].filter(id=>!deletedSongIds.includes(id));
  const knownSet=new Set(knownIds);
  try{
    const saved=JSON.parse(localStorage.getItem(CATALOG_KEY)||"null");
@@ -1887,6 +1926,41 @@ function switchToSong(songId){
  if(songHasCloudSync(songId))loadCloudSongSync();
  else setCloudStatus("Nube: disponible próximamente para esta canción","warning");
 }
+// Fase 8: borrado suave con deshacer inmediato. Nunca purga la metadata ni
+// el documento de la canción — solo la saca de `songCatalog` (deja de
+// mostrarse) y la marca en `deletedSongIds` (para que el manifiesto de la
+// Fase 5 propague el borrado a otros dispositivos). Deshacer es por lo
+// tanto instantáneo y sin pérdida: solo reinserta el id donde estaba.
+let lastDeletedSong=null;
+function deleteSong(songId){
+ if(!songExists(songId)||songCatalog.length<=1)return false;
+ const index=songCatalog.indexOf(songId);
+ if(index===-1)return false;
+ const wasCurrent=songId===currentSongId;
+ songCatalog=songCatalog.filter(id=>id!==songId);
+ if(!deletedSongIds.includes(songId)){deletedSongIds.push(songId);saveDeletedSongIds()}
+ persistCatalog();
+ initSongSelector();
+ lastDeletedSong={songId,index,wasCurrent};
+ if(wasCurrent)switchToSong(songCatalog[Math.min(index,songCatalog.length-1)]);
+ saveCatalogToCloud();
+ return true;
+}
+function undoDeleteSong(){
+ if(!lastDeletedSong)return false;
+ const {songId,index,wasCurrent}=lastDeletedSong;
+ lastDeletedSong=null;
+ deletedSongIds=deletedSongIds.filter(id=>id!==songId);
+ saveDeletedSongIds();
+ if(!songCatalog.includes(songId)){
+   songCatalog.splice(Math.min(index,songCatalog.length),0,songId);
+   persistCatalog();
+ }
+ initSongSelector();
+ if(wasCurrent)switchToSong(songId);
+ saveCatalogToCloud();
+ return true;
+}
 function saveSongSync(syncCloud=true){
  const saved=songDocumentSnapshot();
  try{
@@ -2050,6 +2124,102 @@ async function importSongSyncFromFile(file){
  localStorage.setItem(CLOUD_DIRTY_KEY,"1");
  return true;
 }
+// Fase 8: exportar/importar el cancionero completo (todas las canciones,
+// no solo la actual) como backup manual — la última red de seguridad si
+// falla la nube o la sincronización. Incluye canciones borradas
+// (deletedSongIds) para que el respaldo sea completo de verdad.
+function exportCancioneroPayload(){
+ const allIds=[...new Set([...songCatalog,...deletedSongIds])];
+ const songs={};
+ allIds.forEach(songId=>{
+   const meta=songMeta(songId);
+   if(!meta)return;
+   let document=null;
+   try{document=JSON.parse(localStorage.getItem(songStorageKey(songId,"sync-v1"))||"null")}catch{}
+   songs[songId]={
+     meta:{
+       title:meta.title||"",artist:meta.artist||"",originalKey:meta.originalKey||"",
+       sourceText:meta.sourceText||null,createdAt:meta.createdAt||null
+     },
+     document
+   };
+ });
+ return {
+   format:"piano-estudio-cancionero",
+   version:1,
+   exportedAt:new Date().toISOString(),
+   catalogOrder:songCatalog,
+   deletedSongIds,
+   songs
+ };
+}
+async function exportCancioneroFile(){
+ const payload=exportCancioneroPayload();
+ const json=JSON.stringify(payload,null,2);
+ const filename=`piano-estudio-cancionero-${new Date().toISOString().slice(0,10)}.json`;
+ cancioneroStatus.textContent="Preparando archivo…";
+ try{
+   const blob=new Blob([json],{type:"application/json;charset=utf-8"});
+   const url=URL.createObjectURL(blob),link=document.createElement("a");
+   link.href=url;link.download=filename;link.style.display="none";
+   document.body.appendChild(link);link.click();
+   requestAnimationFrame(()=>link.remove());
+   setTimeout(()=>URL.revokeObjectURL(url),30000);
+   cancioneroStatus.textContent=`Descargado: ${filename}`;
+ }catch(error){
+   try{
+     const file=new File([json],filename,{type:"application/json"});
+     if(!navigator.share||!navigator.canShare?.({files:[file]}))throw error;
+     await navigator.share({title:"Cancionero de Piano Estudio",files:[file]});
+     cancioneroStatus.textContent="Cancionero compartido.";
+   }catch(shareError){
+     if(shareError?.name==="AbortError"){cancioneroStatus.textContent="Exportación cancelada.";return}
+     cancioneroStatus.textContent="No fue posible exportar el cancionero.";
+   }
+ }
+}
+function validatedCancioneroPayload(payload){
+ if(!payload||payload.format!=="piano-estudio-cancionero"||payload.version!==1){
+   throw new Error("El archivo no es un cancionero exportado por esta app.");
+ }
+ if(!payload.songs||typeof payload.songs!=="object"||Array.isArray(payload.songs)){
+   throw new Error("El archivo no contiene canciones.");
+ }
+ if(!Array.isArray(payload.catalogOrder)||!Array.isArray(payload.deletedSongIds)){
+   throw new Error("El archivo no tiene un catálogo válido.");
+ }
+ return payload;
+}
+async function importCancioneroFromFile(file){
+ if(!file)return false;
+ if(file.size>10*1024*1024)throw new Error("El archivo es demasiado grande.");
+ const payload=validatedCancioneroPayload(JSON.parse(await file.text()));
+ if(!confirm("¿Reemplazar el cancionero completo de este dispositivo por el del archivo? Las canciones que no estén en el archivo dejarán de verse."))return false;
+ Object.entries(payload.songs).forEach(([songId,entry])=>{
+   if(!entry||!entry.meta||typeof entry.meta.title!=="string")return;
+   if(!SONGS[songId]){
+     dynamicSongs[songId]={
+       id:songId,
+       title:entry.meta.title||"Canción sin título",
+       artist:entry.meta.artist||"",
+       originalKey:entry.meta.originalKey||"",
+       sourceText:entry.meta.sourceText||null,
+       createdAt:entry.meta.createdAt||new Date().toISOString()
+     };
+   }
+   if(entry.document&&entry.document.version===5&&Array.isArray(entry.document.sections)){
+     try{localStorage.setItem(songStorageKey(songId,"sync-v1"),JSON.stringify(entry.document))}catch{}
+   }
+ });
+ saveDynamicSongs();
+ deletedSongIds=[...new Set(payload.deletedSongIds.filter(id=>typeof id==="string"))];
+ saveDeletedSongIds();
+ const knownIds=Object.keys(payload.songs);
+ songCatalog=payload.catalogOrder.filter(id=>knownIds.includes(id)&&!deletedSongIds.includes(id));
+ knownIds.forEach(id=>{if(!songCatalog.includes(id)&&!deletedSongIds.includes(id))songCatalog.push(id)});
+ persistCatalog();
+ return true;
+}
 function setCloudStatus(textValue,state=""){
  cloudStatus.textContent=textValue;
  cloudStatus.className="data-status"+(state?" "+state:"");
@@ -2122,22 +2292,38 @@ function setCatalogSyncStatus(textValue,state=""){
 }
 function buildCatalogManifest(){
  const nowIso=new Date().toISOString();
- return {
-   entries:songCatalog.map((songId,order)=>{
-     const song=songMeta(songId);
-     if(!song)return null;
-     return {
-       songId,
-       title:song.title||"",
-       artist:song.artist||"",
-       originalKey:song.originalKey||"",
-       order,
-       revision:readPreference(songStorageKey(songId,"cloud-revision"),""),
-       updatedAt:nowIso,
-       deleted:false
-     };
-   }).filter(Boolean)
- };
+ const activeEntries=songCatalog.map((songId,order)=>{
+   const song=songMeta(songId);
+   if(!song)return null;
+   return {
+     songId,
+     title:song.title||"",
+     artist:song.artist||"",
+     originalKey:song.originalKey||"",
+     order,
+     revision:readPreference(songStorageKey(songId,"cloud-revision"),""),
+     updatedAt:nowIso,
+     deleted:false
+   };
+ }).filter(Boolean);
+ // Un id borrado localmente sigue viajando en el manifiesto (con
+ // deleted:true) para que otros dispositivos también lo saquen de su
+ // catálogo — nunca se deja de mencionar de golpe, o un dispositivo que
+ // todavía no vio el borrado lo volvería a traer.
+ const deletedEntries=deletedSongIds.filter(id=>!songCatalog.includes(id)).map((songId,i)=>{
+   const song=songMeta(songId);
+   return {
+     songId,
+     title:song?.title||"",
+     artist:song?.artist||"",
+     originalKey:song?.originalKey||"",
+     order:activeEntries.length+i,
+     revision:"",
+     updatedAt:nowIso,
+     deleted:true
+   };
+ });
+ return {entries:[...activeEntries,...deletedEntries]};
 }
 async function saveCatalogToCloud(force=false){
  if(catalogRequestRunning)return false;
@@ -2214,12 +2400,20 @@ async function loadCatalogFromCloud(forceRefresh=false){
      throw new Error("El catálogo de la nube no es válido.");
    }
    const remoteEntries=result.manifest.entries;
-   let changed=false;
+   let changed=false,switchAway=false;
    for(const entry of remoteEntries){
-     // El borrado suave (deleted:true) todavía no lo produce nada — la
-     // Fase 8 construye la acción de borrar. El campo ya viaja en el
-     // manifiesto para no tener que cambiar el formato después.
-     if(entry.deleted)continue;
+     if(entry.deleted){
+       // Borrada en otro dispositivo: se saca del catálogo local también,
+       // sin tocar su documento (sigue existiendo por si el usuario la
+       // deshace ahí, o por si esta propagación fuera un error).
+       if(!deletedSongIds.includes(entry.songId)){deletedSongIds.push(entry.songId);saveDeletedSongIds()}
+       if(songCatalog.includes(entry.songId)){
+         songCatalog=songCatalog.filter(id=>id!==entry.songId);
+         if(entry.songId===currentSongId)switchAway=true;
+         changed=true;
+       }
+       continue;
+     }
      if(!songExists(entry.songId)){
        if(await materializeRemoteSong(entry)){
          if(!songCatalog.includes(entry.songId))songCatalog.push(entry.songId);
@@ -2245,11 +2439,14 @@ async function loadCatalogFromCloud(forceRefresh=false){
      persistCatalog();
      initSongSelector();
    }
+   if(switchAway&&songCatalog.length)switchToSong(songCatalog[0]);
    catalogCloudRevision=result.revision;
    savePreference(CATALOG_CLOUD_REVISION_KEY,catalogCloudRevision);
    setCatalogSyncStatus("Catálogo: sincronizado","ready");
+   const remoteKnowsDeletion=id=>remoteEntries.some(entry=>entry.songId===id&&entry.deleted);
    const localOnlyIds=songCatalog.filter(id=>!remoteEntries.some(entry=>entry.songId===id));
-   if(localOnlyIds.length){catalogRequestRunning=false;return await saveCatalogToCloud(false)}
+   const unpublishedDeletes=deletedSongIds.filter(id=>!remoteKnowsDeletion(id));
+   if(localOnlyIds.length||unpublishedDeletes.length){catalogRequestRunning=false;return await saveCatalogToCloud(false)}
    return true;
  }catch(error){
    console.warn("Catalog cloud load unavailable",error);
@@ -3669,6 +3866,42 @@ importSongSyncFile.onchange=async()=>{
    songDataStatus.textContent=error instanceof SyntaxError?"El archivo no contiene ajustes válidos.":error.message;
  }
  importSongSyncFile.value="";
+};
+let deleteToastTimer=null;
+function showDeleteToast(title){
+ deleteToastText.textContent=`"${title}" borrada del cancionero.`;
+ deleteToast.hidden=false;
+ if(deleteToastTimer)clearTimeout(deleteToastTimer);
+ deleteToastTimer=setTimeout(()=>{deleteToast.hidden=true;lastDeletedSong=null},8000);
+}
+deleteSongButton.onclick=()=>{
+ if(songCatalog.length<=1){alert("No podés borrar la única canción del cancionero.");return}
+ const song=currentSong();
+ if(!confirm(`¿Borrar "${song.title}" del cancionero? Podés deshacerlo inmediatamente después.`))return;
+ const title=song.title;
+ if(deleteSong(currentSongId))showDeleteToast(title);
+};
+deleteToastUndo.onclick=()=>{
+ if(deleteToastTimer)clearTimeout(deleteToastTimer);
+ deleteToast.hidden=true;
+ undoDeleteSong();
+};
+exportCancionero.onclick=exportCancioneroFile;
+importCancionero.onclick=()=>importCancioneroFile.click();
+importCancioneroFile.onchange=async()=>{
+ const file=importCancioneroFile.files?.[0];
+ if(!file)return;
+ cancioneroStatus.textContent="Revisando archivo…";
+ try{
+   const imported=await importCancioneroFromFile(file);
+   if(imported){
+     cancioneroStatus.textContent="Cancionero importado. Recargando…";
+     setTimeout(()=>location.reload(),500);
+   }else cancioneroStatus.textContent="Importación cancelada.";
+ }catch(error){
+   cancioneroStatus.textContent=error instanceof SyntaxError?"El archivo no contiene un cancionero válido.":error.message;
+ }
+ importCancioneroFile.value="";
 };
 pianoViewButton.onclick=()=>setMainView("piano");
 lyricsViewButton.onclick=()=>setMainView("lyrics");
