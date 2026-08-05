@@ -158,6 +158,34 @@ silenciosa.
   convierte a canción completa aplicando los overrides sobre la semilla, sin
   tocar el blob viejo.
 
+**Implementado.** Notas de la implementación real:
+
+- El documento completo quedó con forma `{version:5, sections:[{name,
+  lines, events:[{uid,chord,inversion,line,anchor,beats}]}]}` — más simple
+  que lo bosquejado arriba: no lleva `id`/`title`/`sourceText` todavía
+  porque el catálogo real (canciones que solo viven en almacenamiento) sigue
+  sin construirse; eso se retoma cuando exista el importador (Fase 6), que
+  es quien de verdad necesita guardar esos campos.
+- La conversión del formato legado (`mis36-cloud-v1` → documento completo)
+  se hace **en el cliente**, no en el servidor: el servidor solo sirve el
+  blob viejo tal cual si no existe el nuevo (`api/song-sync.js` no sabe
+  interpretar diffs, nunca tuvo la letra/estructura para hacerlo). El
+  cliente decide el formato por el campo `format` de la respuesta y
+  normaliza con `validatedCloudDocument`.
+- `loadCatalog()` **no** se tocó en esta fase — sigue aceptando solo
+  canciones que existen como constante en `SONGS`. Confirmado al revisar el
+  código: la única pieza real que bloqueaba tratarlo como "hecho" en la
+  Fase 3 era el formato de sincronización (ya resuelto acá); el catálogo en
+  sí no tenía ninguna canción real que aceptar todavía. Se deja para la
+  Fase 6, cuando el importador exista y produzca canciones sin entrada en
+  el HTML.
+- Verificado con un servidor mock: guardado/carga por canción aislados (dos
+  canciones no se pisan), conversión del formato legado con
+  revalidación idempotente, exportar/importar archivo en ambos formatos
+  (v2 documento completo y v1 diff viejo), y sincronización automática al
+  abrir la app en un "segundo dispositivo" (localStorage vacío + nube ya
+  poblada).
+
 ### Fase 5 — Sincronización del catálogo
 
 - Documento propio en Blob para el manifiesto: lista de `{songId, title,

@@ -1355,14 +1355,16 @@ function cloneSongSections(songId){return JSON.parse(JSON.stringify(SONGS[songId
 let sections=null;
 
 // Fase 3 del plan multi-canción (docs/plan-multi-cancion.md): cada canción
-// tiene su propio almacenamiento namespaced; solo "mis-36" sincroniza con la
-// nube hasta que exista la API genérica (Fase 4). El catálogo (`loadCatalog`)
-// todavía solo ordena canciones que existen como constante en `SONGS` —
-// aceptar canciones que solo viven en almacenamiento es trabajo de la Fase 4.
+// tiene su propio almacenamiento namespaced. Desde la Fase 4, la API de
+// sincronización es genérica por canción (`songId`) y todas las canciones
+// del catálogo sincronizan. El catálogo (`loadCatalog`) todavía solo ordena
+// canciones que existen como constante en `SONGS` — aceptar canciones que
+// solo viven en almacenamiento queda para cuando exista el importador
+// (Fase 6), que es quien realmente las produce.
 const CATALOG_KEY="piano-catalog-v1";
 const LAST_SONG_KEY="piano-last-song";
 function songStorageKey(songId,suffix){return `piano-song:${songId}:${suffix}`}
-function songHasCloudSync(songId){return songId==="mis-36"}
+function songHasCloudSync(songId){return Boolean(SONGS[songId])}
 function loadCatalog(){
  try{
    const saved=JSON.parse(localStorage.getItem(CATALOG_KEY)||"null");
@@ -1401,8 +1403,8 @@ let cloudChangeGeneration=0,cloudSaveQueued=false;
 const deletedSongEvents=new Set();
 function lyricWords(text){return text.trim().split(/\s+/).filter(Boolean)}
 function syncEventKey(section,event){return `${section}:${event.uid}`}
-function assignDefaultAnchors(){
- sections.forEach(section=>{
+function assignDefaultAnchors(targetSections=sections){
+ targetSections.forEach(section=>{
    section.lines.forEach((lineText,line)=>{
      const lineEvents=section.events.filter(event=>event.line===line);
      const words=lyricWords(lineText),count=lineEvents.length;
@@ -1413,44 +1415,110 @@ function assignDefaultAnchors(){
    });
  });
 }
+// Aplica el formato viejo de sincronización (diff de overrides contra la
+// canción semilla, versiones 2-4 del plan pre-Fase 4) sobre un array de
+// secciones ya clonado. Devuelve las claves de eventos originales borrados,
+// para que el llamador decida si alimentar `deletedSongEvents` (solo tiene
+// sentido para la sesión de edición en vivo, no para conversiones puntuales
+// de la nube).
+function applyLegacyDiff(targetSections,saved){
+ const localDeleted=new Set();
+ if(saved.version>=3&&Array.isArray(saved.added)){
+   saved.added.forEach(value=>{
+     const section=targetSections[value.section];
+     if(!section||!voicings[value.chord]||typeof value.uid!=="string"||!value.uid.startsWith("custom:"))return;
+     if(section.events.some(event=>event.uid===value.uid))return;
+     const line=Number.isInteger(value.line)?Math.min(Math.max(value.line,0),section.lines.length-1):0;
+     section.events.push({
+       uid:value.uid,chord:value.chord,line,lyric:section.lines[line],
+       anchor:Number.isInteger(value.anchor)?value.anchor:0,
+       beats:Number.isFinite(+value.beats)&&+value.beats>0?+value.beats:4,
+       inversion:voicingVariants[value.chord]?.[value.inversion]?value.inversion:defaultInversions[value.chord]
+     });
+   });
+ }
+ (Array.isArray(saved.deleted)?saved.deleted:[]).forEach(key=>localDeleted.add(key));
+ const overrides=saved.events||{};
+ targetSections.forEach((section,si)=>{
+   section.events.forEach((event,defaultPosition)=>{
+     const value=overrides[syncEventKey(si,event)];
+     if(value&&voicings[value.chord])event.chord=value.chord;
+     event.inversion=value&&voicingVariants[event.chord]?.[value.inversion]?value.inversion:(event.inversion||defaultInversions[event.chord]);
+     if(value&&Number.isInteger(value.line))event.line=Math.min(Math.max(value.line,0),section.lines.length-1);
+     event.lyric=section.lines[event.line];
+     const maxAnchor=lyricWords(event.lyric).length;
+     if(value&&Number.isInteger(value.anchor))event.anchor=Math.min(Math.max(value.anchor,0),maxAnchor);
+     if(value&&Number.isFinite(+value.beats)&&+value.beats>0)event.beats=+value.beats;
+     event.savedPosition=value&&Number.isInteger(value.position)?value.position:defaultPosition;
+   });
+   section.events=section.events
+     .filter(event=>!localDeleted.has(syncEventKey(si,event)))
+     .sort((a,b)=>a.savedPosition-b.savedPosition);
+   section.events.forEach(event=>delete event.savedPosition);
+ });
+ return localDeleted;
+}
+// Serializa un array de secciones (semilla clonada + ediciones) al formato
+// de documento completo (v5) que guarda Fase 4: la canción entera, no un
+// diff contra el código. Es el mismo objeto que viaja a `localStorage` y a
+// la nube.
+function sectionsToDocument(targetSections){
+ return {
+   version:5,
+   sections:targetSections.map(section=>({
+     name:section.name,
+     lines:section.lines,
+     events:section.events.map(event=>({
+       uid:event.uid,chord:event.chord,inversion:event.inversion,
+       line:event.line,anchor:event.anchor,beats:event.beats
+     }))
+   }))
+ };
+}
+function songDocumentSnapshot(){return sectionsToDocument(sections)}
+// Convierte un diff viejo (guardado antes de la Fase 4) en un documento
+// completo, sin tocar la sesión de edición en vivo: clona la semilla de
+// `songId`, aplica el diff encima, y serializa el resultado.
+function legacyDiffToDocument(songId,diffData){
+ const cloned=cloneSongSections(songId);
+ assignDefaultAnchors(cloned);
+ applyLegacyDiff(cloned,diffData);
+ return sectionsToDocument(cloned);
+}
+// Aplica un documento completo (v5) sobre un array de secciones ya clonado,
+// reemplazando los eventos de cada sección por los del documento guardado
+// (validados contra la biblioteca de acordes actual). A diferencia del diff
+// viejo, no hace falta rastrear "agregados" ni "borrados": la lista de
+// eventos del documento ya es la verdad completa.
+function applyFullDocument(targetSections,saved){
+ saved.sections.forEach((savedSection,si)=>{
+   const section=targetSections[si];
+   if(!section||!Array.isArray(savedSection?.events))return;
+   section.events=savedSection.events.filter(value=>(
+     value&&typeof value.uid==="string"&&value.uid.length<=100&&
+     voicings[value.chord]&&
+     Number.isInteger(value.line)&&value.line>=0&&value.line<section.lines.length&&
+     Number.isInteger(value.anchor)&&
+     Number.isFinite(+value.beats)&&+value.beats>0
+   )).map(value=>({
+     uid:value.uid,
+     chord:value.chord,
+     inversion:voicingVariants[value.chord]?.[value.inversion]?value.inversion:defaultInversions[value.chord],
+     line:value.line,
+     anchor:Math.min(Math.max(value.anchor,0),lyricWords(section.lines[value.line]).length),
+     beats:+value.beats,
+     lyric:section.lines[value.line]
+   }));
+ });
+}
 function initializeSongSync(){
  assignDefaultAnchors();
  try{
    const saved=JSON.parse(localStorage.getItem(SONG_SYNC_KEY)||"{}");
-   if(saved?.version>=2){
-     const overrides=saved.events||{};
-     if(saved.version>=3&&Array.isArray(saved.added)){
-       saved.added.forEach(value=>{
-         const section=sections[value.section];
-         if(!section||!voicings[value.chord]||typeof value.uid!=="string"||!value.uid.startsWith("custom:"))return;
-         if(section.events.some(event=>event.uid===value.uid))return;
-         const line=Number.isInteger(value.line)?Math.min(Math.max(value.line,0),section.lines.length-1):0;
-         section.events.push({
-           uid:value.uid,chord:value.chord,line,lyric:section.lines[line],
-           anchor:Number.isInteger(value.anchor)?value.anchor:0,
-           beats:Number.isFinite(+value.beats)&&+value.beats>0?+value.beats:4,
-           inversion:voicingVariants[value.chord]?.[value.inversion]?value.inversion:defaultInversions[value.chord]
-         });
-       });
-     }
-     (Array.isArray(saved.deleted)?saved.deleted:[]).forEach(key=>deletedSongEvents.add(key));
-     sections.forEach((section,si)=>{
-       section.events.forEach((event,defaultPosition)=>{
-         const value=overrides[syncEventKey(si,event)];
-         if(value&&voicings[value.chord])event.chord=value.chord;
-         event.inversion=value&&voicingVariants[event.chord]?.[value.inversion]?value.inversion:(event.inversion||defaultInversions[event.chord]);
-         if(value&&Number.isInteger(value.line))event.line=Math.min(Math.max(value.line,0),section.lines.length-1);
-         event.lyric=section.lines[event.line];
-         const maxAnchor=lyricWords(event.lyric).length;
-         if(value&&Number.isInteger(value.anchor))event.anchor=Math.min(Math.max(value.anchor,0),maxAnchor);
-         if(value&&Number.isFinite(+value.beats)&&+value.beats>0)event.beats=+value.beats;
-         event.savedPosition=value&&Number.isInteger(value.position)?value.position:defaultPosition;
-       });
-       section.events=section.events
-         .filter(event=>!deletedSongEvents.has(syncEventKey(si,event)))
-         .sort((a,b)=>a.savedPosition-b.savedPosition);
-       section.events.forEach(event=>delete event.savedPosition);
-     });
+   if(saved?.version===5&&Array.isArray(saved.sections)){
+     applyFullDocument(sections,saved);
+   }else if(saved?.version>=2){
+     applyLegacyDiff(sections,saved).forEach(key=>deletedSongEvents.add(key));
    }else{
      sections.forEach((section,si)=>section.events.forEach((event,ei)=>{
        const value=saved[`${si}:${ei}`];
@@ -1514,23 +1582,8 @@ function switchToSong(songId){
  if(songHasCloudSync(songId))loadCloudSongSync();
  else setCloudStatus("Nube: disponible próximamente para esta canción","warning");
 }
-function songSyncSnapshot(){
- const saved={version:4,events:{},deleted:[...deletedSongEvents],added:[]};
- sections.forEach((section,si)=>section.events.forEach((event,position)=>{
-   saved.events[syncEventKey(si,event)]={
-     chord:event.chord,inversion:event.inversion,line:event.line,anchor:event.anchor,beats:event.beats,position
-   };
-   if(event.uid.startsWith("custom:")){
-     saved.added.push({
-       section:si,uid:event.uid,chord:event.chord,line:event.line,
-       anchor:event.anchor,beats:event.beats,inversion:event.inversion
-     });
-   }
- }));
- return saved;
-}
 function saveSongSync(syncCloud=true){
- const saved=songSyncSnapshot();
+ const saved=songDocumentSnapshot();
  try{
    localStorage.setItem(SONG_SYNC_KEY,JSON.stringify(saved));
    setLocalSaveStatus("Dispositivo: guardado","ready");
@@ -1587,15 +1640,35 @@ function moveEditorHistory(source,target){
 function songSyncExportPayload(){
  return {
    format:"mis-36-piano-ajustes",
-   version:1,
+   version:2,
    song:currentSong().title,
    exportedAt:new Date().toISOString(),
-   songSync:songSyncSnapshot()
+   songSync:songDocumentSnapshot()
  };
 }
-function validatedImportedSongSync(payload){
- if(!payload||payload.format!=="mis-36-piano-ajustes"||payload.song!==currentSong().title||payload.version!==1)throw new Error(`El archivo no corresponde a los ajustes de "${currentSong().title}".`);
- const data=payload.songSync;
+// Valida un documento completo (v5) contra la canción actualmente cargada:
+// mismas comprobaciones estructurales que usa la nube, más los límites de
+// línea/acorde reales de `sections` (la semilla en curso).
+function validatedSongDocument(data){
+ if(!data||data.version!==5||!Array.isArray(data.sections)||data.sections.length>sections.length)throw new Error("El documento de la canción no es válido.");
+ data.sections.forEach((savedSection,si)=>{
+   const section=sections[si];
+   if(!section||!Array.isArray(savedSection?.events)||savedSection.events.length>500)throw new Error("El documento de la canción no es válido.");
+   savedSection.events.forEach(value=>{
+     if(!value||typeof value.uid!=="string"||value.uid.length>100)throw new Error("El documento contiene un identificador no válido.");
+     if(!voicings[value.chord])throw new Error("El documento contiene un acorde no reconocido.");
+     if(!voicingVariants[value.chord]?.[value.inversion])throw new Error("El documento contiene una inversión no reconocida.");
+     if(!Number.isInteger(value.line)||value.line<0||value.line>=section.lines.length)throw new Error("El documento contiene una posición no válida.");
+     if(!Number.isInteger(value.anchor)||value.anchor<0||value.anchor>500)throw new Error("El documento contiene un ancla no válida.");
+     if(!Number.isFinite(+value.beats)||+value.beats<=0||+value.beats>32)throw new Error("El documento contiene una duración no válida.");
+   });
+ });
+ return data;
+}
+// Valida el formato diff de antes de la Fase 4 (versiones 2-4: overrides
+// contra la canción semilla). Se conserva solo para leer respaldos viejos
+// exportados a archivo, o la copia legada en la nube de "mis-36".
+function validatedLegacyDiff(data){
  if(!data||data.version!==4||!data.events||typeof data.events!=="object"||Array.isArray(data.events))throw new Error("La versión del archivo no es compatible.");
  if(!Array.isArray(data.added)||!Array.isArray(data.deleted))throw new Error("El archivo contiene listas de cambios no válidas.");
  if(Object.keys(data.events).length>1500||data.added.length>500||data.deleted.length>1500)throw new Error("El archivo contiene demasiados cambios.");
@@ -1624,6 +1697,13 @@ function validatedImportedSongSync(payload){
    if(!Number.isFinite(+value.beats)||+value.beats<=0||+value.beats>32)throw new Error("El archivo contiene una duración agregada no válida.");
  });
  return data;
+}
+function validatedImportedSongSync(payload){
+ if(!payload||payload.format!=="mis-36-piano-ajustes"||payload.song!==currentSong().title)throw new Error(`El archivo no corresponde a los ajustes de "${currentSong().title}".`);
+ const data=payload.songSync;
+ if(payload.version===2&&data?.version===5)return validatedSongDocument(data);
+ if(payload.version===1&&data?.version===4)return validatedLegacyDiff(data);
+ throw new Error("La versión del archivo no es compatible.");
 }
 async function exportSongSyncFile(){
  saveSongSync(false);
@@ -1675,19 +1755,30 @@ function showCloudChoice(show){
 function cloudDocumentsMatch(first,second){
  try{return JSON.stringify(first)===JSON.stringify(second)}catch{return false}
 }
+// Acepta dos formatos de documento en la nube: el nuevo genérico por
+// canción (Fase 4, `piano-song-cloud-v1`, documento completo) y el legado
+// de un solo documento hardcodeado para "mis-36" (`mis36-cloud-v1`, diff de
+// overrides) que el servidor sigue sirviendo como fallback de lectura si
+// todavía no se escribió nada en la ruta nueva. El resultado siempre
+// conserva `format` normalizado a `piano-song-cloud-v1`, así que llamar de
+// nuevo a esta función sobre su propio resultado (como hace
+// `applyCloudDocument`) es seguro.
 function validatedCloudDocument(documentValue){
- if(!documentValue||documentValue.format!=="mis36-cloud-v1"||typeof documentValue.revision!=="string"||!documentValue.updatedAt)throw new Error("La versión de la nube no es válida.");
- const songSync=validatedImportedSongSync({
-   format:"mis-36-piano-ajustes",
-   version:1,
-   song:currentSong().title,
-   songSync:documentValue.songSync
- });
- return {...documentValue,songSync};
+ if(!documentValue||typeof documentValue.revision!=="string"||!documentValue.updatedAt)throw new Error("La versión de la nube no es válida.");
+ if(documentValue.format==="piano-song-cloud-v1"){
+   const song=validatedSongDocument(documentValue.song);
+   return {...documentValue,format:"piano-song-cloud-v1",song};
+ }
+ if(documentValue.format==="mis36-cloud-v1"){
+   const diff=validatedLegacyDiff(documentValue.songSync);
+   const song=legacyDiffToDocument(currentSongId,diff);
+   return {...documentValue,format:"piano-song-cloud-v1",song};
+ }
+ throw new Error("La versión de la nube no es válida.");
 }
 function applyCloudDocument(documentValue){
  const validated=validatedCloudDocument(documentValue);
- localStorage.setItem(SONG_SYNC_KEY,JSON.stringify(validated.songSync));
+ localStorage.setItem(SONG_SYNC_KEY,JSON.stringify(validated.song));
  localStorage.setItem(CLOUD_REVISION_KEY,validated.revision);
  localStorage.removeItem(CLOUD_DIRTY_KEY);
  cloudRevision=validated.revision;
@@ -1714,19 +1805,27 @@ async function saveCloudSongSync(force=false){
    return false;
  }
  const savingGeneration=cloudChangeGeneration;
- const savingSnapshot=songSyncSnapshot();
+ const savingSongId=currentSongId;
+ const savingSnapshot=songDocumentSnapshot();
  let savedSuccessfully=false;
  cloudRequestRunning=true;
  cloudSaveQueued=false;
  cloudSyncNow.disabled=true;
  setCloudStatus("Nube: guardando…","warning");
  try{
-   const response=await cloudFetch("/api/song-sync",{
+   const response=await cloudFetch(`/api/song-sync?songId=${encodeURIComponent(savingSongId)}`,{
      method:"PUT",
      headers:{"Content-Type":"application/json"},
-     body:JSON.stringify({songSync:savingSnapshot,baseRevision:cloudRevision||null,force})
+     body:JSON.stringify({songId:savingSongId,song:savingSnapshot,baseRevision:cloudRevision||null,force})
    });
    const result=await response.json().catch(()=>({}));
+   if(savingSongId!==currentSongId){
+     // La canción activa cambió mientras esta petición estaba en vuelo (los
+     // slots de almacenamiento globales ya apuntan a otra canción): la
+     // escritura en el servidor ya se hizo, pero no toca el estado local de
+     // la canción nueva ni reintenta nada.
+     return response.ok;
+   }
    if(response.status===409){
      cloudSaveQueued=false;
      setCloudStatus("Nube: hay otra versión. Elige cuál conservar.","warning");
@@ -1775,12 +1874,14 @@ async function saveCloudSongSync(force=false){
 async function loadCloudSongSync(forceRefresh=false){
  if(!songHasCloudSync(currentSongId)){setCloudStatus("Nube: disponible próximamente para esta canción","warning");return false;}
  if(cloudRequestRunning&&!forceRefresh)return false;
+ const loadingSongId=currentSongId;
  cloudRequestRunning=true;
  cloudSyncNow.disabled=true;
  setCloudStatus("Nube: comprobando…");
  try{
-   const response=await cloudFetch("/api/song-sync",{cache:"no-store",headers:{"Accept":"application/json"}});
+   const response=await cloudFetch(`/api/song-sync?songId=${encodeURIComponent(loadingSongId)}`,{cache:"no-store",headers:{"Accept":"application/json"}});
    const result=await response.json().catch(()=>({}));
+   if(loadingSongId!==currentSongId)return false;
    if(response.status===503){
      setCloudStatus("Nube pendiente de activar · copia local segura","warning");
      return false;
@@ -1797,9 +1898,9 @@ async function loadCloudSongSync(forceRefresh=false){
    if(!response.ok)throw new Error(result.error||"No fue posible leer la nube.");
    const documentValue=validatedCloudDocument(result);
    cloudRemoteDocument=documentValue;
-   const localSnapshot=songSyncSnapshot();
+   const localSnapshot=songDocumentSnapshot();
    const isDirty=readPreference(CLOUD_DIRTY_KEY,"")==="1";
-   if(cloudDocumentsMatch(localSnapshot,documentValue.songSync)){
+   if(cloudDocumentsMatch(localSnapshot,documentValue.song)){
      cloudRevision=documentValue.revision;
      localStorage.setItem(CLOUD_REVISION_KEY,cloudRevision);
      localStorage.removeItem(CLOUD_DIRTY_KEY);
