@@ -113,28 +113,78 @@ silenciosa.
 ### Fase 3 — Migración de "Mis 36" y catálogo dinámico
 
 - "Mis 36" se convierte al schema de la Fase 1 y se copia como primera
-  entrada del **catálogo dinámico** (fuente de verdad real, no el registro
-  estático en el HTML).
+  entrada del catálogo.
 - Claves de estado renombradas a un prefijo neutral versionado
   (`piano-song:*`), namespaceadas por `songId`.
 - Migración automática: si existen las claves viejas y no las nuevas, se
   copian una sola vez.
 - Selector de canción en el header. La app abre la última canción usada, o
   "Mis 36" la primera vez.
+- **Ajustado tras revisión de Fase 4:** el catálogo entregado en esta fase
+  todavía solo ordena canciones que existen como constante en el HTML
+  (`loadCatalog()` descarta cualquier id ajeno a `SONGS`) — no es aún fuente
+  de verdad real. Ese salto (aceptar canciones que solo existen en
+  almacenamiento) se hace recién en la Fase 4, junto con el cambio de
+  formato de sincronización que lo hace posible. También se corrigió en esta
+  base un bug de mutación: `sections` pasó de ser la misma referencia que la
+  semilla de "Mis 36" (mutada en sitio en cada sesión) a un clon de trabajo
+  por canción (`cloneSongSections`), para que cambiar de canción y volver no
+  arrastre estado de una sesión de edición anterior.
 
-### Fase 4 — API genérica (sin listas blancas por canción)
+### Fase 4 — API genérica y catálogo real (sin listas blancas por canción)
 
+- El documento sincronizado deja de ser un **diff de overrides** contra una
+  canción hardcodeada (formato `songSync` actual, ilegible sin el código) y
+  pasa a ser **la canción completa**: `{id, title, artist, originalKey,
+  sections:[{name, lines, events}], sourceText, revision, updatedAt}`. Este
+  cambio es el que permite que la Fase 6 (importador) guarde canciones que no
+  existen en el HTML, sin inventar un segundo formato ni migrar el primero.
+- `SONGS` pasa a ser semilla de solo lectura; el catálogo persistido
+  (`loadCatalog()`) acepta canciones que solo existen en `localStorage`/Blob.
 - `api/song-sync.js` deja de depender de `SECTION_LINE_COUNTS`/
-  `ALLOWED_CHORDS` fijos. Valida **estructura**, no contenido conocido:
-  tipos, límites de tamaño, rangos numéricos razonables, símbolo de acorde
-  como string acotado (largo máximo, charset permitido).
+  `ALLOWED_CHORDS` fijos. Valida **estructura** derivada del propio
+  documento (tipos, límites de tamaño, rangos numéricos, símbolo de acorde
+  como string acotado en largo y charset), no una lista cerrada de
+  contenido conocido.
 - Cada canción: documento propio (`songs/<songId>/current.json` +
-  `songs/<songId>/history/...`).
+  `songs/<songId>/history/...`), y el `PUT` escribe de verdad `current.json`
+  en cada guardado — hoy solo escribe en `history/` y cada lectura lista el
+  prefijo completo para encontrar el blob más reciente, un costo que crece
+  sin límite con la cantidad de guardados históricos.
 - Conflictos por revisión: se extiende el mecanismo que ya existe hoy, por
   canción individual.
 - Fallback de lectura: si `songs/mis-36/current.json` no existe, se lee
-  `mis36/current.json` (ruta actual en producción) para no perder el
-  historial existente.
+  `mis36/current.json` (ruta actual en producción, formato diff viejo) y se
+  convierte a canción completa aplicando los overrides sobre la semilla, sin
+  tocar el blob viejo.
+
+**Implementado.** Notas de la implementación real:
+
+- El documento completo quedó con forma `{version:5, sections:[{name,
+  lines, events:[{uid,chord,inversion,line,anchor,beats}]}]}` — más simple
+  que lo bosquejado arriba: no lleva `id`/`title`/`sourceText` todavía
+  porque el catálogo real (canciones que solo viven en almacenamiento) sigue
+  sin construirse; eso se retoma cuando exista el importador (Fase 6), que
+  es quien de verdad necesita guardar esos campos.
+- La conversión del formato legado (`mis36-cloud-v1` → documento completo)
+  se hace **en el cliente**, no en el servidor: el servidor solo sirve el
+  blob viejo tal cual si no existe el nuevo (`api/song-sync.js` no sabe
+  interpretar diffs, nunca tuvo la letra/estructura para hacerlo). El
+  cliente decide el formato por el campo `format` de la respuesta y
+  normaliza con `validatedCloudDocument`.
+- `loadCatalog()` **no** se tocó en esta fase — sigue aceptando solo
+  canciones que existen como constante en `SONGS`. Confirmado al revisar el
+  código: la única pieza real que bloqueaba tratarlo como "hecho" en la
+  Fase 3 era el formato de sincronización (ya resuelto acá); el catálogo en
+  sí no tenía ninguna canción real que aceptar todavía. Se deja para la
+  Fase 6, cuando el importador exista y produzca canciones sin entrada en
+  el HTML.
+- Verificado con un servidor mock: guardado/carga por canción aislados (dos
+  canciones no se pisan), conversión del formato legado con
+  revalidación idempotente, exportar/importar archivo en ambos formatos
+  (v2 documento completo y v1 diff viejo), y sincronización automática al
+  abrir la app en un "segundo dispositivo" (localStorage vacío + nube ya
+  poblada).
 
 ### Fase 5 — Sincronización del catálogo
 
@@ -145,6 +195,84 @@ silenciosa.
 - Estados visibles: "Guardado", "Sincronizando", "Sin conexión".
 - Borrado suave (`deleted:true` en el manifiesto) + deshacer inmediato
   (toast). Sin papelera navegable en v1.
+
+**Implementado** (se hizo después de la Fase 6+7, no antes, porque recién
+con el importador el catálogo tiene canciones reales que puedan divergir
+entre dispositivos — antes de eso hubiera sido infraestructura sin nada que
+ejercitar). Notas de la implementación real:
+
+- `api/catalog-sync.js`: mismo mecanismo de revisión que ya usa
+  `api/song-sync.js` (conflicto por `baseRevision`, historial inmutable),
+  aplicado a un único documento global (`catalog/current.json` +
+  `catalog/history/...`) en vez de uno por canción. Valida solo la forma del
+  manifiesto — nunca toca el contenido de una canción, que sigue viajando
+  por su propio endpoint.
+- El manifiesto no incluye `deleted:true` desde ningún productor todavía
+  (no existe la acción de borrar — eso es la Fase 8). El campo ya viaja en
+  el esquema y el cliente ya lo respeta si aparece, para no tener que tocar
+  el formato otra vez cuando se construya el borrado.
+- Al abrir la app (o al importar una canción nueva): se publica/consulta el
+  manifiesto. Una canción del manifiesto que no existe localmente se
+  materializa completa (`materializeRemoteSong`): se trae su documento vía
+  `/api/song-sync?songId=...` (el mismo endpoint de siempre) y se guarda
+  como canción dinámica, exactamente como si se hubiera importado en este
+  dispositivo. Una canción local que el manifiesto todavía no conoce
+  (recién creada, sin publicar) dispara su propia publicación.
+- Estados visibles en la interfaz: "Catálogo: sincronizando…" / "Catálogo:
+  sincronizado" / "Catálogo: sin conexión" (mismo patrón de texto que ya
+  usa la sincronización por canción).
+- Verificado con un servidor mock: catálogo publicado tras importar una
+  canción en un "dispositivo A"; un "dispositivo B" completamente
+  limpio (sin nada en `localStorage`) la descubre y materializa sola al
+  abrir la app, sin haber visitado esa canción nunca; conflicto de revisión
+  simulado (alguien más publica mientras se estaba por guardar) se
+  resuelve solo, sin intervención ni error visible.
+
+### Prerrequisito de la Fase 6 — acordes pendientes, sin caída
+
+Al empezar a construir el importador se confirmó un hallazgo crítico: la app
+**no tenía ningún camino de degradación** para un acorde fuera de la
+biblioteca curada. `resolveVoicing()` asumía siempre `voicings[chord]`
+presente; con un acorde desconocido lanzaba `TypeError` sin captura en
+`render()`, y los validadores del cliente descartaban o rechazaban esos
+eventos en silencio. El criterio de éxito #3 de este plan ("degrada
+elegantemente") era aspiracional, no implementado — y el criterio #2 pide
+justamente probar con una canción real que use acordes que "Mis 36" nunca
+tocó, el escenario que rompía la app.
+
+**Implementado como prerrequisito, antes del parser:**
+
+- `resolveVoicing(chord,inversion)` devuelve un objeto "pendiente"
+  (`{l:null,r:[],inv:"",inversion:"root",pending:true}`) en vez de explotar
+  cuando el acorde no está en `voicings`/`voicingVariants`. Único punto de
+  cambio que cubre casi todos los sitios de lectura (teclado, notas,
+  digitación), porque todos consumen su forma `{l,r,inv}`.
+- `playChord` ve `pending` y no reproduce nada, pero respeta los `beats` del
+  evento — el resto de la canción no se desincroniza, el silencio ocupa
+  exactamente el lugar del acorde que falta.
+- `chordText`, `noteText`, `keyHint` devuelven el símbolo original o un
+  marcador neutro (`"—"`) en vez de la cadena `"undefined"`.
+- Los validadores del cliente (`applyFullDocument`, `applyLegacyDiff`,
+  `validatedSongDocument`) dejan de exigir pertenencia a la biblioteca:
+  solo exigen que el símbolo tenga forma válida (mismo patrón que ya usaba
+  el servidor desde la Fase 4) y que la inversión sea una de las tres reales
+  (`root`/`first`/`second`, con `"root"` como default seguro). Un acorde
+  pendiente sobrevive guardar, cargar, sincronizar y exportar sin perderse.
+- Marcado visible: en la vista Letra el botón del acorde pendiente se ve con
+  borde ámbar y la palabra "pendiente"; en la guía de Práctica y en el
+  detalle de acorde se explica que ese cambio no se puede practicar/sonar
+  todavía, en vez de mostrar datos vacíos sin explicación.
+- Descartado deliberadamente: generar un voicing por fórmula para acordes
+  desconocidos. Resolvería el silencio, pero contradice dos decisiones ya
+  tomadas ("no se reemplaza por un motor genérico", "nunca por generación
+  algorítmica silenciosa" en la Parte B) y haría sonar acordes nunca
+  aprobados por oído.
+- Verificado: `resolveVoicing`/`chordText`/`render`/`playChord` con un
+  acorde inventado no lanzan error; el acorde pendiente sobrevive
+  guardado→recarga y sincronización entre "dos dispositivos" sin
+  descartarse; `verifyVoicingLibraryIntegrity()` sigue pasando (los 12
+  originales, intactos); un acorde ya aprobado (`E`) resuelve exactamente
+  igual que antes del cambio.
 
 ### Fase 6 — Importador (copiar y pegar, acotado)
 
@@ -159,11 +287,65 @@ Cobertura v1, en orden de prioridad:
 El detector es un borrador, no tiene que ser perfecto — `sourceText` se
 guarda siempre para comparar contra la interpretación.
 
+**Implementado**, junto con la Fase 7 en una sola entrega (como preveía el
+orden de ejecución). Notas de la implementación real:
+
+- **Catálogo dinámico real, resuelto acá** (quedaba pendiente de la Fase 4):
+  `SONGS` sigue siendo semillas de solo lectura; una canción importada vive
+  enteramente en `dynamicSongs` (metadata: título/artista/tonalidad/
+  `sourceText`) + su documento completo v5 en la misma clave de
+  sincronización que usa cualquier canción (`piano-song:<id>:sync-v1`). No
+  hizo falta una semilla en código: el documento completo *es* la canción.
+  `songMeta`/`songExists` unifican ambos orígenes en el resto del archivo.
+  `loadCatalog()` ahora sí acepta y persiste ids que solo viven en
+  almacenamiento.
+- El parser (`parseSongText`) cubre las 4 prioridades. Encontró un bug real
+  durante las pruebas: el patrón de acorde permisivo (necesario para aceptar
+  símbolos reales como `Bm7b5` o `D7M`) también hacía matchear palabras
+  cortas como "Coro" o "Final" (`C`+`oro`, `F`+`inal`), rompiendo la
+  detección de encabezados de sección. Se resolvió con un segundo patrón
+  más estricto (`SOLO_CHORD_TOKEN_PATTERN`, limitado a calidades de acorde
+  reales conocidas) usado solo para decidir si una línea `[Palabra]` sola es
+  un acorde suelto entre corchetes o un encabezado — el patrón permisivo
+  se sigue usando donde el contexto ya desambigua (línea entera de acordes,
+  o `[C]` pegado a una palabra).
+- Un acorde que el parser detecta pero que la biblioteca no reconoce se
+  guarda como pendiente (Prerrequisito de arriba) — nunca bloquea ni
+  descarta la importación.
+- **Fase 7 simplificada deliberadamente:** en vez de construir una vista de
+  revisión paralela, el flujo de guardado abre la canción importada
+  directamente en el editor ya existente (Letra + "Editar acordes y letra")
+  — reasignar secciones, mover/cambiar/añadir/quitar acordes y corregir
+  letra ya son cosas que ese editor sabe hacer. Lo que sí es nuevo es la
+  vista previa *antes* de guardar (`#importPanel`): confirmar
+  título/artista/tonalidad, ver el conteo de acordes detectados separados
+  en "pendientes" vs "ya en la biblioteca", y un vistazo a las primeras
+  líneas de cada sección. `sourceText` se guarda siempre en
+  `dynamicSongs[id].sourceText`, aunque todavía no hay una UI para volver a
+  mostrarlo en paralelo del editor — eso se agrega después si hace falta en
+  la práctica.
+- Verificado con un servidor mock: análisis con texto vacío y sin título
+  (mensajes claros, sin guardar nada); colisión de título con "Mis 36" →
+  `mis-36-2` sin pisar la canción original; guardado→apertura en modo
+  edición sin errores; sincronización con la nube de una canción importada
+  (antes solo sincronizaba "Mis 36"); acorde pendiente detectado y marcado
+  visualmente en la vista Letra de la canción recién importada.
+- **Limitación conocida, heredada de que la Fase 5 no existe todavía:** el
+  catálogo (`piano-catalog-v1`) es local a cada dispositivo. Una canción
+  importada en un dispositivo no aparece automáticamente en otro hasta que
+  la Fase 5 (manifiesto sincronizado) exista — su documento sí sincroniza
+  desde ya, solo falta que el catálogo lo anuncie.
+
 ### Fase 7 — Revisión visual antes de guardar
 
 Vista de edición previa: confirmar título/artista/tonalidad, revisar y
 reasignar secciones, mover/cambiar/añadir/quitar acordes, corregir letra, ver
 `sourceText` en paralelo. Nada entra al catálogo sin pasar por acá.
+
+**Implementado junto con la Fase 6** (ver notas arriba) — reutilizando el
+editor existente en vez de una vista paralela, con la vista previa del
+importador cubriendo la confirmación de título/artista/tonalidad y el
+resumen de acordes antes de guardar.
 
 ### Fase 8 — Red de seguridad mínima
 
@@ -175,6 +357,39 @@ Queda explícitamente fuera de v1: historial navegable de versiones con UI de
 restaurar, papelera con recuperación tardía. El historial en Blob ya se
 genera solo; la UI para navegarlo se agrega después si hace falta en la
 práctica.
+
+**Implementado.** Notas de la implementación real:
+
+- Borrar una canción (`deleteSong`) nunca purga nada: solo la saca de
+  `songCatalog` (deja de listarse) y la agrega a `deletedSongIds`
+  (persistido en `localStorage`, propagado en el manifiesto de la Fase 5
+  con `deleted:true`). Su metadata y su documento completo siguen
+  intactos — es lo que hace que deshacer sea instantáneo y sin pérdida:
+  `undoDeleteSong` solo reinserta el id donde estaba.
+- No se puede borrar la última canción del cancionero (`songCatalog.length
+  <= 1`) — la app siempre necesita al menos una para mostrar algo.
+- El toast de "Deshacer" dura 8 segundos; pasado ese tiempo el borrado ya
+  se publicó en la nube (`saveCatalogToCloud` se dispara al borrar) y otros
+  dispositivos lo van a replicar en su próxima sincronización del
+  catálogo — deshacerlo después de eso ya no es "inmediato", es agregarla
+  de nuevo.
+- El borrado se propaga entre dispositivos reutilizando exactamente el
+  mismo mecanismo de reconciliación de la Fase 5: un dispositivo que
+  sincroniza y ve `deleted:true` para una canción que todavía tenía
+  visible, la saca de su propio catálogo (y si era la canción actual,
+  cambia a otra).
+- Exportar/importar el cancionero completo (`piano-estudio-cancionero`,
+  distinto del export/import por canción que ya existía desde antes):
+  incluye todas las canciones del catálogo *y* las borradas
+  (`deletedSongIds`), con su metadata y su documento completo. Importar
+  reemplaza el catálogo local completo tras confirmar — es la red de
+  seguridad manual si falla la nube o la sincronización.
+- Verificado: borrar y deshacer una canción que no es la actual y una que
+  sí lo es; intento de borrar la única canción restante (bloqueado con
+  aviso, sin cambios); el borrado en un dispositivo se propaga a otro que
+  nunca tuvo esa canción localmente; exportar el cancionero completo
+  (incluida una canción importada) e importarlo en un dispositivo nuevo,
+  con el contenido real de la canción intacto.
 
 ### Fuera de la v1
 
@@ -244,32 +459,23 @@ Bm7b5                 3
 los acordes teóricamente posibles. Esta lista es la única fuente de qué
 construir; no hay taxonomía pre-declarada de familias a llenar.
 
-### Fase 3 — Taller mínimo de voicings
+### Fase 3 — Expandir según el repertorio elegido
 
-Herramienta interna simple, no forma parte del cancionero:
-
-- Elegir un acorde aprobado como referencia.
-- Duplicar y transponer automáticamente a la nueva fundamental.
-- Ajustar notas/octavas/reparto entre manos a mano.
-- Escuchar el acorde aislado y en contexto (progresión o canción real).
-- Guardar como aprobado, o descartar.
-
-Sin comparador visual, sin control de tempo/sustain en vivo, sin estados de
-borrador separados, sin editor de digitación — se agrega después solo si
-hace falta.
-
-### Fase 4 — Expandir según el repertorio elegido
-
-Para cada acorde de la lista de la Fase 2, en orden de frecuencia:
+No hizo falta construir una herramienta interna de taller: los 9 acordes de
+KM0 (Fase 4 original, ver historial de commits) se agregaron directamente en
+`voicings`/`voicingVariants`/`defaultInversions`, verificando cada uno por
+aritmética de semitonos contra un acorde ya aprobado de la misma familia
+antes de escucharlo. El proceso real, por acorde de la lista de la Fase 2 en
+orden de frecuencia:
 
 1. Identificar su calidad exacta.
 2. Elegir un acorde aprobado de la misma familia (o, si es la primera vez que
    aparece esa familia, construirlo desde cero por teoría estándar, igual
    que se hizo con los 12 originales).
-3. Duplicar y transponer.
+3. Duplicar y transponer por aritmética de semitonos, a mano.
 4. Ajustar registro, octavas, reparto entre manos.
-5. Escucharlo aislado, en 2-3 progresiones, y en la canción real donde
-   aparece.
+5. Escucharlo tocando la canción real donde aparece (la aprobación aislada o
+   en progresiones sueltas queda como paso opcional, no obligatorio).
 6. Aprobarlo → queda disponible para toda la biblioteca (con su alias si
    corresponde).
 
@@ -277,7 +483,7 @@ Una propuesta nunca sobrescribe un voicing aprobado; para cambiarlo se crea
 una variante nueva. No se construyen acordes que el repertorio elegido no
 use.
 
-### Fase 5 — Variantes (solo bajo demanda)
+### Fase 4 — Variantes (solo bajo demanda)
 
 Cada acorde tiene una variante principal obligatoria. Se agrega una segunda
 variante (conducción cercana) solo si una canción real la necesita.
@@ -296,7 +502,9 @@ Un voicing se aprueba solo si:
 - No cruza las manos accidentalmente y es razonablemente tocable.
 - Enlaza bien con los acordes vecinos y suena coherente con "Mis 36" (mismo
   piano, sustain, dinámica, reverberación).
-- Funciona dentro de la canción real, no solo aislado.
+- Se verificó por aritmética de semitonos contra un acorde ya aprobado de la
+  misma familia, y se escuchó tocando la canción real donde aparece (no hace
+  falta un paso previo aislado si la canción real ya lo confirma).
 
 ### Definición de "listo" (Parte B)
 
@@ -314,9 +522,8 @@ Un voicing se aprueba solo si:
 ```
 Congelar los 12 originales
 → elegir repertorio real y priorizar por frecuencia
-→ taller mínimo de voicings
 → expandir solo lo que el repertorio pide, por orden de frecuencia
-→ escuchar y aprobar en contexto real
+  (aritmética de semitonos + escuchar en la canción real)
 → variantes solo si una canción real lo exige
 ```
 

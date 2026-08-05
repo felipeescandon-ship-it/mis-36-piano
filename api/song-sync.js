@@ -1,10 +1,12 @@
 import { get, list, put } from "@vercel/blob";
 
-const CURRENT_PATH = "mis36/current.json";
-const HISTORY_PREFIX = "mis36/history/";
+const LEGACY_SONG_ID = "mis-36";
+const LEGACY_CURRENT_PATH = "mis36/current.json";
+const LEGACY_HISTORY_PREFIX = "mis36/history/";
+const CLOUD_FORMAT = "piano-song-cloud-v1";
 const ALLOWED_INVERSIONS = new Set(["root", "first", "second"]);
-const ALLOWED_CHORDS = new Set(["E", "F#", "F#m", "A", "Am", "C#m", "C#", "G#m", "G#", "D", "B", "B/D#"]);
-const SECTION_LINE_COUNTS = [2, 8, 4, 7, 4, 4, 6, 2, 4, 7];
+const CHORD_PATTERN = /^[A-Za-z0-9#b°+/]{1,16}$/;
+const SONG_ID_PATTERN = /^[a-z0-9-]{1,64}$/;
 class ValidationError extends Error {}
 
 function json(value, status = 200) {
@@ -28,62 +30,85 @@ function sameOrigin(request) {
   }
 }
 
-async function readCurrent() {
+function validateSongId(songId) {
+  if (typeof songId !== "string" || !SONG_ID_PATTERN.test(songId)) {
+    throw new ValidationError("Identificador de canción no válido.");
+  }
+  return songId;
+}
+
+function songPaths(songId) {
+  return {
+    current: `songs/${songId}/current.json`,
+    historyPrefix: `songs/${songId}/history/`,
+  };
+}
+
+async function latestBlob(prefix, fallbackPath) {
   let cursor;
   let latest = null;
   do {
-    const history = await list({ prefix: HISTORY_PREFIX, limit: 1000, cursor });
+    const history = await list({ prefix, limit: 1000, cursor });
     latest = history.blobs.reduce((selected, blob) => (
       !selected || blob.pathname > selected.pathname ? blob : selected
     ), latest);
     cursor = history.hasMore ? history.cursor : undefined;
   } while (cursor);
-  const result = await get(latest?.pathname || CURRENT_PATH, { access: "private" });
+  const result = await get(latest?.pathname || fallbackPath, { access: "private" });
   if (!result || result.statusCode !== 200 || !result.stream) return null;
   const document = await new Response(result.stream).json();
   return { document };
 }
 
-function validateSongSync(data) {
-  if (!data || data.version !== 4 || !data.events || typeof data.events !== "object" || Array.isArray(data.events)) {
-    throw new ValidationError("Formato de sincronización no válido.");
+async function readCurrent(songId) {
+  const { current, historyPrefix } = songPaths(songId);
+  const found = await latestBlob(historyPrefix, current);
+  if (found) return found;
+  if (songId === LEGACY_SONG_ID) {
+    return latestBlob(LEGACY_HISTORY_PREFIX, LEGACY_CURRENT_PATH);
   }
-  const eventEntries = Object.entries(data.events);
-  if (eventEntries.length > 1500) throw new ValidationError("Demasiados eventos.");
-  if (!Array.isArray(data.deleted) || data.deleted.length > 1500) throw new ValidationError("Lista de eliminados no válida.");
-  if (!Array.isArray(data.added) || data.added.length > 500) throw new ValidationError("Lista de agregados no válida.");
+  return null;
+}
 
-  for (const [key, value] of eventEntries) {
-    if (typeof key !== "string" || key.length > 100 || !/^\d+:(?:\d+:\d+|custom:[\w:-]+)$/.test(key)) throw new ValidationError("Identificador de evento no válido.");
-    const section = Number(key.split(":", 1)[0]);
-    if (!Number.isInteger(section) || section < 0 || section >= SECTION_LINE_COUNTS.length) throw new ValidationError("Sección de evento no válida.");
-    if (!value || !ALLOWED_CHORDS.has(value.chord)) throw new ValidationError("Acorde no reconocido.");
-    if (!ALLOWED_INVERSIONS.has(value.inversion)) throw new ValidationError("Inversión no reconocida.");
-    if (![value.line, value.anchor, value.position].every(Number.isInteger)) throw new ValidationError("Posición no válida.");
-    if (value.line < 0 || value.line >= SECTION_LINE_COUNTS[section] || value.anchor < 0 || value.anchor > 200 || value.position < 0 || value.position > 1500) throw new ValidationError("Posición fuera de rango.");
-    if (!Number.isFinite(+value.beats) || +value.beats <= 0 || +value.beats > 32) throw new ValidationError("Duración no válida.");
+function validateSongDocument(data) {
+  if (!data || data.version !== 5 || !Array.isArray(data.sections) || data.sections.length > 200) {
+    throw new ValidationError("Formato de canción no válido.");
   }
-
-  for (const key of data.deleted) {
-    if (typeof key !== "string" || key.length > 100 || !/^\d+:\d+:\d+$/.test(key)) throw new ValidationError("Evento eliminado no válido.");
-    const section = Number(key.split(":", 1)[0]);
-    if (section < 0 || section >= SECTION_LINE_COUNTS.length) throw new ValidationError("Sección eliminada no válida.");
+  let totalEvents = 0;
+  for (const section of data.sections) {
+    if (!section || typeof section.name !== "string" || section.name.length > 200) {
+      throw new ValidationError("Nombre de sección no válido.");
+    }
+    if (!Array.isArray(section.lines) || section.lines.length > 500 || section.lines.some(line => typeof line !== "string" || line.length > 500)) {
+      throw new ValidationError("Letra de sección no válida.");
+    }
+    if (!Array.isArray(section.events) || section.events.length > 500) {
+      throw new ValidationError("Eventos de sección no válidos.");
+    }
+    totalEvents += section.events.length;
+    for (const event of section.events) {
+      if (!event || typeof event.uid !== "string" || event.uid.length > 100) {
+        throw new ValidationError("Identificador de evento no válido.");
+      }
+      if (typeof event.chord !== "string" || !CHORD_PATTERN.test(event.chord)) {
+        throw new ValidationError("Acorde no válido.");
+      }
+      if (!ALLOWED_INVERSIONS.has(event.inversion)) {
+        throw new ValidationError("Inversión no reconocida.");
+      }
+      if (!Number.isInteger(event.line) || event.line < 0 || event.line >= section.lines.length) {
+        throw new ValidationError("Posición de línea fuera de rango.");
+      }
+      if (!Number.isInteger(event.anchor) || event.anchor < 0 || event.anchor > 500) {
+        throw new ValidationError("Ancla fuera de rango.");
+      }
+      if (!Number.isFinite(+event.beats) || +event.beats <= 0 || +event.beats > 32) {
+        throw new ValidationError("Duración no válida.");
+      }
+    }
   }
-
-  const addedIds = new Set();
-  for (const value of data.added) {
-    if (!value || !Number.isInteger(value.section) || value.section < 0 || value.section >= SECTION_LINE_COUNTS.length) throw new ValidationError("Sección agregada no válida.");
-    if (typeof value.uid !== "string" || !value.uid.startsWith("custom:") || value.uid.length > 100) throw new ValidationError("Identificador agregado no válido.");
-    const eventKey = `${value.section}:${value.uid}`;
-    if (addedIds.has(eventKey) || !data.events[eventKey]) throw new ValidationError("Evento agregado incoherente.");
-    addedIds.add(eventKey);
-    if (!ALLOWED_CHORDS.has(value.chord) || !ALLOWED_INVERSIONS.has(value.inversion)) throw new ValidationError("Acorde agregado no válido.");
-    if (!Number.isInteger(value.line) || !Number.isInteger(value.anchor)) throw new ValidationError("Posición agregada no válida.");
-    if (value.line < 0 || value.line >= SECTION_LINE_COUNTS[value.section] || value.anchor < 0 || value.anchor > 200) throw new ValidationError("Posición agregada fuera de rango.");
-    if (!Number.isFinite(+value.beats) || +value.beats <= 0 || +value.beats > 32) throw new ValidationError("Duración agregada no válida.");
-  }
-
-  if (JSON.stringify(data).length > 250_000) throw new ValidationError("La sincronización es demasiado grande.");
+  if (totalEvents > 1500) throw new ValidationError("Demasiados eventos.");
+  if (JSON.stringify(data).length > 250_000) throw new ValidationError("La canción es demasiado grande.");
   return data;
 }
 
@@ -91,13 +116,20 @@ function cloudIsConfigured() {
   return Boolean(process.env.BLOB_READ_WRITE_TOKEN || process.env.BLOB_STORE_ID);
 }
 
-export async function GET() {
+export async function GET(request) {
   if (!cloudIsConfigured()) {
     return json({ error: "cloud_not_configured" }, 503);
   }
 
+  let songId;
   try {
-    const current = await readCurrent();
+    songId = validateSongId(new URL(request.url).searchParams.get("songId"));
+  } catch (error) {
+    return json({ error: "invalid_song_id", message: error.message }, 400);
+  }
+
+  try {
+    const current = await readCurrent(songId);
     if (!current) return json({ empty: true }, 404);
     return json(current.document);
   } catch (error) {
@@ -118,8 +150,9 @@ export async function PUT(request) {
 
   try {
     const payload = await request.json();
-    const songSync = validateSongSync(payload.songSync);
-    const current = await readCurrent();
+    const songId = validateSongId(payload.songId);
+    const song = validateSongDocument(payload.song);
+    const current = await readCurrent(songId);
 
     if (current && payload.baseRevision !== current.document.revision && payload.force !== true) {
       return json({
@@ -137,15 +170,23 @@ export async function PUT(request) {
     const revision = crypto.randomUUID();
     const updatedAt = new Date().toISOString();
     const document = {
-      format: "mis36-cloud-v1",
+      format: CLOUD_FORMAT,
+      songId,
       revision,
       updatedAt,
-      songSync,
+      song,
     };
     const body = JSON.stringify(document);
     const safeTimestamp = updatedAt.replaceAll(":", "-");
+    const { current: currentPath, historyPrefix } = songPaths(songId);
 
-    await put(`${HISTORY_PREFIX}${safeTimestamp}-${revision}.json`, body, {
+    await put(`${historyPrefix}${safeTimestamp}-${revision}.json`, body, {
+      access: "private",
+      contentType: "application/json",
+      addRandomSuffix: false,
+      cacheControlMaxAge: 60,
+    });
+    await put(currentPath, body, {
       access: "private",
       contentType: "application/json",
       addRandomSuffix: false,
