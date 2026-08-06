@@ -541,8 +541,8 @@ body.screen-practicar #transitionLoop{display:none}
 <header class="app-nav">
   <div class="app-nav-brand"><span class="mark">🎹</span> Piano Estudio</div>
   <div class="app-nav-tabs" role="tablist" aria-label="Navegación principal">
-    <button id="navCancionero" type="button" role="tab" aria-selected="false">Cancionero</button>
-    <button id="navTocar" type="button" role="tab" aria-selected="true">Tocar</button>
+    <button id="navCancionero" type="button" role="tab" aria-selected="true">Cancionero</button>
+    <button id="navTocar" type="button" role="tab" aria-selected="false">Tocar</button>
     <button id="navPracticar" type="button" role="tab" aria-selected="false">Practicar</button>
   </div>
   <div class="app-nav-right">
@@ -597,7 +597,7 @@ body.screen-practicar #transitionLoop{display:none}
   <div class="settings-actions"></div>
 </div>
 
-<section id="cancioneroScreen" class="app-screen" hidden aria-labelledby="cancioneroTitle">
+<section id="cancioneroScreen" class="app-screen" aria-labelledby="cancioneroTitle">
   <div class="cancionero-head">
     <div>
       <h2 id="cancioneroTitle">Mi cancionero</h2>
@@ -663,7 +663,7 @@ body.screen-practicar #transitionLoop{display:none}
   </div>
 </section>
 
-<div id="tocarBody">
+<div id="tocarBody" hidden>
 <div class="songbar">
   <button id="backToCancionero" class="secondary songbar-back" type="button">← Cancionero</button>
   <div class="songbar-main">
@@ -3729,7 +3729,7 @@ function renderStructureMap(){
 // Router de pantallas principales (Cancionero · Tocar · Practicar). No
 // mueve el DOM de Tocar/Letra/Editar/Práctica — esos siguen gobernados por
 // setMainView(); esto solo decide qué franja de la app se ve.
-let activeScreen="tocar";
+let activeScreen="cancionero";
 function setActiveScreen(screen){
  activeScreen=screen;
  navCancionero.setAttribute("aria-selected",String(screen==="cancionero"));
@@ -4638,6 +4638,7 @@ nextPianoToggle.onclick=()=>{
 nextKeyboardWrap.addEventListener("scroll",()=>syncPianoScroll(nextKeyboardWrap,currentKeyboardWrap),{passive:true});
 currentKeyboardWrap.addEventListener("scroll",()=>syncPianoScroll(currentKeyboardWrap,nextKeyboardWrap),{passive:true});
 verifyVoicingLibraryIntegrity();updateNotationToggle();updateLyricsNotesToggle();renderSyncChordOptions();renderSyncInversionOptions("E");initializeSongSync();updateSettingsSummary();updateNextPianoVisibility();initSongSelector();initSections();buildSteps();render();renderFullSong();updateSessionSummary();updateTransportControls();updateSongIdentityUi();if(songHasCloudSync(currentSongId))loadCloudSongSync();else setCloudStatus("Nube: disponible próximamente para esta canción","warning");
+setActiveScreen("cancionero");
 loadCatalogFromCloud();
 loadPracticeFromCloud();
 </script>
