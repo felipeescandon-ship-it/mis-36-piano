@@ -1667,8 +1667,32 @@ function loadPracticeLog(){
 function savePracticeLog(){try{localStorage.setItem(PRACTICE_LOG_KEY,JSON.stringify(practiceLog))}catch{}}
 let practiceLog=loadPracticeLog();
 function songPracticeEntry(songId){
- if(!practiceLog[songId])practiceLog[songId]={reps:0,lastPracticedAt:null,transitions:{}};
+ if(!practiceLog[songId])practiceLog[songId]={reps:0,lastPracticedAt:null,transitions:{},daily:{}};
+ if(!practiceLog[songId].daily)practiceLog[songId].daily={};
  return practiceLog[songId];
+}
+function dayKey(date=new Date()){return date.toISOString().slice(0,10)}
+// Solo conserva ~90 días de historial diario: alcanza de sobra para la
+// tendencia semanal ("esta semana vs. la pasada") sin que el documento
+// crezca sin límite con los años.
+function pruneDailyBucket(daily){
+ const cutoff=Date.now()-90*86400000;
+ Object.keys(daily).forEach(key=>{if(new Date(key+"T00:00:00Z").getTime()<cutoff)delete daily[key]});
+}
+function sumDailyRange(daily,fromDaysAgo,toDaysAgo){
+ let total=0;
+ for(let i=fromDaysAgo;i<toDaysAgo;i++){
+   const key=dayKey(new Date(Date.now()-i*86400000));
+   total+=daily[key]||0;
+ }
+ return total;
+}
+function weeklyTrend(entry){
+ const daily=entry?.daily||{};
+ return {thisWeek:sumDailyRange(daily,0,7),lastWeek:sumDailyRange(daily,7,14)};
+}
+function globalWeeklyTrend(){
+ return Object.values(practiceLog).reduce((total,entry)=>total+weeklyTrend(entry).thisWeek,0);
 }
 function recordPracticeReps(songId,transitionKey,count){
  if(!count)return;
@@ -1676,7 +1700,10 @@ function recordPracticeReps(songId,transitionKey,count){
  entry.reps+=count;
  entry.lastPracticedAt=new Date().toISOString();
  if(transitionKey)entry.transitions[transitionKey]=(entry.transitions[transitionKey]||0)+count;
+ entry.daily[dayKey()]=(entry.daily[dayKey()]||0)+count;
+ pruneDailyBucket(entry.daily);
  savePracticeLog();
+ schedulePracticeSync();
 }
 function transitionKeyFor(position){return position?`${position.section}:${position.step}`:null}
 function formatRelativeDate(iso){
@@ -2183,7 +2210,8 @@ function undoDeleteSong(){
 // título/artista pueden venir del importador de texto pegado por el usuario.
 function renderSongList(){
  songList.innerHTML="";
- cancioneroCount.textContent=`${songCatalog.length} ${songCatalog.length===1?"canción":"canciones"}`;
+ const globalThisWeek=globalWeeklyTrend();
+ cancioneroCount.textContent=`${songCatalog.length} ${songCatalog.length===1?"canción":"canciones"}`+(globalThisWeek?` · practicaste ${globalThisWeek} ${globalThisWeek===1?"vez":"veces"} esta semana`:"");
  songCatalog.forEach(songId=>{
    const song=songMeta(songId);
    if(!song)return;
@@ -2759,6 +2787,113 @@ async function loadCatalogFromCloud(forceRefresh=false){
    return false;
  }finally{
    catalogRequestRunning=false;
+ }
+}
+// ---- Sincronización en la nube de la memoria de práctica ----
+// Mismo patrón que el catálogo: un único documento global (Fase 5-style),
+// no uno por canción. La diferencia es que acá el contenido son contadores
+// que solo crecen, así que un conflicto de revisión no necesita que el
+// usuario elija una versión (a diferencia de un documento de canción, que
+// sí puede tener ediciones incompatibles): se combinan tomando el máximo de
+// cada contador entre lo local y lo remoto, así que sincronizar nunca hace
+// retroceder ni perder una repetición ya registrada en ningún dispositivo.
+const PRACTICE_CLOUD_REVISION_KEY="piano-practice-cloud-revision";
+let practiceCloudRevision=readPreference(PRACTICE_CLOUD_REVISION_KEY,"");
+let practiceRequestRunning=false,practiceSyncTimer=null;
+function mergeCounterMap(localMap,remoteMap,flags){
+ Object.entries(remoteMap||{}).forEach(([key,value])=>{
+   const current=localMap[key]||0;
+   if(value>current)flags.remoteAddedSomething=true;
+   if(current>value)flags.localAhead=true;
+   localMap[key]=Math.max(current,value);
+ });
+ Object.keys(localMap).forEach(key=>{if(!remoteMap||!(key in remoteMap))flags.localAhead=true});
+}
+function mergePracticeLog(remote){
+ const flags={remoteAddedSomething:false,localAhead:false};
+ const remoteIds=new Set(Object.keys(remote||{}));
+ Object.keys(practiceLog).forEach(songId=>{if(!remoteIds.has(songId))flags.localAhead=true});
+ Object.entries(remote||{}).forEach(([songId,remoteEntry])=>{
+   const localEntry=songPracticeEntry(songId);
+   if((remoteEntry.reps||0)>(localEntry.reps||0))flags.remoteAddedSomething=true;
+   if((localEntry.reps||0)>(remoteEntry.reps||0))flags.localAhead=true;
+   localEntry.reps=Math.max(localEntry.reps||0,remoteEntry.reps||0);
+   const localDate=localEntry.lastPracticedAt?new Date(localEntry.lastPracticedAt).getTime():0;
+   const remoteDate=remoteEntry.lastPracticedAt?new Date(remoteEntry.lastPracticedAt).getTime():0;
+   if(remoteDate>localDate){localEntry.lastPracticedAt=remoteEntry.lastPracticedAt;flags.remoteAddedSomething=true}
+   if(localDate>remoteDate)flags.localAhead=true;
+   mergeCounterMap(localEntry.transitions,remoteEntry.transitions,flags);
+   mergeCounterMap(localEntry.daily,remoteEntry.daily,flags);
+   pruneDailyBucket(localEntry.daily);
+ });
+ return flags;
+}
+function schedulePracticeSync(){
+ if(practiceSyncTimer)clearTimeout(practiceSyncTimer);
+ practiceSyncTimer=setTimeout(()=>savePracticeToCloud(false),2500);
+}
+async function savePracticeToCloud(force=false){
+ if(practiceRequestRunning)return false;
+ practiceRequestRunning=true;
+ try{
+   const response=await cloudFetch("/api/practice-sync",{
+     method:"PUT",
+     headers:{"Content-Type":"application/json"},
+     body:JSON.stringify({practice:practiceLog,baseRevision:practiceCloudRevision||null,force})
+   });
+   if(response.status===409){
+     practiceRequestRunning=false;
+     return await loadPracticeFromCloud(true);
+   }
+   if(response.status===503)return false;
+   if(response.status===429){
+     if(practiceSyncTimer)clearTimeout(practiceSyncTimer);
+     practiceSyncTimer=setTimeout(()=>savePracticeToCloud(force),1600);
+     return false;
+   }
+   const result=await response.json().catch(()=>({}));
+   if(!response.ok)throw new Error(result.message||result.error||"No fue posible guardar la práctica.");
+   practiceCloudRevision=result.revision;
+   savePreference(PRACTICE_CLOUD_REVISION_KEY,practiceCloudRevision);
+   return true;
+ }catch(error){
+   console.warn("Practice cloud save unavailable",error);
+   return false;
+ }finally{
+   practiceRequestRunning=false;
+ }
+}
+async function loadPracticeFromCloud(forceRefresh=false){
+ if(practiceRequestRunning&&!forceRefresh)return false;
+ practiceRequestRunning=true;
+ try{
+   const response=await cloudFetch("/api/practice-sync",{cache:"no-store",headers:{"Accept":"application/json"}});
+   const result=await response.json().catch(()=>({}));
+   if(response.status===503){practiceRequestRunning=false;return false}
+   if(response.status===404&&result.empty){
+     practiceRequestRunning=false;
+     if(Object.keys(practiceLog).length)return await savePracticeToCloud(true);
+     return false;
+   }
+   if(!response.ok)throw new Error(result.error||"No fue posible leer la práctica.");
+   if(result.format!=="piano-practice-cloud-v1"||!result.practice||typeof result.practice!=="object"||Array.isArray(result.practice)){
+     throw new Error("El log de práctica de la nube no es válido.");
+   }
+   const flags=mergePracticeLog(result.practice);
+   if(flags.remoteAddedSomething){
+     savePracticeLog();
+     if(!practiceChooser.hidden){updatePracticeSongSummary();renderPracticeTransitionOptions()}
+     if(!cancioneroScreen.hidden)renderSongList();
+   }
+   practiceCloudRevision=result.revision;
+   savePreference(PRACTICE_CLOUD_REVISION_KEY,practiceCloudRevision);
+   if(flags.localAhead){practiceRequestRunning=false;return await savePracticeToCloud(true)}
+   return true;
+ }catch(error){
+   console.warn("Practice cloud load unavailable",error);
+   return false;
+ }finally{
+   practiceRequestRunning=false;
  }
 }
 async function saveCloudSongSync(force=false){
@@ -3645,11 +3780,19 @@ function renderPracticeTransitionOptions(){
  });
  practiceTransitionSelect.value=`${sectionIndex}:${stepIndex}`;
 }
+function weeklyTrendPhrase(entry){
+ const {thisWeek,lastWeek}=weeklyTrend(entry);
+ if(!thisWeek&&!lastWeek)return "";
+ if(!lastWeek)return ` · ${thisWeek} esta semana`;
+ if(thisWeek>lastWeek)return ` · ${thisWeek} esta semana (subiste desde ${lastWeek} la semana pasada)`;
+ if(thisWeek<lastWeek)return ` · ${thisWeek} esta semana (bajaste desde ${lastWeek} la semana pasada)`;
+ return ` · ${thisWeek} esta semana (igual que la semana pasada)`;
+}
 function updatePracticeSongSummary(){
  const entry=practiceLog[currentSongId];
  if(entry&&entry.reps>0){
    practiceSongSummary.classList.add("has-reps");
-   practiceSongSummary.textContent=`Llevás ${entry.reps} ${entry.reps===1?"repetición":"repeticiones"} practicada${entry.reps===1?"":"s"} en esta canción · ${formatRelativeDate(entry.lastPracticedAt)}`;
+   practiceSongSummary.textContent=`Llevás ${entry.reps} ${entry.reps===1?"repetición":"repeticiones"} practicada${entry.reps===1?"":"s"} en esta canción · ${formatRelativeDate(entry.lastPracticedAt)}${weeklyTrendPhrase(entry)}`;
  }else{
    practiceSongSummary.classList.remove("has-reps");
    practiceSongSummary.textContent="Todavía no practicaste esta canción.";
@@ -4142,6 +4285,7 @@ document.addEventListener("keydown",event=>{
 document.addEventListener("visibilitychange",()=>{
  if(!document.hidden&&audioCtx&&audioCtx.state!=="running")setAudioStatus("Toca un control para reactivar el audio");
  if(!document.hidden&&songHasCloudSync(currentSongId))loadCloudSongSync();
+ if(!document.hidden)loadPracticeFromCloud();
 });
 
 playMode.onchange=()=>{
@@ -4495,6 +4639,7 @@ nextKeyboardWrap.addEventListener("scroll",()=>syncPianoScroll(nextKeyboardWrap,
 currentKeyboardWrap.addEventListener("scroll",()=>syncPianoScroll(currentKeyboardWrap,nextKeyboardWrap),{passive:true});
 verifyVoicingLibraryIntegrity();updateNotationToggle();updateLyricsNotesToggle();renderSyncChordOptions();renderSyncInversionOptions("E");initializeSongSync();updateSettingsSummary();updateNextPianoVisibility();initSongSelector();initSections();buildSteps();render();renderFullSong();updateSessionSummary();updateTransportControls();updateSongIdentityUi();if(songHasCloudSync(currentSongId))loadCloudSongSync();else setCloudStatus("Nube: disponible próximamente para esta canción","warning");
 loadCatalogFromCloud();
+loadPracticeFromCloud();
 </script>
 </body>
 </html>
