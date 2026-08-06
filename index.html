@@ -9,13 +9,14 @@
 <link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,600;0,700;1,500&display=swap" rel="stylesheet">
 <style>
 :root{
-  --bg:#f4f7fb;--panel:#fff;--ink:#152033;--muted:#526178;
+  --bg:#f6efe3;--panel:#fff;--ink:#241a10;--muted:#6b5c4c;
   --blue:#155fc0;--blueSoft:#dbeafe;--green:#168447;--greenSoft:#dcfce7;
-  --amber:#925000;--amberSoft:#fff0cc;--line:#d8e0ec;--navy:#071a33;
-  --focus:#0b6ff4;--shadow:0 12px 30px rgba(18,40,75,.10)
+  --amber:#925000;--amberSoft:#fff0cc;--line:#e6dcc9;--navy:#1f150e;
+  --focus:#0b6ff4;--shadow:0 12px 30px rgba(40,28,16,.12);
+  --accent:#a8461f;--accentSoft:#f3ddd0;--accentDark:#7c3417
 }
 *{box-sizing:border-box}
-body{margin:0;background:linear-gradient(#eef4fb,#fafcff);color:var(--ink);
+body{margin:0;background:linear-gradient(#f6efe3,#fbf8f2);color:var(--ink);
 font-family:Inter,system-ui,-apple-system,"Segoe UI",sans-serif}
 .skip-link{position:fixed;left:16px;top:12px;z-index:200;display:inline-flex;align-items:center;min-height:44px;
 transform:translateY(-160%);padding:10px 14px;border-radius:10px;background:#fff;color:var(--navy);font-weight:850;
@@ -28,8 +29,6 @@ padding:16px 22px;box-shadow:var(--shadow)}
 .app-header p{margin:0;color:#d8e7fa}
 .current-song-name{margin:0 0 4px;font-size:clamp(18px,2.6vw,26px);font-weight:800;color:#bcdcff}
 .eyebrow{color:#8fc2ff;font-size:11px;font-weight:900;letter-spacing:.14em;text-transform:uppercase}
-.song-selector-label{display:flex;align-items:center;gap:8px;margin-top:6px;font-size:12px;font-weight:800;color:#d8e7fa;letter-spacing:.03em;text-transform:uppercase}
-.song-selector-label select{font-family:inherit;font-size:14px;font-weight:700;text-transform:none;color:#fff;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.3);border-radius:10px;padding:6px 10px}
 .notation-toggle{min-width:76px;min-height:52px;flex:0 0 auto;padding:9px 13px;border:1px solid rgba(255,255,255,.26);border-radius:16px;background:rgba(255,255,255,.10);color:#fff;font-size:15px;font-weight:900;letter-spacing:.02em}
 .notation-toggle:hover{background:rgba(255,255,255,.17)}
 .toolbar{display:grid;gap:10px;background:#fff;border:1px solid var(--line);
@@ -50,7 +49,7 @@ border-radius:17px;padding:12px;margin:16px 0;box-shadow:var(--shadow)}
 .view-switch-bar{position:sticky;top:8px;z-index:40;display:flex;justify-content:flex-end;margin:12px 0 -4px;pointer-events:none}
 .view-switch{display:inline-flex;gap:3px;padding:4px;border:1px solid #b8c8dc;border-radius:13px;background:rgba(238,243,249,.96);box-shadow:0 8px 22px rgba(18,40,75,.14);backdrop-filter:blur(10px);pointer-events:auto}
 .view-switch button{min-width:112px;padding:8px 13px;background:transparent;color:#526178;border-radius:9px}
-.view-switch button[aria-pressed="true"]{background:var(--blue);color:#fff;box-shadow:0 4px 12px rgba(21,95,192,.24)}
+.view-switch button[aria-pressed="true"]{background:var(--accent);color:#fff;box-shadow:0 4px 12px rgba(168,70,31,.24)}
 .lyrics-playback-dock{position:fixed;right:max(18px,env(safe-area-inset-right));bottom:max(18px,env(safe-area-inset-bottom));
 z-index:90;display:flex;gap:8px;padding:7px;border:1px solid rgba(15,43,78,.16);border-radius:15px;
 background:rgba(255,255,255,.96);box-shadow:0 12px 34px rgba(7,26,51,.24);backdrop-filter:blur(10px)}
@@ -68,7 +67,7 @@ background:rgba(255,255,255,.96);box-shadow:0 12px 34px rgba(7,26,51,.24);backdr
 .data-status.ready{color:#11703c}.data-status.warning{color:#824700}.data-status.error{color:#992626}
 button,select,input{font:inherit}
 button,select{min-height:44px;border:0;border-radius:11px;padding:10px 14px;font-weight:750}
-button{min-width:44px;cursor:pointer}.primary{background:var(--blue);color:#fff}.secondary{background:#e9eff7;color:#173354}
+button{min-width:44px;cursor:pointer}.primary{background:var(--accent);color:#fff}.secondary{background:#f1e9db;color:#4a3a29}
 .danger{background:#fee2e2;color:#9f1d1d;border:1px solid #fecaca}
 button:disabled,select:disabled{cursor:not-allowed;opacity:.55}
 :where(button,select,input,a):focus-visible{outline:3px solid var(--focus);outline-offset:3px}
@@ -457,12 +456,12 @@ button.song-line-end{padding:3px 8px}
 }
 
 /* ===== Navegación principal (Cancionero · Tocar · Practicar) ===== */
-.app-nav{display:flex;align-items:center;gap:12px;flex-wrap:wrap;background:linear-gradient(135deg,#06172d,#123e72);color:#fff;border-radius:18px;padding:9px 12px;box-shadow:var(--shadow)}
+.app-nav{display:flex;align-items:center;gap:12px;flex-wrap:wrap;background:linear-gradient(135deg,#1f150e,#3d2a1c);color:#fff;border-radius:18px;padding:9px 12px;box-shadow:var(--shadow)}
 .app-nav-brand{display:flex;align-items:center;gap:7px;font-weight:900;font-size:15px;letter-spacing:-.01em;white-space:nowrap}
 .app-nav-brand .mark{font-size:17px;line-height:1}
 .app-nav-tabs{display:flex;gap:2px;margin-right:auto;background:rgba(255,255,255,.1);border-radius:12px;padding:3px}
 .app-nav-tabs button{min-width:0;min-height:38px;padding:7px 15px;background:transparent;color:rgba(255,255,255,.82);font-size:13.5px;font-weight:800;border-radius:9px}
-.app-nav-tabs button[aria-selected="true"]{background:#fff;color:#0b2545}
+.app-nav-tabs button[aria-selected="true"]{background:#fff;color:var(--ink)}
 .app-nav-right{display:flex;align-items:center;gap:8px}
 .app-nav-sync{display:none;align-items:center;gap:6px;font-size:12px;font-weight:800;color:#bfe6cf;background:rgba(22,132,71,.24);border-radius:999px;padding:6px 11px;white-space:nowrap}
 .app-nav-sync.ready{display:inline-flex}
@@ -473,7 +472,7 @@ button.song-line-end{padding:3px 8px}
 .app-nav-sync.error .dot{background:#ef5350}
 .app-nav-gear{background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.22);color:#fff;white-space:nowrap}
 .app-nav-gear:hover{background:rgba(255,255,255,.18)}
-.app-nav-gear[aria-expanded="true"]{background:#fff;color:#0b2545}
+.app-nav-gear[aria-expanded="true"]{background:#fff;color:var(--ink)}
 .settings-panel.card{margin:14px 0;padding:14px}
 .settings-panel[hidden]{display:none}
 
@@ -571,10 +570,6 @@ body.screen-practicar #transitionLoop{display:none}
   </div>
 </header>
 
-<label class="song-selector-label" for="songSelector" hidden>Canción
-  <select id="songSelector" aria-label="Elegir canción"></select>
-</label>
-
 <div id="settingsPanel" class="settings-panel card" hidden>
   <div class="settings-grid">
     <label class="section-control">
@@ -614,21 +609,6 @@ body.screen-practicar #transitionLoop{display:none}
       <input id="bpm" type="range" min="45" max="120" value="72" aria-label="Tempo">
     </div>
   </div>
-  <div class="settings-actions"></div>
-</div>
-
-<section id="cancioneroScreen" class="app-screen" aria-labelledby="cancioneroTitle">
-  <div class="cancionero-head">
-    <div>
-      <h2 id="cancioneroTitle">Mi cancionero</h2>
-      <p id="cancioneroCount" class="sub"></p>
-    </div>
-    <button id="cancioneroNewSong" class="primary" type="button">＋ Nueva canción</button>
-  </div>
-  <div class="song-fichero-shell">
-    <div id="songList" class="song-list"></div>
-    <div id="songDetailPanel" class="song-detail-panel"></div>
-  </div>
   <div class="cancionero-manage">
     <h3>Administrar biblioteca</h3>
     <div class="settings-actions">
@@ -650,6 +630,19 @@ body.screen-practicar #transitionLoop{display:none}
       <input id="importSongSyncFile" type="file" accept=".json,application/json" hidden>
       <span id="songDataStatus" class="data-status" aria-live="polite"></span>
     </div>
+  </div>
+</div>
+
+<section id="cancioneroScreen" class="app-screen" aria-labelledby="cancioneroTitle">
+  <div class="cancionero-head">
+    <div>
+      <h2 id="cancioneroTitle">Mi cancionero</h2>
+      <p id="cancioneroCount" class="sub"></p>
+    </div>
+  </div>
+  <div class="song-fichero-shell">
+    <div id="songList" class="song-list"></div>
+    <div id="songDetailPanel" class="song-detail-panel"></div>
   </div>
 </section>
 
@@ -988,7 +981,6 @@ const sectionSelect=document.getElementById("sectionSelect");
 const goSectionStart=document.getElementById("goSectionStart");
 const notation=document.getElementById("notation");
 const songTitle=document.getElementById("songTitle");
-const songSelector=document.getElementById("songSelector");
 const exportSongSync=document.getElementById("exportSongSync");
 const importSongSync=document.getElementById("importSongSync");
 const importSongSyncFile=document.getElementById("importSongSyncFile");
@@ -1004,7 +996,6 @@ const structureViewButton=document.getElementById("structureViewButton");
 const structureView=document.getElementById("structureView");
 const structureMap=document.getElementById("structureMap");
 const openEditor=document.getElementById("openEditor");
-const cancioneroNewSong=document.getElementById("cancioneroNewSong");
 const importPanel=document.getElementById("importPanel");
 const importPanelClose=document.getElementById("importPanelClose");
 const importTitle=document.getElementById("importTitle");
@@ -2146,21 +2137,7 @@ function updateSongIdentityUi(){
  const song=currentSong();
  songTitle.textContent=song.title;
  document.title=`${song.title} · Piano Estudio`;
- songSelector.value=currentSongId;
  songMetaLine.textContent=[song.artist,song.originalKey?`Tono ${song.originalKey}`:null].filter(Boolean).join(" · ");
-}
-function initSongSelector(){
- songSelector.innerHTML="";
- songCatalog.forEach(songId=>{
-   const song=songMeta(songId);
-   if(!song)return;
-   const option=document.createElement("option");
-   option.value=songId;
-   option.textContent=song.title;
-   songSelector.appendChild(option);
- });
- songSelector.value=currentSongId;
- songSelector.onchange=()=>switchToSong(songSelector.value);
 }
 function switchToSong(songId){
  if(songId===currentSongId||!songExists(songId))return;
@@ -2207,7 +2184,6 @@ function deleteSong(songId){
  songCatalog=songCatalog.filter(id=>id!==songId);
  if(!deletedSongIds.includes(songId)){deletedSongIds.push(songId);saveDeletedSongIds()}
  persistCatalog();
- initSongSelector();
  renderSongList();
  lastDeletedSong={songId,index,wasCurrent};
  if(wasCurrent)switchToSong(songCatalog[Math.min(index,songCatalog.length-1)]);
@@ -2224,7 +2200,6 @@ function undoDeleteSong(){
    songCatalog.splice(Math.min(index,songCatalog.length),0,songId);
    persistCatalog();
  }
- initSongSelector();
  renderSongList();
  if(wasCurrent)switchToSong(songId);
  saveCatalogToCloud();
@@ -2260,7 +2235,7 @@ function renderSongList(){
  const addTab=document.createElement("button");
  addTab.type="button";addTab.className="song-tab song-tab-add";addTab.textContent="＋";
  addTab.setAttribute("aria-label","Nueva canción");
- addTab.onclick=()=>cancioneroNewSong.click();
+ addTab.onclick=openNewSongPanel;
  songList.appendChild(addTab);
  renderSongDetail();
 }
@@ -2827,7 +2802,6 @@ async function loadCatalogFromCloud(forceRefresh=false){
    }
    if(changed){
      persistCatalog();
-     initSongSelector();
    }
    if(switchAway&&songCatalog.length)switchToSong(songCatalog[0]);
    catalogCloudRevision=result.revision;
@@ -4610,10 +4584,10 @@ function renderImportPreview(parsed){
  importPreview.appendChild(sectionsBox);
  importPreview.hidden=false;
 }
-cancioneroNewSong.onclick=()=>{
+function openNewSongPanel(){
  importPanel.hidden=!importPanel.hidden;
  if(!importPanel.hidden)importPanel.scrollIntoView({behavior:scrollBehavior(),block:"start"});
-};
+}
 importPanelClose.onclick=()=>{importPanel.hidden=true};
 importAnalyze.onclick=()=>{
  const raw=importText.value;
@@ -4640,7 +4614,6 @@ importSave.onclick=()=>{
  importPreview.hidden=true;
  importStatus.textContent="";
  switchToSong(songId);
- initSongSelector();
  setActiveScreen("tocar");
  setMainView("edit");
  saveCatalogToCloud();
@@ -4695,7 +4668,7 @@ nextPianoToggle.onclick=()=>{
 };
 nextKeyboardWrap.addEventListener("scroll",()=>syncPianoScroll(nextKeyboardWrap,currentKeyboardWrap),{passive:true});
 currentKeyboardWrap.addEventListener("scroll",()=>syncPianoScroll(currentKeyboardWrap,nextKeyboardWrap),{passive:true});
-verifyVoicingLibraryIntegrity();updateNotationToggle();updateLyricsNotesToggle();renderSyncChordOptions();renderSyncInversionOptions("E");initializeSongSync();updateSettingsSummary();updateNextPianoVisibility();initSongSelector();initSections();buildSteps();render();renderFullSong();updateSessionSummary();updateTransportControls();updateSongIdentityUi();if(songHasCloudSync(currentSongId))loadCloudSongSync();else setCloudStatus("Nube: disponible próximamente para esta canción","warning");
+verifyVoicingLibraryIntegrity();updateNotationToggle();updateLyricsNotesToggle();renderSyncChordOptions();renderSyncInversionOptions("E");initializeSongSync();updateSettingsSummary();updateNextPianoVisibility();initSections();buildSteps();render();renderFullSong();updateSessionSummary();updateTransportControls();updateSongIdentityUi();if(songHasCloudSync(currentSongId))loadCloudSongSync();else setCloudStatus("Nube: disponible próximamente para esta canción","warning");
 setActiveScreen("cancionero");
 loadCatalogFromCloud();
 loadPracticeFromCloud();
