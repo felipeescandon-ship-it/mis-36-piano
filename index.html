@@ -318,6 +318,8 @@ button.song-line-end{padding:3px 8px}
 .practice-controls{display:flex;align-items:end;gap:8px;flex-wrap:wrap;justify-content:flex-end}
 .practice-setting{display:grid;gap:4px;color:#526178;font-size:12px;font-weight:800}
 .practice-status{grid-column:1/-1;padding:9px 11px;border-radius:10px;background:#f4f0ff;color:#4f3496;font-weight:850}
+.practice-song-summary{margin-top:5px;font-size:12.5px;font-weight:750;color:var(--muted)}
+.practice-song-summary.has-reps{color:var(--blue)}
 .practice-chooser-body{display:flex!important;flex-wrap:wrap;align-items:flex-end;gap:16px}
 .practice-chooser-select{flex:1 1 260px;min-width:0}
 .practice-chooser-select select{width:100%}
@@ -486,6 +488,9 @@ button.song-line-end{padding:3px 8px}
 .song-card-title{font-weight:850;font-size:16px}
 .song-card-title .seed-tag{display:inline-block;font-size:10px;font-weight:900;letter-spacing:.08em;text-transform:uppercase;color:var(--blue);background:var(--blueSoft);border-radius:5px;padding:2px 6px;margin-left:7px;vertical-align:2px}
 .song-card-meta{color:var(--muted);font-size:12.5px;margin-top:2px}
+.song-card-progress{font-size:12.5px;margin-top:2px;font-weight:750}
+.song-card-progress.has-reps{color:var(--blue)}
+.song-card-progress.no-reps{color:var(--muted)}
 .song-card-acts{display:flex;align-items:center;gap:6px;flex:none;position:relative}
 .song-card-open{white-space:nowrap}
 .song-card-menu-btn{min-width:38px;min-height:38px;padding:0;font-size:17px}
@@ -808,6 +813,7 @@ body.screen-practicar #transitionLoop{display:none}
     <div>
       <span class="lyrics-eyebrow">Practicar</span>
       <h2 id="practiceChooserTitle">¿Qué querés practicar?</h2>
+      <div id="practiceSongSummary" class="practice-song-summary"></div>
     </div>
   </div>
   <div class="practice-guide-body practice-chooser-body">
@@ -1055,6 +1061,7 @@ const nextPianoToggle=document.getElementById("nextPianoToggle");
 const nextKeyboardWrap=document.getElementById("nextKeyboardWrap");
 const nextKeyboard=document.getElementById("nextKeyboard");
 const practiceChooser=document.getElementById("practiceChooser");
+const practiceSongSummary=document.getElementById("practiceSongSummary");
 const practiceTransitionSelect=document.getElementById("practiceTransitionSelect");
 const practiceFullSongButton=document.getElementById("practiceFullSongButton");
 const practiceFullSongNote=document.getElementById("practiceFullSongNote");
@@ -1646,6 +1653,43 @@ function loadDeletedSongIds(){
 }
 function saveDeletedSongIds(){try{localStorage.setItem(DELETED_SONGS_KEY,JSON.stringify(deletedSongIds))}catch{}}
 let deletedSongIds=loadDeletedSongIds();
+// Memoria de práctica: cuántas repeticiones acumuló cada canción y cada
+// transición puntual, para que "Practicar" y el Cancionero puedan mostrar
+// una sensación de avance en vez de resetear a cero cada vez que se abre
+// la app. Guarda solo contadores y fechas, nunca contenido de la canción.
+const PRACTICE_LOG_KEY="piano-practice-log-v1";
+function loadPracticeLog(){
+ try{
+   const saved=JSON.parse(localStorage.getItem(PRACTICE_LOG_KEY)||"{}");
+   return saved&&typeof saved==="object"&&!Array.isArray(saved)?saved:{};
+ }catch{return {}}
+}
+function savePracticeLog(){try{localStorage.setItem(PRACTICE_LOG_KEY,JSON.stringify(practiceLog))}catch{}}
+let practiceLog=loadPracticeLog();
+function songPracticeEntry(songId){
+ if(!practiceLog[songId])practiceLog[songId]={reps:0,lastPracticedAt:null,transitions:{}};
+ return practiceLog[songId];
+}
+function recordPracticeReps(songId,transitionKey,count){
+ if(!count)return;
+ const entry=songPracticeEntry(songId);
+ entry.reps+=count;
+ entry.lastPracticedAt=new Date().toISOString();
+ if(transitionKey)entry.transitions[transitionKey]=(entry.transitions[transitionKey]||0)+count;
+ savePracticeLog();
+}
+function transitionKeyFor(position){return position?`${position.section}:${position.step}`:null}
+function formatRelativeDate(iso){
+ if(!iso)return null;
+ const days=Math.floor((Date.now()-new Date(iso).getTime())/86400000);
+ if(days<=0)return "hoy";
+ if(days===1)return "ayer";
+ if(days<30)return `hace ${days} días`;
+ const months=Math.floor(days/30);
+ if(months<12)return `hace ${months} ${months===1?"mes":"meses"}`;
+ const years=Math.floor(months/12);
+ return `hace ${years} ${years===1?"año":"años"}`;
+}
 function songExists(songId){return Boolean(SONGS[songId])||Boolean(dynamicSongs[songId])}
 function songMeta(songId){return SONGS[songId]||dynamicSongs[songId]||null}
 function currentSong(){return songMeta(currentSongId)}
@@ -2156,7 +2200,16 @@ function renderSongList(){
    }
    const meta=document.createElement("div");meta.className="song-card-meta";
    meta.textContent=[song.artist,song.originalKey?`Tono ${song.originalKey}`:null].filter(Boolean).join(" · ")||"Sin datos adicionales";
-   main.append(titleRow,meta);
+   const progress=document.createElement("div");progress.className="song-card-progress";
+   const entry=practiceLog[songId];
+   if(entry&&entry.reps>0){
+     progress.classList.add("has-reps");
+     progress.textContent=`🎯 ${entry.reps} ${entry.reps===1?"repetición":"repeticiones"} practicada${entry.reps===1?"":"s"} · ${formatRelativeDate(entry.lastPracticedAt)}`;
+   }else{
+     progress.classList.add("no-reps");
+     progress.textContent="Todavía sin practicar";
+   }
+   main.append(titleRow,meta,progress);
 
    const acts=document.createElement("div");acts.className="song-card-acts";
    const openBtn=document.createElement("button");
@@ -3040,7 +3093,7 @@ function marker(k,note,finger,type,isBlack,chord,inactive=false){
  const l=document.createElement("div");l.className="label"+(isBlack?" black-label":"")+(inactive?" hand-inactive":"");l.textContent=noteText(note,chord);l.title=noteText(note,chord)+keyHint(note,chord);k.appendChild(l);
  const f=document.createElement("div");f.className="finger "+(type==="left"?"left-f":type==="preview"?"preview-f":"right-f")+(isBlack?" black-f":"")+(inactive?" hand-inactive":"");f.textContent=finger;k.appendChild(f);
 }
-let sectionIndex=0,stepIndex=0,timer=null,cueTimer=null,audioCtx=null,isAutoPlaying=false,isPlaybackPaused=false,isTransitionLoop=false,lyricsFollowPlayback=true;
+let sectionIndex=0,stepIndex=0,timer=null,cueTimer=null,audioCtx=null,isAutoPlaying=false,isPlaybackPaused=false,isTransitionLoop=false,lyricsFollowPlayback=true,isFullSongReducedPractice=false;
 let playQueue=[],queueIndex=0;
 let transitionPracticeCompleted=0,transitionPracticeTotal=4,transitionPracticeStart=null;
 // El foco de mano solo aplica durante el loop de práctica de una transición:
@@ -3562,6 +3615,7 @@ function setActiveScreen(screen){
    setMainView("piano");
    practiceChooser.hidden=false;
    renderPracticeTransitionOptions();
+   updatePracticeSongSummary();
    updatePracticeFullSongNote();
    openPracticeGuide();
  }
@@ -3573,6 +3627,7 @@ function setActiveScreen(screen){
 // un segundo camino de reproducción.
 function renderPracticeTransitionOptions(){
  practiceTransitionSelect.innerHTML="";
+ const entry=practiceLog[currentSongId];
  sections.forEach((section,si)=>{
    const group=document.createElement("optgroup");
    group.label=section.name;
@@ -3582,12 +3637,23 @@ function renderPracticeTransitionOptions(){
      const nextEvent=sections[next.section].events[next.step];
      const option=document.createElement("option");
      option.value=`${si}:${ei}`;
-     option.textContent=`${chordText(event.chord)} → ${chordText(nextEvent.chord)}`;
+     const reps=entry?.transitions?.[`${si}:${ei}`]||0;
+     option.textContent=`${chordText(event.chord)} → ${chordText(nextEvent.chord)}${reps?` (${reps}x)`:""}`;
      group.appendChild(option);
    });
    if(group.childElementCount)practiceTransitionSelect.appendChild(group);
  });
  practiceTransitionSelect.value=`${sectionIndex}:${stepIndex}`;
+}
+function updatePracticeSongSummary(){
+ const entry=practiceLog[currentSongId];
+ if(entry&&entry.reps>0){
+   practiceSongSummary.classList.add("has-reps");
+   practiceSongSummary.textContent=`Llevás ${entry.reps} ${entry.reps===1?"repetición":"repeticiones"} practicada${entry.reps===1?"":"s"} en esta canción · ${formatRelativeDate(entry.lastPracticedAt)}`;
+ }else{
+   practiceSongSummary.classList.remove("has-reps");
+   practiceSongSummary.textContent="Todavía no practicaste esta canción.";
+ }
 }
 function practiceReducedTempo(){
  return Math.max(45,Math.round((+bpm.value*0.75)/5)*5);
@@ -3789,6 +3855,8 @@ async function playCurrent(){
 function stopAuto(){
  const wasPracticing=isTransitionLoop;
  const practiceStartPosition=transitionPracticeStart;
+ const completedReps=transitionPracticeCompleted;
+ const naturalSongCompletion=isFullSongReducedPractice&&playQueue.length>0&&queueIndex>=playQueue.length;
  if(timer){clearTimeout(timer);timer=null}
  resetLyricsUpcomingCue();
  if(audioCtx&&activeAudioGroup)dampActiveChord(audioCtx,audioCtx.currentTime,.12);
@@ -3801,6 +3869,10 @@ function stopAuto(){
  transitionLoop.setAttribute("aria-pressed","false");
  practiceStart.textContent="▶ Comenzar";
  if(wasPracticing)practiceStatus.textContent="Práctica detenida. Puedes cambiar las opciones y volver a comenzar.";
+ if(wasPracticing&&completedReps>0)recordPracticeReps(currentSongId,transitionKeyFor(practiceStartPosition),completedReps);
+ if(naturalSongCompletion)recordPracticeReps(currentSongId,null,1);
+ isFullSongReducedPractice=false;
+ if((wasPracticing&&completedReps>0||naturalSongCompletion)&&!practiceChooser.hidden){updatePracticeSongSummary();renderPracticeTransitionOptions()}
  document.querySelectorAll(".loop-step").forEach(element=>element.classList.remove("loop-step"));
  document.querySelectorAll(".loop-song-chord").forEach(element=>element.classList.remove("loop-song-chord"));
  if(wasPracticing&&practiceStartPosition){
@@ -3898,7 +3970,10 @@ function finishTransitionPractice(){
  transitionLoop.textContent="🔁 Practicar cambio";
  transitionLoop.setAttribute("aria-pressed","false");
  practiceStart.textContent="▶ Repetir";
- practiceStatus.textContent=`Práctica completada: ${transitionPracticeTotal} repeticiones.`;
+ recordPracticeReps(currentSongId,transitionKeyFor(practiceStartPosition),transitionPracticeTotal);
+ const totalReps=songPracticeEntry(currentSongId).reps;
+ practiceStatus.textContent=`Práctica completada: ${transitionPracticeTotal} repeticiones (llevás ${totalReps} en total en esta canción).`;
+ if(!practiceChooser.hidden){updatePracticeSongSummary();renderPracticeTransitionOptions()}
  document.querySelectorAll(".loop-step").forEach(element=>element.classList.remove("loop-step"));
  document.querySelectorAll(".loop-song-chord").forEach(element=>element.classList.remove("loop-song-chord"));
  if(practiceStartPosition){
@@ -4390,13 +4465,15 @@ practiceTransitionSelect.onchange=()=>{
  openPracticeGuide();
  practiceGuide.scrollIntoView({behavior:scrollBehavior(),block:"center"});
 };
-practiceFullSongButton.onclick=()=>{
+practiceFullSongButton.onclick=async()=>{
  const reduced=practiceReducedTempo();
  bpm.value=reduced;bpmOut.textContent=reduced;updateSettingsSummary();
  playMode.value="full";
+ isFullSongReducedPractice=false;
  stopAuto();
  practiceGuide.hidden=true;
- startAuto();
+ await startAuto();
+ isFullSongReducedPractice=isAutoPlaying;
 };
 keyboardMode.value=keyboardViewMode;
 sustainMode.value=sustainViewMode;
