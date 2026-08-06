@@ -5,6 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex,nofollow,noarchive">
 <title>Piano Estudio</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,600;0,700;1,500&display=swap" rel="stylesheet">
 <style>
 :root{
   --bg:#f4f7fb;--panel:#fff;--ink:#152033;--muted:#526178;
@@ -482,27 +484,45 @@ button.song-line-end{padding:3px 8px}
 .cancionero-head{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px}
 .cancionero-head h2{margin:0;font-size:clamp(20px,3vw,26px)}
 .cancionero-head p{margin:2px 0 0;color:var(--muted);font-size:13px}
-.song-list{display:flex;flex-direction:column;gap:9px}
-.song-card{display:flex;align-items:center;gap:13px;padding:13px 16px;overflow:visible}
-.song-card-main{flex:1;min-width:0}
-.song-card-title{font-weight:850;font-size:16px}
-.song-card-title .seed-tag{display:inline-block;font-size:10px;font-weight:900;letter-spacing:.08em;text-transform:uppercase;color:var(--blue);background:var(--blueSoft);border-radius:5px;padding:2px 6px;margin-left:7px;vertical-align:2px}
-.song-card-meta{color:var(--muted);font-size:12.5px;margin-top:2px}
-.song-card-progress{font-size:12.5px;margin-top:2px;font-weight:750}
-.song-card-progress.has-reps{color:var(--blue)}
-.song-card-progress.no-reps{color:var(--muted)}
-.song-card-acts{display:flex;align-items:center;gap:6px;flex:none;position:relative}
-.song-card-open{white-space:nowrap}
-.song-card-menu-btn{min-width:38px;min-height:38px;padding:0;font-size:17px}
-.song-card-menu{position:absolute;top:44px;right:0;z-index:30;width:210px;background:#fff;border:1px solid var(--line);border-radius:12px;box-shadow:var(--shadow);padding:6px}
-.song-card-menu[hidden]{display:none}
-.song-card-menu button{display:flex;width:100%;align-items:center;gap:9px;text-align:left;background:transparent;color:var(--ink);font-size:13.5px;font-weight:750;padding:9px 10px;border-radius:8px;min-height:auto}
-.song-card-menu button:hover{background:#f1f5fb}
-.song-card-menu button.danger-item{color:#9f1d1d}
-.song-card-menu button:disabled{opacity:.45;cursor:not-allowed}
-.song-card-menu hr{border:0;border-top:1px solid var(--line);margin:5px 2px}
+#cancioneroScreen{--c-paper:oklch(98% 0.008 75);--c-shell1:oklch(88% 0.02 60);--c-shell2:oklch(84% 0.02 60);--c-ink:oklch(24% 0.02 55);--c-muted:oklch(45% 0.03 55);--c-line:oklch(88% 0.015 60)}
+.cancionero-head h2{font-family:Lora,Georgia,serif;letter-spacing:-.01em}
+.song-fichero-shell{border-radius:22px;background:linear-gradient(180deg,var(--c-shell1),var(--c-shell2));padding:22px 18px 10px;box-shadow:inset 0 2px 8px rgba(0,0,0,.06)}
+.song-list{display:flex;align-items:stretch;gap:6px;overflow-x:auto;padding:0 2px 2px;border-bottom:3px solid var(--c-shell2);min-height:70px}
+.song-tab{flex:0 0 auto;min-width:170px;max-width:230px;min-height:64px;padding:10px 16px 12px;border:0;border-top:4px solid oklch(52% 0.13 var(--hue,40));border-radius:12px 12px 0 0;background:oklch(91% 0.02 var(--hue,40));color:oklch(32% 0.05 var(--hue,40));cursor:pointer;text-align:left;font:inherit}
+.song-tab.active{background:var(--c-paper);color:var(--c-ink);box-shadow:0 -6px 16px rgba(30,20,10,.10);transform:translateY(-4px);position:relative;z-index:2}
+.song-tab-title{display:block;font-family:Lora,Georgia,serif;font-weight:700;font-size:15px;line-height:1.2;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.song-tab-artist{display:block;margin-top:3px;font-size:11.5px;font-weight:600;opacity:.85;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.song-tab-add{flex:0 0 56px;border:2px dashed oklch(70% 0.02 60);border-radius:12px 12px 0 0;background:transparent;color:var(--c-muted);font-weight:800;font-size:20px;cursor:pointer}
+.song-detail-panel{background:var(--c-paper);border-radius:0 0 16px 16px;box-shadow:0 20px 44px rgba(30,20,10,.16);padding:26px 30px;border-top:1px solid oklch(90% 0.01 60)}
+.song-detail-top{display:flex;align-items:flex-start;justify-content:space-between;gap:24px;flex-wrap:wrap}
+.song-detail-heading{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.song-detail-heading h3{margin:0;font-family:Lora,Georgia,serif;font-size:28px;letter-spacing:-.01em;color:var(--c-ink)}
+.song-detail-index{font-family:Lora,Georgia,serif;font-style:italic;font-size:12px;color:oklch(70% 0.02 60);white-space:nowrap}
+.song-detail-seed{font-size:10px;font-weight:900;letter-spacing:.1em;text-transform:uppercase;color:oklch(52% 0.13 var(--hue,40));border:1px solid oklch(52% 0.13 var(--hue,40));border-radius:5px;padding:2px 7px}
+.song-detail-meta{margin-top:6px;color:var(--c-muted);font-size:14px;font-weight:600}
+.song-detail-progress{margin-top:14px;font-size:13px;font-weight:750}
+.song-detail-progress.has-reps{color:oklch(52% 0.13 var(--hue,40))}
+.song-detail-progress.no-reps{color:var(--c-muted)}
+.song-detail-actions{display:flex;flex-direction:column;align-items:stretch;gap:8px;flex:0 0 auto;min-width:220px}
+.song-detail-open{min-height:48px;padding:0 22px;border:0;border-radius:11px;background:oklch(52% 0.13 var(--hue,40));color:#fff;font-size:15px;font-weight:800;cursor:pointer}
+.song-detail-views{display:flex;gap:6px;flex-wrap:wrap}
+.song-detail-views button{flex:1 1 auto;min-height:40px;padding:0 10px;border:1px solid var(--c-line);border-radius:9px;background:#fff;color:var(--c-muted);font-size:12px;font-weight:750;cursor:pointer;white-space:nowrap}
+.song-detail-practice{min-height:44px;padding:0 14px;border:1px solid var(--c-line);border-radius:11px;background:transparent;color:var(--c-muted);font-size:13px;font-weight:750;cursor:pointer}
+.song-detail-links{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:2px}
+.song-detail-links button{display:inline-flex;align-items:center;min-height:44px;padding:0 6px;border:0;background:transparent;font-size:12.5px;font-weight:750;cursor:pointer}
+.song-detail-edit{color:var(--c-muted)}
+.song-detail-delete{color:oklch(55% 0.14 30)}
+.song-detail-links button:disabled{opacity:.45;cursor:not-allowed}
 .cancionero-manage{margin-top:4px;padding-top:15px;border-top:1px solid var(--line)}
 .cancionero-manage h3{margin:0 0 9px;font-size:11px;font-weight:900;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+@media(max-width:600px){
+ .song-fichero-shell{padding:14px 10px 8px}
+ .song-tab{min-width:128px;max-width:170px;padding:9px 12px 10px}
+ .song-detail-panel{padding:18px 16px}
+ .song-detail-top{flex-direction:column;align-items:stretch;gap:16px}
+ .song-detail-actions{min-width:0;width:100%}
+ .song-detail-links{justify-content:flex-start;gap:22px}
+}
 
 /* ===== Barra de la canción abierta + subpestañas de Tocar ===== */
 .songbar{display:flex;flex-wrap:wrap;align-items:center;gap:12px;margin-bottom:10px}
@@ -605,7 +625,10 @@ body.screen-practicar #transitionLoop{display:none}
     </div>
     <button id="cancioneroNewSong" class="primary" type="button">＋ Nueva canción</button>
   </div>
-  <div id="songList" class="song-list"></div>
+  <div class="song-fichero-shell">
+    <div id="songList" class="song-list"></div>
+    <div id="songDetailPanel" class="song-detail-panel"></div>
+  </div>
   <div class="cancionero-manage">
     <h3>Administrar biblioteca</h3>
     <div class="settings-actions">
@@ -1008,6 +1031,7 @@ const cancioneroScreen=document.getElementById("cancioneroScreen");
 const cancioneroTitle=document.getElementById("cancioneroTitle");
 const cancioneroCount=document.getElementById("cancioneroCount");
 const songList=document.getElementById("songList");
+const songDetailPanel=document.getElementById("songDetailPanel");
 const tocarBody=document.getElementById("tocarBody");
 const backToCancionero=document.getElementById("backToCancionero");
 const songMetaLine=document.getElementById("songMetaLine");
@@ -1772,6 +1796,7 @@ migrateLegacyMis36Storage();
 let songCatalog=loadCatalog();
 currentSongId=readPreference(LAST_SONG_KEY,"mis-36");
 if(!songExists(currentSongId))currentSongId="mis-36";
+let cancioneroActiveId=currentSongId;
 sections=cloneSongSections(currentSongId);
 
 let SONG_SYNC_KEY=songStorageKey(currentSongId,"sync-v1");
@@ -2205,78 +2230,110 @@ function undoDeleteSong(){
  saveCatalogToCloud();
  return true;
 }
-// Pantalla Cancionero: lista de canciones + acciones por tarjeta. Construida
-// con DOM/textContent (nunca innerHTML con datos de la canción) porque
+// Pantalla Cancionero: fichero con una solapa por canción (título+artista) y
+// un único panel de detalle abajo para la solapa activa. Construida con
+// DOM/textContent (nunca innerHTML con datos de la canción) porque
 // título/artista pueden venir del importador de texto pegado por el usuario.
+function songHue(songId){let h=0;for(let i=0;i<songId.length;i++){h=(h*31+songId.charCodeAt(i))%360}return h}
+function openSongInView(songId,view){switchToSong(songId);setActiveScreen("tocar");setMainView(view)}
+function practiceSongFromCancionero(songId){switchToSong(songId);setActiveScreen("practicar")}
 function renderSongList(){
  songList.innerHTML="";
  const globalThisWeek=globalWeeklyTrend();
  cancioneroCount.textContent=`${songCatalog.length} ${songCatalog.length===1?"canción":"canciones"}`+(globalThisWeek?` · practicaste ${globalThisWeek} ${globalThisWeek===1?"vez":"veces"} esta semana`:"");
+ if(!songCatalog.includes(cancioneroActiveId))cancioneroActiveId=songCatalog[0];
  songCatalog.forEach(songId=>{
    const song=songMeta(songId);
    if(!song)return;
-   const card=document.createElement("div");
-   card.className="card song-card";
-   card.dataset.songId=songId;
-
-   const main=document.createElement("div");main.className="song-card-main";
-   const titleRow=document.createElement("div");titleRow.className="song-card-title";
-   titleRow.appendChild(document.createTextNode(song.title));
-   if(SONGS[songId]){
-     const tag=document.createElement("span");tag.className="seed-tag";tag.textContent="Semilla";
-     titleRow.appendChild(tag);
-   }
-   const meta=document.createElement("div");meta.className="song-card-meta";
-   meta.textContent=[song.artist,song.originalKey?`Tono ${song.originalKey}`:null].filter(Boolean).join(" · ")||"Sin datos adicionales";
-   const progress=document.createElement("div");progress.className="song-card-progress";
-   const entry=practiceLog[songId];
-   if(entry&&entry.reps>0){
-     progress.classList.add("has-reps");
-     progress.textContent=`🎯 ${entry.reps} ${entry.reps===1?"repetición":"repeticiones"} practicada${entry.reps===1?"":"s"} · ${formatRelativeDate(entry.lastPracticedAt)}`;
-   }else{
-     progress.classList.add("no-reps");
-     progress.textContent="Todavía sin practicar";
-   }
-   main.append(titleRow,meta,progress);
-
-   const acts=document.createElement("div");acts.className="song-card-acts";
-   const openBtn=document.createElement("button");
-   openBtn.type="button";openBtn.className="secondary song-card-open";openBtn.textContent="Abrir";
-   openBtn.onclick=()=>openSongFromCancionero(songId);
-
-   const menuBtn=document.createElement("button");
-   menuBtn.type="button";menuBtn.className="secondary song-card-menu-btn";
-   menuBtn.setAttribute("aria-haspopup","true");menuBtn.setAttribute("aria-expanded","false");
-   menuBtn.setAttribute("aria-label",`Más acciones para ${song.title}`);menuBtn.textContent="⋯";
-
-   const menu=document.createElement("div");menu.className="song-card-menu";menu.hidden=true;
-   const editBtn=document.createElement("button");
-   editBtn.type="button";editBtn.textContent="✎ Editar acordes y letra";
-   editBtn.onclick=()=>{menu.hidden=true;editSongFromCancionero(songId)};
-   const deleteBtn=document.createElement("button");
-   deleteBtn.type="button";deleteBtn.className="danger-item";deleteBtn.textContent="🗑 Eliminar";
-   deleteBtn.disabled=songCatalog.length<=1;
-   deleteBtn.onclick=()=>{menu.hidden=true;deleteSongFromCancionero(songId,song.title)};
-   menu.append(editBtn,document.createElement("hr"),deleteBtn);
-
-   menuBtn.onclick=event=>{
-     event.stopPropagation();
-     const willOpen=menu.hidden;
-     closeAllSongCardMenus();
-     menu.hidden=!willOpen;
-     menuBtn.setAttribute("aria-expanded",String(willOpen));
-   };
-
-   acts.append(openBtn,menuBtn,menu);
-   card.append(main,acts);
-   songList.appendChild(card);
+   const active=songId===cancioneroActiveId;
+   const tab=document.createElement("button");
+   tab.type="button";tab.className="song-tab"+(active?" active":"");
+   tab.style.setProperty("--hue",songHue(songId));
+   tab.setAttribute("aria-pressed",String(active));
+   const titleEl=document.createElement("span");titleEl.className="song-tab-title";titleEl.textContent=song.title;
+   const artistEl=document.createElement("span");artistEl.className="song-tab-artist";
+   artistEl.textContent=song.artist||(song.originalKey?`Tono ${song.originalKey}`:"");
+   tab.append(titleEl,artistEl);
+   tab.onclick=()=>{cancioneroActiveId=songId;renderSongList()};
+   songList.appendChild(tab);
  });
+ const addTab=document.createElement("button");
+ addTab.type="button";addTab.className="song-tab song-tab-add";addTab.textContent="＋";
+ addTab.setAttribute("aria-label","Nueva canción");
+ addTab.onclick=()=>cancioneroNewSong.click();
+ songList.appendChild(addTab);
+ renderSongDetail();
 }
-function closeAllSongCardMenus(){
- document.querySelectorAll(".song-card-menu").forEach(m=>{m.hidden=true});
- document.querySelectorAll(".song-card-menu-btn").forEach(b=>b.setAttribute("aria-expanded","false"));
+function renderSongDetail(){
+ songDetailPanel.innerHTML="";
+ const songId=cancioneroActiveId;
+ const song=songMeta(songId);
+ if(!song)return;
+ songDetailPanel.style.setProperty("--hue",songHue(songId));
+
+ const top=document.createElement("div");top.className="song-detail-top";
+ const left=document.createElement("div");left.style.flex="1";left.style.minWidth="0";
+ const heading=document.createElement("div");heading.className="song-detail-heading";
+ const h3=document.createElement("h3");h3.textContent=song.title;
+ heading.appendChild(h3);
+ if(SONGS[songId]){
+   const tag=document.createElement("span");tag.className="song-detail-seed";tag.textContent="Semilla";
+   heading.appendChild(tag);
+ }
+ const indexEl=document.createElement("span");indexEl.className="song-detail-index";
+ indexEl.textContent=`ficha ${songCatalog.indexOf(songId)+1} / ${songCatalog.length}`;
+ heading.appendChild(indexEl);
+ left.appendChild(heading);
+
+ const meta=document.createElement("div");meta.className="song-detail-meta";
+ meta.textContent=[song.artist,song.originalKey?`Tono ${song.originalKey}`:null].filter(Boolean).join(" · ")||"Sin datos adicionales";
+ left.appendChild(meta);
+
+ const progress=document.createElement("div");progress.className="song-detail-progress";
+ const entry=practiceLog[songId];
+ if(entry&&entry.reps>0){
+   progress.classList.add("has-reps");
+   progress.textContent=`🎯 ${entry.reps} ${entry.reps===1?"repetición":"repeticiones"} practicada${entry.reps===1?"":"s"} · ${formatRelativeDate(entry.lastPracticedAt)}`;
+ }else{
+   progress.classList.add("no-reps");
+   progress.textContent="Todavía sin practicar";
+ }
+ left.appendChild(progress);
+ top.appendChild(left);
+
+ const actions=document.createElement("div");actions.className="song-detail-actions";
+ const openBtn=document.createElement("button");
+ openBtn.type="button";openBtn.className="song-detail-open";openBtn.textContent="▶ Abrir";
+ openBtn.onclick=()=>openSongFromCancionero(songId);
+ actions.appendChild(openBtn);
+
+ const views=document.createElement("div");views.className="song-detail-views";
+ [["Acordes y letra","lyrics"],["Teclado","piano"],["Estructura","structure"]].forEach(([label,view])=>{
+   const b=document.createElement("button");b.type="button";b.textContent=label;
+   b.onclick=()=>openSongInView(songId,view);
+   views.appendChild(b);
+ });
+ actions.appendChild(views);
+
+ const practiceBtn=document.createElement("button");
+ practiceBtn.type="button";practiceBtn.className="song-detail-practice";practiceBtn.textContent="Practicar transición";
+ practiceBtn.onclick=()=>practiceSongFromCancionero(songId);
+ actions.appendChild(practiceBtn);
+
+ const links=document.createElement("div");links.className="song-detail-links";
+ const editBtn=document.createElement("button");
+ editBtn.type="button";editBtn.className="song-detail-edit";editBtn.textContent="✎ Editar";
+ editBtn.onclick=()=>editSongFromCancionero(songId);
+ const deleteBtn=document.createElement("button");
+ deleteBtn.type="button";deleteBtn.className="song-detail-delete";deleteBtn.textContent="Eliminar";
+ deleteBtn.disabled=songCatalog.length<=1;
+ deleteBtn.onclick=()=>deleteSongFromCancionero(songId,song.title);
+ links.append(editBtn,deleteBtn);
+ actions.appendChild(links);
+
+ top.appendChild(actions);
+ songDetailPanel.appendChild(top);
 }
-document.addEventListener("click",closeAllSongCardMenus);
 function openSongFromCancionero(songId){
  switchToSong(songId);
  setMainView("lyrics");
@@ -3742,6 +3799,7 @@ function setActiveScreen(screen){
    stopAuto();
    practiceChooser.hidden=true;
    practiceGuide.hidden=true;
+   cancioneroActiveId=currentSongId;
    renderSongList();
  }else if(screen==="tocar"){
    practiceChooser.hidden=true;
