@@ -125,6 +125,10 @@ border:1px solid rgba(0,0,0,.08)}
 display:grid;place-items:center;color:#fff;font-weight:900;z-index:7;border:2px solid #fff}
 .finger.left-f{background:var(--green)}.finger.right-f{background:var(--blue)}.finger.preview-f{background:var(--amber)}
 .finger.black-f{bottom:8px}
+.white.left.hand-inactive,.white.right.hand-inactive{background:linear-gradient(#eef2f8,#dbe3ee)}
+.black.left.hand-inactive,.black.right.hand-inactive{background:#5b6576}
+.finger.hand-inactive{background:#8b96a6;opacity:.55}
+.label.hand-inactive{opacity:.55}
 #nextKeyboardWrap[hidden]{display:none}
 .current{border-color:#b8d4f3;box-shadow:0 16px 38px rgba(21,95,192,.13)}
 .current .card-titlebar,.current>h2{background:linear-gradient(90deg,#f3f8ff,#fff)}
@@ -201,7 +205,7 @@ background:var(--blue);color:#fff;font-weight:900;margin:auto auto 4px}
 .full-view{display:none;margin-bottom:16px}
 .show-full .full-view{display:block}
 .show-full:not(.song-editing) .full-view{padding-bottom:92px}
-.show-full .stack,.show-full .seq,.show-full .legend,.show-full .practice-guide,.show-full #customPanel{display:none!important}
+.show-full .stack,.show-full .seq,.show-full .legend,.show-full #practiceGuide,.show-full #customPanel{display:none!important}
 .show-full:not(.song-editing) .toolbar{display:none}
 .show-full:not(.song-editing) .app{max-width:1480px}
 .lyrics-page{max-width:1400px;margin:0 auto;background:#fff;border:1px solid var(--line);border-radius:22px;overflow:hidden;box-shadow:var(--shadow);padding:0 30px 28px}
@@ -314,6 +318,11 @@ button.song-line-end{padding:3px 8px}
 .practice-controls{display:flex;align-items:end;gap:8px;flex-wrap:wrap;justify-content:flex-end}
 .practice-setting{display:grid;gap:4px;color:#526178;font-size:12px;font-weight:800}
 .practice-status{grid-column:1/-1;padding:9px 11px;border-radius:10px;background:#f4f0ff;color:#4f3496;font-weight:850}
+.practice-chooser-body{display:flex!important;flex-wrap:wrap;align-items:flex-end;gap:16px}
+.practice-chooser-select{flex:1 1 260px;min-width:0}
+.practice-chooser-select select{width:100%}
+.practice-chooser-full{display:flex;flex-direction:column;gap:5px;flex:1 1 260px}
+.practice-chooser-full .sub{margin:0;color:var(--muted);font-size:12.5px}
 .song-editor-actions{display:flex;gap:8px;align-items:end;justify-content:flex-end;flex-wrap:wrap}
 .editor-section-jump{display:grid;gap:4px;color:#526178;font-size:12px;font-weight:800}
 .editor-section-jump select{min-width:160px;padding-block:8px}
@@ -442,29 +451,229 @@ button.song-line-end{padding:3px 8px}
  .show-full.song-editing .sync-duration select{width:100%;min-width:0}
  .show-full.song-editing #syncAdd,.show-full.song-editing #syncMove,.show-full.song-editing #syncDelete{flex:1 1 auto}
 }
+
+/* ===== Navegación principal (Cancionero · Tocar · Practicar) ===== */
+.app-nav{display:flex;align-items:center;gap:12px;flex-wrap:wrap;background:linear-gradient(135deg,#06172d,#123e72);color:#fff;border-radius:18px;padding:9px 12px;box-shadow:var(--shadow)}
+.app-nav-brand{display:flex;align-items:center;gap:7px;font-weight:900;font-size:15px;letter-spacing:-.01em;white-space:nowrap}
+.app-nav-brand .mark{font-size:17px;line-height:1}
+.app-nav-tabs{display:flex;gap:2px;margin-right:auto;background:rgba(255,255,255,.1);border-radius:12px;padding:3px}
+.app-nav-tabs button{min-width:0;min-height:38px;padding:7px 15px;background:transparent;color:rgba(255,255,255,.82);font-size:13.5px;font-weight:800;border-radius:9px}
+.app-nav-tabs button[aria-selected="true"]{background:#fff;color:#0b2545}
+.app-nav-right{display:flex;align-items:center;gap:8px}
+.app-nav-sync{display:none;align-items:center;gap:6px;font-size:12px;font-weight:800;color:#bfe6cf;background:rgba(22,132,71,.24);border-radius:999px;padding:6px 11px;white-space:nowrap}
+.app-nav-sync.ready{display:inline-flex}
+.app-nav-sync .dot{width:7px;height:7px;border-radius:50%;background:#4ade80;flex:none}
+.app-nav-sync.warning{display:inline-flex;color:#ffe3ad;background:rgba(146,80,0,.35)}
+.app-nav-sync.warning .dot{background:#f3bb47}
+.app-nav-sync.error{display:inline-flex;color:#ffd2c9;background:rgba(153,38,38,.35)}
+.app-nav-sync.error .dot{background:#ef5350}
+.app-nav-gear{background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.22);color:#fff;white-space:nowrap}
+.app-nav-gear:hover{background:rgba(255,255,255,.18)}
+.app-nav-gear[aria-expanded="true"]{background:#fff;color:#0b2545}
+.settings-panel.card{margin:14px 0;padding:14px}
+.settings-panel[hidden]{display:none}
+
+/* ===== Pantalla Cancionero ===== */
+.app-screen[hidden]{display:none}
+#cancioneroScreen{display:flex;flex-direction:column;gap:14px;margin-top:16px}
+#cancioneroScreen[hidden]{display:none}
+.cancionero-head{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px}
+.cancionero-head h2{margin:0;font-size:clamp(20px,3vw,26px)}
+.cancionero-head p{margin:2px 0 0;color:var(--muted);font-size:13px}
+.song-list{display:flex;flex-direction:column;gap:9px}
+.song-card{display:flex;align-items:center;gap:13px;padding:13px 16px;overflow:visible}
+.song-card-main{flex:1;min-width:0}
+.song-card-title{font-weight:850;font-size:16px}
+.song-card-title .seed-tag{display:inline-block;font-size:10px;font-weight:900;letter-spacing:.08em;text-transform:uppercase;color:var(--blue);background:var(--blueSoft);border-radius:5px;padding:2px 6px;margin-left:7px;vertical-align:2px}
+.song-card-meta{color:var(--muted);font-size:12.5px;margin-top:2px}
+.song-card-acts{display:flex;align-items:center;gap:6px;flex:none;position:relative}
+.song-card-open{white-space:nowrap}
+.song-card-menu-btn{min-width:38px;min-height:38px;padding:0;font-size:17px}
+.song-card-menu{position:absolute;top:44px;right:0;z-index:30;width:210px;background:#fff;border:1px solid var(--line);border-radius:12px;box-shadow:var(--shadow);padding:6px}
+.song-card-menu[hidden]{display:none}
+.song-card-menu button{display:flex;width:100%;align-items:center;gap:9px;text-align:left;background:transparent;color:var(--ink);font-size:13.5px;font-weight:750;padding:9px 10px;border-radius:8px;min-height:auto}
+.song-card-menu button:hover{background:#f1f5fb}
+.song-card-menu button.danger-item{color:#9f1d1d}
+.song-card-menu button:disabled{opacity:.45;cursor:not-allowed}
+.song-card-menu hr{border:0;border-top:1px solid var(--line);margin:5px 2px}
+.cancionero-manage{margin-top:4px;padding-top:15px;border-top:1px solid var(--line)}
+.cancionero-manage h3{margin:0 0 9px;font-size:11px;font-weight:900;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+
+/* ===== Barra de la canción abierta + subpestañas de Tocar ===== */
+.songbar{display:flex;flex-wrap:wrap;align-items:center;gap:12px;margin-bottom:10px}
+.songbar-back{white-space:nowrap}
+.songbar-main{flex:1 1 160px;min-width:0}
+.songbar-title{margin:0;font-size:clamp(19px,2.6vw,24px);letter-spacing:-.01em}
+.songbar-meta{color:var(--muted);font-size:12.5px;font-weight:750}
+.songbar-edit{white-space:nowrap}
+.view-switch.tocar-subtabs button{min-width:0}
+
+/* ===== Estructura ===== */
+#structureView{display:none}
+body.view-structure #structureView{display:block;margin-bottom:16px}
+.structure-map{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:9px}
+.structure-map button{display:flex;flex-direction:column;align-items:flex-start;gap:3px;text-align:left;background:#fff;border:1px solid var(--line);border-radius:13px;padding:12px 14px;font-size:13.5px;font-weight:800;color:var(--ink);min-height:auto}
+.structure-map button .n{color:var(--muted);font-size:11.5px;font-weight:700}
+.structure-map button[aria-current="true"]{border-color:var(--blue);background:var(--blueSoft);color:var(--blue)}
+.structure-map button[aria-current="true"] .n{color:var(--blue);opacity:.8}
+
+/* ===== Pantalla Practicar: sin subpestañas ni acceso duplicado a práctica ===== */
+body.screen-practicar .view-switch-bar{display:none}
+body.screen-practicar #transitionLoop{display:none}
+
+@media (max-width:640px){
+  .app-nav{padding:8px 10px}
+  .app-nav-tabs{order:3;width:100%;justify-content:space-between;margin-right:0}
+  .app-nav-tabs button{flex:1}
+  .app-nav-sync{display:none!important}
+  .songbar{gap:8px}
+}
 </style>
 </head>
 <body>
 <div class="app">
 <a class="skip-link" href="#mainContent">Saltar al contenido</a>
-<header class="app-header">
-  <div>
-    <span class="eyebrow">Guía de acompañamiento</span>
-    <h1>Piano Estudio</h1>
-    <h2 id="songTitle" class="current-song-name">Mis 36</h2>
-    <p>Acordes claros para tocar, acompañar y cantar.</p>
-    <label class="song-selector-label" for="songSelector">Canción
-      <select id="songSelector" aria-label="Elegir canción"></select>
-    </label>
+<header class="app-nav">
+  <div class="app-nav-brand"><span class="mark">🎹</span> Piano Estudio</div>
+  <div class="app-nav-tabs" role="tablist" aria-label="Navegación principal">
+    <button id="navCancionero" type="button" role="tab" aria-selected="false">Cancionero</button>
+    <button id="navTocar" type="button" role="tab" aria-selected="true">Tocar</button>
+    <button id="navPracticar" type="button" role="tab" aria-selected="false">Practicar</button>
   </div>
-  <button id="notation" class="notation-toggle" type="button" aria-label="Usar nombres de notas en inglés" title="Usar nombres de notas en inglés">Do · Re</button>
+  <div class="app-nav-right">
+    <span id="navSyncChip" class="app-nav-sync" role="status" aria-live="polite"><span class="dot"></span><span id="navSyncText">Nube</span></span>
+    <button id="settingsToggle" class="app-nav-gear secondary" type="button" aria-expanded="false" aria-controls="settingsPanel">⚙ Ajustes</button>
+  </div>
 </header>
 
+<label class="song-selector-label" for="songSelector" hidden>Canción
+  <select id="songSelector" aria-label="Elegir canción"></select>
+</label>
+
+<div id="settingsPanel" class="settings-panel card" hidden>
+  <div class="settings-grid">
+    <label class="section-control">
+      <span>Comenzar en</span>
+      <select id="sectionSelect" aria-label="Sección de la canción"></select>
+    </label>
+
+    <label class="section-control">
+      <span>Recorrido</span>
+      <select id="playMode" aria-label="Recorrido de reproducción">
+        <option value="section">Solo esta sección</option>
+        <option value="fromHere">Desde aquí hasta el final</option>
+        <option value="full">Canción completa</option>
+        <option value="custom">Elegir varias secciones</option>
+      </select>
+    </label>
+
+    <label class="setting">
+      <span>Ayuda visual</span>
+      <select id="keyboardMode" aria-label="Ayuda visual del teclado">
+        <option value="current">Sin anticipación</option>
+        <option value="preview" selected>Anticipar próximas teclas</option>
+      </select>
+    </label>
+
+    <label class="setting">
+      <span>Sonido</span>
+      <select id="sustainMode" aria-label="Duración del sonido">
+        <option value="short">Sustain corto</option>
+        <option value="natural" selected>Sustain natural</option>
+        <option value="long">Sustain largo</option>
+      </select>
+    </label>
+
+    <div class="tempo">
+      <strong>Tempo: <span id="bpmOut">72</span> BPM</strong>
+      <input id="bpm" type="range" min="45" max="120" value="72" aria-label="Tempo">
+    </div>
+  </div>
+  <div class="settings-actions"></div>
+</div>
+
+<section id="cancioneroScreen" class="app-screen" hidden aria-labelledby="cancioneroTitle">
+  <div class="cancionero-head">
+    <div>
+      <h2 id="cancioneroTitle">Mi cancionero</h2>
+      <p id="cancioneroCount" class="sub"></p>
+    </div>
+    <button id="cancioneroNewSong" class="primary" type="button">＋ Nueva canción</button>
+  </div>
+  <div id="songList" class="song-list"></div>
+  <div class="cancionero-manage">
+    <h3>Administrar biblioteca</h3>
+    <div class="settings-actions">
+      <button id="cloudSyncNow" class="secondary" type="button">☁ Sincronizar ahora</button>
+      <button id="cloudUseLocal" class="primary" type="button" hidden>Subir este dispositivo</button>
+      <button id="cloudUseRemote" class="secondary" type="button" hidden>Cargar versión de la nube</button>
+      <span id="cloudStatus" class="data-status" aria-live="polite">Nube: comprobando…</span>
+      <span id="catalogSyncStatus" class="data-status" aria-live="polite"></span>
+    </div>
+    <div class="settings-actions">
+      <button id="exportCancionero" class="secondary" type="button">↓ Exportar cancionero completo</button>
+      <button id="importCancionero" class="secondary" type="button">↧ Importar cancionero completo</button>
+      <input id="importCancioneroFile" type="file" accept=".json,application/json" hidden>
+      <span id="cancioneroStatus" class="data-status" aria-live="polite"></span>
+    </div>
+    <div class="settings-actions">
+      <button id="exportSongSync" class="secondary" type="button" hidden>↓ Exportar ajustes de la canción abierta</button>
+      <button id="importSongSync" class="secondary" type="button" hidden>↧ Importar ajustes de la canción abierta</button>
+      <input id="importSongSyncFile" type="file" accept=".json,application/json" hidden>
+      <span id="songDataStatus" class="data-status" aria-live="polite"></span>
+    </div>
+  </div>
+</section>
+
 <main id="mainContent" tabindex="-1">
+<div id="deleteToast" class="delete-toast" hidden role="status" aria-live="assertive">
+  <span id="deleteToastText"></span>
+  <button id="deleteToastUndo" class="secondary" type="button">Deshacer</button>
+</div>
+
+<section id="importPanel" class="card practice-guide" aria-labelledby="importPanelTitle" hidden>
+  <div class="practice-guide-head">
+    <div>
+      <span class="lyrics-eyebrow">Cancionero</span>
+      <h2 id="importPanelTitle">Nueva canción</h2>
+    </div>
+    <button id="importPanelClose" class="secondary" type="button">Cerrar</button>
+  </div>
+  <div class="practice-guide-body import-panel-body">
+    <div class="import-fields">
+      <label class="section-control"><span>Título</span><input id="importTitle" type="text" maxlength="120" placeholder="Título de la canción"></label>
+      <label class="section-control"><span>Artista</span><input id="importArtist" type="text" maxlength="120" placeholder="Artista (opcional)"></label>
+      <label class="section-control"><span>Tonalidad</span><input id="importKey" type="text" maxlength="20" placeholder="ej. G, Am"></label>
+    </div>
+    <label class="section-control import-textarea-label">
+      <span>Letra con acordes (pegar tal cual, con "Tono:" y secciones entre corchetes si las tiene)</span>
+      <textarea id="importText" rows="14" placeholder="[Estrofa 1]&#10;C          G          Am         F&#10;Letra de la primera línea aquí"></textarea>
+    </label>
+    <div class="import-actions">
+      <button id="importAnalyze" class="secondary" type="button">Analizar</button>
+      <button id="importSave" class="primary" type="button" disabled>Guardar y abrir</button>
+      <span id="importStatus" class="data-status" aria-live="polite"></span>
+    </div>
+    <div id="importPreview" class="import-preview" hidden></div>
+  </div>
+</section>
+
+<div id="tocarBody">
+<div class="songbar">
+  <button id="backToCancionero" class="secondary songbar-back" type="button">← Cancionero</button>
+  <div class="songbar-main">
+    <h2 id="songTitle" class="songbar-title">Mis 36</h2>
+    <div id="songMetaLine" class="songbar-meta"></div>
+  </div>
+  <button id="openEditor" class="secondary songbar-edit" type="button">✎ Editar</button>
+  <button id="notation" class="notation-toggle" type="button" aria-label="Usar nombres de notas en inglés" title="Usar nombres de notas en inglés">Do · Re</button>
+</div>
+
 <div class="view-switch-bar">
-  <div class="view-switch" role="group" aria-label="Cambiar vista">
-    <button id="pianoViewButton" type="button" aria-pressed="true">🎹 Tocar</button>
-    <button id="lyricsViewButton" type="button" aria-pressed="false">♪ Letra</button>
+  <div class="view-switch tocar-subtabs" role="group" aria-label="Cambiar vista">
+    <button id="lyricsViewButton" type="button" aria-pressed="false">Acordes y letra</button>
+    <button id="pianoViewButton" type="button" aria-pressed="true">Teclado</button>
+    <button id="structureViewButton" type="button" aria-pressed="false">Estructura</button>
   </div>
 </div>
 
@@ -480,80 +689,12 @@ button.song-line-end{padding:3px 8px}
     </div>
 
     <div id="sessionSummary" class="session-summary"><strong>Introducción</strong>Solo esta sección</div>
-    <button id="settingsToggle" class="secondary" type="button" aria-expanded="false" aria-controls="settingsPanel">⚙ Ajustes</button>
   </div>
 
   <div class="toolbar-status">
     <span id="audioStatus" class="audio-status" role="status" aria-live="polite">Piano: toca para cargar</span>
     <span id="settingsSummary" class="settings-summary">72 BPM · Sustain natural · Anticipar próximas teclas</span>
   </div>
-
-  <div id="settingsPanel" class="settings-panel" hidden>
-    <div class="settings-grid">
-      <label class="section-control">
-        <span>Comenzar en</span>
-        <select id="sectionSelect" aria-label="Sección de la canción"></select>
-      </label>
-
-      <label class="section-control">
-        <span>Recorrido</span>
-        <select id="playMode" aria-label="Recorrido de reproducción">
-          <option value="section">Solo esta sección</option>
-          <option value="fromHere">Desde aquí hasta el final</option>
-          <option value="full">Canción completa</option>
-          <option value="custom">Elegir varias secciones</option>
-        </select>
-      </label>
-
-      <label class="setting">
-        <span>Ayuda visual</span>
-        <select id="keyboardMode" aria-label="Ayuda visual del teclado">
-          <option value="current">Sin anticipación</option>
-          <option value="preview" selected>Anticipar próximas teclas</option>
-        </select>
-      </label>
-
-      <label class="setting">
-        <span>Sonido</span>
-        <select id="sustainMode" aria-label="Duración del sonido">
-          <option value="short">Sustain corto</option>
-          <option value="natural" selected>Sustain natural</option>
-          <option value="long">Sustain largo</option>
-        </select>
-      </label>
-
-      <div class="tempo">
-        <strong>Tempo: <span id="bpmOut">72</span> BPM</strong>
-        <input id="bpm" type="range" min="45" max="120" value="72" aria-label="Tempo">
-      </div>
-    </div>
-
-    <div class="settings-actions">
-      <button id="openEditor" class="secondary" type="button">✎ Editar acordes y letra</button>
-      <button id="openImporter" class="secondary" type="button">＋ Nueva canción</button>
-      <button id="deleteSongButton" class="danger" type="button">🗑 Borrar canción</button>
-      <button id="exportSongSync" class="secondary" type="button" hidden>↓ Exportar ajustes</button>
-      <button id="importSongSync" class="secondary" type="button" hidden>↧ Importar ajustes</button>
-      <button id="cloudSyncNow" class="secondary" type="button">☁ Sincronizar ahora</button>
-      <button id="cloudUseLocal" class="primary" type="button" hidden>Subir este dispositivo</button>
-      <button id="cloudUseRemote" class="secondary" type="button" hidden>Cargar versión de la nube</button>
-      <input id="importSongSyncFile" type="file" accept=".json,application/json" hidden>
-      <span id="songDataStatus" class="data-status" aria-live="polite"></span>
-      <span id="cloudStatus" class="data-status" aria-live="polite">Nube: comprobando…</span>
-      <span id="catalogSyncStatus" class="data-status" aria-live="polite"></span>
-    </div>
-    <div class="settings-actions">
-      <button id="exportCancionero" class="secondary" type="button">↓ Exportar cancionero completo</button>
-      <button id="importCancionero" class="secondary" type="button">↧ Importar cancionero completo</button>
-      <input id="importCancioneroFile" type="file" accept=".json,application/json" hidden>
-      <span id="cancioneroStatus" class="data-status" aria-live="polite"></span>
-    </div>
-  </div>
-</div>
-
-<div id="deleteToast" class="delete-toast" hidden role="status" aria-live="assertive">
-  <span id="deleteToastText"></span>
-  <button id="deleteToastUndo" class="secondary" type="button">Deshacer</button>
 </div>
 
 <div id="lyricsPlaybackDock" class="lyrics-playback-dock" role="group" aria-label="Modo interpretación" hidden>
@@ -662,6 +803,25 @@ button.song-line-end{padding:3px 8px}
 </div>
 </section>
 
+<section id="practiceChooser" class="card practice-guide" aria-labelledby="practiceChooserTitle" hidden>
+  <div class="practice-guide-head">
+    <div>
+      <span class="lyrics-eyebrow">Practicar</span>
+      <h2 id="practiceChooserTitle">¿Qué querés practicar?</h2>
+    </div>
+  </div>
+  <div class="practice-guide-body practice-chooser-body">
+    <label class="section-control practice-chooser-select">
+      <span>Una transición</span>
+      <select id="practiceTransitionSelect" aria-label="Elegir transición a practicar"></select>
+    </label>
+    <div class="practice-chooser-full">
+      <button id="practiceFullSongButton" class="secondary" type="button">▶ Toda la canción, tempo reducido</button>
+      <span id="practiceFullSongNote" class="sub"></span>
+    </div>
+  </div>
+</section>
+
 <section id="practiceGuide" class="card practice-guide" aria-labelledby="practiceGuideTitle" hidden>
   <div class="practice-guide-head">
     <div>
@@ -676,6 +836,14 @@ button.song-line-end{padding:3px 8px}
       <div id="practiceMovement" class="practice-movement"></div>
     </div>
     <div class="practice-controls">
+      <label class="practice-setting">
+        <span>Manos</span>
+        <select id="practiceHands">
+          <option value="both" selected>Ambas manos</option>
+          <option value="left">Solo mano izquierda</option>
+          <option value="right">Solo mano derecha</option>
+        </select>
+      </label>
       <label class="practice-setting">
         <span>Repeticiones</span>
         <select id="practiceRepetitions">
@@ -697,32 +865,12 @@ button.song-line-end{padding:3px 8px}
   </div>
 </section>
 
-<section id="importPanel" class="card practice-guide" aria-labelledby="importPanelTitle" hidden>
-  <div class="practice-guide-head">
-    <div>
-      <span class="lyrics-eyebrow">Cancionero</span>
-      <h2 id="importPanelTitle">Nueva canción</h2>
-    </div>
-    <button id="importPanelClose" class="secondary" type="button">Cerrar</button>
+<div id="structureView" class="app-screen">
+  <div class="cancionero-head">
+    <div><h2>Estructura</h2><p class="sub">Toca una sección para saltar ahí.</p></div>
   </div>
-  <div class="practice-guide-body import-panel-body">
-    <div class="import-fields">
-      <label class="section-control"><span>Título</span><input id="importTitle" type="text" maxlength="120" placeholder="Título de la canción"></label>
-      <label class="section-control"><span>Artista</span><input id="importArtist" type="text" maxlength="120" placeholder="Artista (opcional)"></label>
-      <label class="section-control"><span>Tonalidad</span><input id="importKey" type="text" maxlength="20" placeholder="ej. G, Am"></label>
-    </div>
-    <label class="section-control import-textarea-label">
-      <span>Letra con acordes (pegar tal cual, con "Tono:" y secciones entre corchetes si las tiene)</span>
-      <textarea id="importText" rows="14" placeholder="[Estrofa 1]&#10;C          G          Am         F&#10;Letra de la primera línea aquí"></textarea>
-    </label>
-    <div class="import-actions">
-      <button id="importAnalyze" class="secondary" type="button">Analizar</button>
-      <button id="importSave" class="primary" type="button" disabled>Guardar y abrir</button>
-      <span id="importStatus" class="data-status" aria-live="polite"></span>
-    </div>
-    <div id="importPreview" class="import-preview" hidden></div>
-  </div>
-</section>
+  <div id="structureMap" class="structure-map"></div>
+</div>
 
 <div class="stack">
 <section class="card current">
@@ -786,6 +934,7 @@ button.song-line-end{padding:3px 8px}
 </div>
 <div class="info">La mano izquierda toca una nota de bajo, normalmente la fundamental; en Si/Re#, toca Re#. Registro sugerido para el bajo: Si1–La2. Esta versión organiza los acordes por secciones; la sincronización exacta debe calibrarse con la grabación original.<br>Sonido: Salamander Grand Piano V3, Alexander Holm, licencia CC BY 3.0.</div>
 </section>
+</div><!-- /tocarBody -->
 </main>
 </div>
 
@@ -822,8 +971,11 @@ const cloudStatus=document.getElementById("cloudStatus");
 const catalogSyncStatus=document.getElementById("catalogSyncStatus");
 const pianoViewButton=document.getElementById("pianoViewButton");
 const lyricsViewButton=document.getElementById("lyricsViewButton");
+const structureViewButton=document.getElementById("structureViewButton");
+const structureView=document.getElementById("structureView");
+const structureMap=document.getElementById("structureMap");
 const openEditor=document.getElementById("openEditor");
-const openImporter=document.getElementById("openImporter");
+const cancioneroNewSong=document.getElementById("cancioneroNewSong");
 const importPanel=document.getElementById("importPanel");
 const importPanelClose=document.getElementById("importPanelClose");
 const importTitle=document.getElementById("importTitle");
@@ -834,7 +986,6 @@ const importAnalyze=document.getElementById("importAnalyze");
 const importSave=document.getElementById("importSave");
 const importStatus=document.getElementById("importStatus");
 const importPreview=document.getElementById("importPreview");
-const deleteSongButton=document.getElementById("deleteSongButton");
 const deleteToast=document.getElementById("deleteToast");
 const deleteToastText=document.getElementById("deleteToastText");
 const deleteToastUndo=document.getElementById("deleteToastUndo");
@@ -842,6 +993,18 @@ const exportCancionero=document.getElementById("exportCancionero");
 const importCancionero=document.getElementById("importCancionero");
 const importCancioneroFile=document.getElementById("importCancioneroFile");
 const cancioneroStatus=document.getElementById("cancioneroStatus");
+const navCancionero=document.getElementById("navCancionero");
+const navTocar=document.getElementById("navTocar");
+const navPracticar=document.getElementById("navPracticar");
+const navSyncChip=document.getElementById("navSyncChip");
+const navSyncText=document.getElementById("navSyncText");
+const cancioneroScreen=document.getElementById("cancioneroScreen");
+const cancioneroTitle=document.getElementById("cancioneroTitle");
+const cancioneroCount=document.getElementById("cancioneroCount");
+const songList=document.getElementById("songList");
+const tocarBody=document.getElementById("tocarBody");
+const backToCancionero=document.getElementById("backToCancionero");
+const songMetaLine=document.getElementById("songMetaLine");
 const lyricsPlaybackDock=document.getElementById("lyricsPlaybackDock");
 const resumeLyricsFollow=document.getElementById("resumeLyricsFollow");
 const lyricsFollowStatus=document.getElementById("lyricsFollowStatus");
@@ -891,10 +1054,15 @@ const nextBadge=document.getElementById("nextBadge");
 const nextPianoToggle=document.getElementById("nextPianoToggle");
 const nextKeyboardWrap=document.getElementById("nextKeyboardWrap");
 const nextKeyboard=document.getElementById("nextKeyboard");
+const practiceChooser=document.getElementById("practiceChooser");
+const practiceTransitionSelect=document.getElementById("practiceTransitionSelect");
+const practiceFullSongButton=document.getElementById("practiceFullSongButton");
+const practiceFullSongNote=document.getElementById("practiceFullSongNote");
 const practiceGuide=document.getElementById("practiceGuide");
 const practiceClose=document.getElementById("practiceClose");
 const practiceRoute=document.getElementById("practiceRoute");
 const practiceMovement=document.getElementById("practiceMovement");
+const practiceHands=document.getElementById("practiceHands");
 const practiceRepetitions=document.getElementById("practiceRepetitions");
 const practiceCountIn=document.getElementById("practiceCountIn");
 const practiceStart=document.getElementById("practiceStart");
@@ -926,6 +1094,8 @@ if(!["es","en"].includes(notationMode))notationMode="es";
 let keyboardViewMode=readPreference("mis36-keyboard-mode","preview");
 if(!["current","preview"].includes(keyboardViewMode))keyboardViewMode="preview";
 let sustainViewMode=readPreference("mis36-sustain-mode","natural");
+let practiceHandMode=readPreference("mis36-practice-hands","both");
+if(!["both","left","right"].includes(practiceHandMode))practiceHandMode="both";
 let showNextPiano=readPreference("mis36-show-next-piano","false")==="true";
 let syncEditorCollapsed=readPreference("mis36-editor-collapsed","true")!=="false";
 let showLyricsChordNotes=readPreference("mis36-lyrics-show-chord-notes","true")!=="false";
@@ -1881,6 +2051,7 @@ function updateSongIdentityUi(){
  songTitle.textContent=song.title;
  document.title=`${song.title} · Piano Estudio`;
  songSelector.value=currentSongId;
+ songMetaLine.textContent=[song.artist,song.originalKey?`Tono ${song.originalKey}`:null].filter(Boolean).join(" · ");
 }
 function initSongSelector(){
  songSelector.innerHTML="";
@@ -1941,6 +2112,7 @@ function deleteSong(songId){
  if(!deletedSongIds.includes(songId)){deletedSongIds.push(songId);saveDeletedSongIds()}
  persistCatalog();
  initSongSelector();
+ renderSongList();
  lastDeletedSong={songId,index,wasCurrent};
  if(wasCurrent)switchToSong(songCatalog[Math.min(index,songCatalog.length-1)]);
  saveCatalogToCloud();
@@ -1957,9 +2129,87 @@ function undoDeleteSong(){
    persistCatalog();
  }
  initSongSelector();
+ renderSongList();
  if(wasCurrent)switchToSong(songId);
  saveCatalogToCloud();
  return true;
+}
+// Pantalla Cancionero: lista de canciones + acciones por tarjeta. Construida
+// con DOM/textContent (nunca innerHTML con datos de la canción) porque
+// título/artista pueden venir del importador de texto pegado por el usuario.
+function renderSongList(){
+ songList.innerHTML="";
+ cancioneroCount.textContent=`${songCatalog.length} ${songCatalog.length===1?"canción":"canciones"}`;
+ songCatalog.forEach(songId=>{
+   const song=songMeta(songId);
+   if(!song)return;
+   const card=document.createElement("div");
+   card.className="card song-card";
+   card.dataset.songId=songId;
+
+   const main=document.createElement("div");main.className="song-card-main";
+   const titleRow=document.createElement("div");titleRow.className="song-card-title";
+   titleRow.appendChild(document.createTextNode(song.title));
+   if(SONGS[songId]){
+     const tag=document.createElement("span");tag.className="seed-tag";tag.textContent="Semilla";
+     titleRow.appendChild(tag);
+   }
+   const meta=document.createElement("div");meta.className="song-card-meta";
+   meta.textContent=[song.artist,song.originalKey?`Tono ${song.originalKey}`:null].filter(Boolean).join(" · ")||"Sin datos adicionales";
+   main.append(titleRow,meta);
+
+   const acts=document.createElement("div");acts.className="song-card-acts";
+   const openBtn=document.createElement("button");
+   openBtn.type="button";openBtn.className="secondary song-card-open";openBtn.textContent="Abrir";
+   openBtn.onclick=()=>openSongFromCancionero(songId);
+
+   const menuBtn=document.createElement("button");
+   menuBtn.type="button";menuBtn.className="secondary song-card-menu-btn";
+   menuBtn.setAttribute("aria-haspopup","true");menuBtn.setAttribute("aria-expanded","false");
+   menuBtn.setAttribute("aria-label",`Más acciones para ${song.title}`);menuBtn.textContent="⋯";
+
+   const menu=document.createElement("div");menu.className="song-card-menu";menu.hidden=true;
+   const editBtn=document.createElement("button");
+   editBtn.type="button";editBtn.textContent="✎ Editar acordes y letra";
+   editBtn.onclick=()=>{menu.hidden=true;editSongFromCancionero(songId)};
+   const deleteBtn=document.createElement("button");
+   deleteBtn.type="button";deleteBtn.className="danger-item";deleteBtn.textContent="🗑 Eliminar";
+   deleteBtn.disabled=songCatalog.length<=1;
+   deleteBtn.onclick=()=>{menu.hidden=true;deleteSongFromCancionero(songId,song.title)};
+   menu.append(editBtn,document.createElement("hr"),deleteBtn);
+
+   menuBtn.onclick=event=>{
+     event.stopPropagation();
+     const willOpen=menu.hidden;
+     closeAllSongCardMenus();
+     menu.hidden=!willOpen;
+     menuBtn.setAttribute("aria-expanded",String(willOpen));
+   };
+
+   acts.append(openBtn,menuBtn,menu);
+   card.append(main,acts);
+   songList.appendChild(card);
+ });
+}
+function closeAllSongCardMenus(){
+ document.querySelectorAll(".song-card-menu").forEach(m=>{m.hidden=true});
+ document.querySelectorAll(".song-card-menu-btn").forEach(b=>b.setAttribute("aria-expanded","false"));
+}
+document.addEventListener("click",closeAllSongCardMenus);
+function openSongFromCancionero(songId){
+ switchToSong(songId);
+ setMainView("lyrics");
+ setActiveScreen("tocar");
+}
+function editSongFromCancionero(songId){
+ switchToSong(songId);
+ setActiveScreen("tocar");
+ setMainView("edit");
+}
+function deleteSongFromCancionero(songId,title){
+ if(songCatalog.length<=1){alert("No podés borrar la única canción del cancionero.");return}
+ if(!confirm(`¿Borrar "${title}" del cancionero? Podés deshacerlo inmediatamente después.`))return;
+ if(deleteSong(songId))showDeleteToast(title);
 }
 function saveSongSync(syncCloud=true){
  const saved=songDocumentSnapshot();
@@ -2225,6 +2475,8 @@ function setCloudStatus(textValue,state=""){
  cloudStatus.className="data-status"+(state?" "+state:"");
  editorCloudStatus.textContent=textValue;
  editorCloudStatus.className="editor-cloud-status"+(state?" "+state:"");
+ navSyncText.textContent=textValue;
+ navSyncChip.className="app-nav-sync"+(state?" "+state:"");
 }
 function showCloudChoice(show){
  cloudUseLocal.hidden=!show;
@@ -2746,31 +2998,33 @@ function renderSyncInversionOptions(chord,selectedId=defaultInversions[chord]){
 function midi(note){const m=note.match(/^([A-G]#?)(\d)$/),s={C:0,"C#":1,D:2,"D#":3,E:4,F:5,"F#":6,G:7,"G#":8,A:9,"A#":10,B:11};return(+m[2]+1)*12+s[m[1]]}
 function frequency(note){return 440*Math.pow(2,(midi(note)-69)/12)}
 
-function keyboard(el,chord,preview,nextChord=null,inversion=null,nextInversion=null){
+function keyboard(el,chord,preview,nextChord=null,inversion=null,nextInversion=null,handFocus="both"){
  const v=resolveVoicing(chord,inversion),left=[v.l],right=v.r.map(x=>x[0]),fingers=Object.fromEntries(v.r);
+ const leftOff=handFocus==="right",rightOff=handFocus==="left";
  el.innerHTML="";
  whites.forEach(note=>{
    const k=document.createElement("div");k.className="white";k.dataset.note=note;
-   if(left.includes(note))k.classList.add("left");
-   if(right.includes(note))k.classList.add(preview?"preview":"right");
+   if(left.includes(note))k.classList.add("left",...leftOff?["hand-inactive"]:[]);
+   if(right.includes(note))k.classList.add(preview?"preview":"right",...rightOff?["hand-inactive"]:[]);
    el.appendChild(k);
-   if(left.includes(note))marker(k,note,"5","left",false,chord);
-   if(right.includes(note))marker(k,note,fingers[note],preview?"preview":"right",false,chord);
+   if(left.includes(note))marker(k,note,"5","left",false,chord,leftOff);
+   if(right.includes(note))marker(k,note,fingers[note],preview?"preview":"right",false,chord,rightOff);
  });
  blacks.forEach(x=>{
    const k=document.createElement("div");k.className="black";k.dataset.note=x.note;k.style.left=`calc(var(--w)*${x.position})`;
-   if(left.includes(x.note))k.classList.add("left");
-   if(right.includes(x.note))k.classList.add(preview?"preview":"right");
-   if(left.includes(x.note))marker(k,x.note,"5","left",true,chord);
-   if(right.includes(x.note))marker(k,x.note,fingers[x.note],preview?"preview":"right",true,chord);
+   if(left.includes(x.note))k.classList.add("left",...leftOff?["hand-inactive"]:[]);
+   if(right.includes(x.note))k.classList.add(preview?"preview":"right",...rightOff?["hand-inactive"]:[]);
+   if(left.includes(x.note))marker(k,x.note,"5","left",true,chord,leftOff);
+   if(right.includes(x.note))marker(k,x.note,fingers[x.note],preview?"preview":"right",true,chord,rightOff);
    el.appendChild(k);
  });
- if(nextChord&&!preview&&keyboardViewMode!=="current")renderUpcoming(el,chord,nextChord,inversion,nextInversion);
+ if(nextChord&&!preview&&keyboardViewMode!=="current")renderUpcoming(el,chord,nextChord,inversion,nextInversion,handFocus);
 }
-function renderUpcoming(el,currentChord,nextChord,currentInversion,nextInversion){
+function renderUpcoming(el,currentChord,nextChord,currentInversion,nextInversion,handFocus="both"){
  const current=resolveVoicing(currentChord,currentInversion),upcoming=resolveVoicing(nextChord,nextInversion);
  const keyFor=note=>[...el.children].find(child=>child.dataset.note===note);
- if(upcoming.l!==current.l)keyFor(upcoming.l)?.classList.add("upcoming");
+ if(handFocus!=="right"&&upcoming.l!==current.l)keyFor(upcoming.l)?.classList.add("upcoming");
+ if(handFocus==="left")return;
  const currentRight=new Map(current.r.map(([note,finger])=>[note,String(finger)]));
  upcoming.r.forEach(([note,finger])=>{
    const key=keyFor(note);
@@ -2782,13 +3036,16 @@ function renderUpcoming(el,currentChord,nextChord,currentInversion,nextInversion
    key.classList.add("upcoming");
  });
 }
-function marker(k,note,finger,type,isBlack,chord){
- const l=document.createElement("div");l.className="label"+(isBlack?" black-label":"");l.textContent=noteText(note,chord);l.title=noteText(note,chord)+keyHint(note,chord);k.appendChild(l);
- const f=document.createElement("div");f.className="finger "+(type==="left"?"left-f":type==="preview"?"preview-f":"right-f")+(isBlack?" black-f":"");f.textContent=finger;k.appendChild(f);
+function marker(k,note,finger,type,isBlack,chord,inactive=false){
+ const l=document.createElement("div");l.className="label"+(isBlack?" black-label":"")+(inactive?" hand-inactive":"");l.textContent=noteText(note,chord);l.title=noteText(note,chord)+keyHint(note,chord);k.appendChild(l);
+ const f=document.createElement("div");f.className="finger "+(type==="left"?"left-f":type==="preview"?"preview-f":"right-f")+(isBlack?" black-f":"")+(inactive?" hand-inactive":"");f.textContent=finger;k.appendChild(f);
 }
 let sectionIndex=0,stepIndex=0,timer=null,cueTimer=null,audioCtx=null,isAutoPlaying=false,isPlaybackPaused=false,isTransitionLoop=false,lyricsFollowPlayback=true;
 let playQueue=[],queueIndex=0;
 let transitionPracticeCompleted=0,transitionPracticeTotal=4,transitionPracticeStart=null;
+// El foco de mano solo aplica durante el loop de práctica de una transición:
+// fuera de él (reproducción normal, edición, vista previa) siempre son ambas manos.
+function activeHandFocus(){return isTransitionLoop&&practiceHandMode!=="both"?practiceHandMode:"both"}
 let pianoSamples=[],pianoLoading=null,pianoReady=false,pianoLoadFailed=false,pianoPreloadStarted=false,reverbNode=null,activeAudioGroup=null;
 const PIANO_BASE="https://tonejs.github.io/audio/salamander/";
 const PIANO_FILES={
@@ -2976,9 +3233,11 @@ function updatePracticeGuide(){
  });
  practiceRoute.textContent=`${chordText(currentEvent.chord)} → ${chordText(nextEvent.chord)}`;
  const directions=[];
- directions.push(held.length?`Mantén ${held.join(" y ")}.`:"La mano derecha cambia de forma completa.");
- if(moved.length)directions.push(`Mueve ${moved.join("; ")}.`);
- directions.push(`Mano izquierda: ${noteText(currentVoicing.l,currentEvent.chord)} → ${noteText(nextVoicing.l,nextEvent.chord)}, con dedo 5.`);
+ if(practiceHandMode!=="left"){
+   directions.push(held.length?`Mantén ${held.join(" y ")}.`:"La mano derecha cambia de forma completa.");
+   if(moved.length)directions.push(`Mueve ${moved.join("; ")}.`);
+ }
+ if(practiceHandMode!=="right")directions.push(`Mano izquierda: ${noteText(currentVoicing.l,currentEvent.chord)} → ${noteText(nextVoicing.l,nextEvent.chord)}, con dedo 5.`);
  practiceMovement.textContent=directions.join(" ");
 }
 let displayedLyric="",lyricTransitionTimer=null;
@@ -3028,13 +3287,19 @@ function render(){
  renderChordNotes(nextNotes,vn.r.map(([note])=>noteText(note,next)));
  currentSub.textContent=vc.pending?PENDING_CHORD_HINT:`MI: ${noteText(vc.l,cur)} (5) · MD: ${vc.r.map(x=>noteText(x[0],cur)+keyHint(x[0],cur)).join("–")} (${vc.r.map(x=>x[1]).join("–")}) · Posición MD: ${vc.inv}`;
  nextSub.textContent=vn.pending?PENDING_CHORD_HINT:`MI: ${noteText(vn.l,next)} (5) · MD: ${vn.r.map(x=>noteText(x[0],next)+keyHint(x[0],next)).join("–")} (${vn.r.map(x=>x[1]).join("–")}) · Posición MD: ${vn.inv}`;
- keyboard(currentKeyboard,cur,false,next,event.inversion,nextEvent.inversion);
- keyboard(nextKeyboard,next,true,null,nextEvent.inversion);
+ const handFocus=activeHandFocus();
+ keyboard(currentKeyboard,cur,false,next,event.inversion,nextEvent.inversion,handFocus);
+ keyboard(nextKeyboard,next,true,null,nextEvent.inversion,null,handFocus);
  updateLyricsCue();
  updatePracticeGuide();
  sectionName.textContent=s.name;sectionCount.textContent=`${s.events.length} cambios de acorde`;
  [...steps.children].forEach((el,i)=>{el.classList.toggle("current-step",i===stepIndex);el.classList.toggle("next-step",nextPos.section===sectionIndex&&i===nextPos.step)});
  updatePlaybackHighlight();
+ if(document.body.classList.contains("view-structure"))renderStructureMap();
+ if(!practiceChooser.hidden){
+   const key=`${sectionIndex}:${stepIndex}`;
+   if([...practiceTransitionSelect.options].some(o=>o.value===key))practiceTransitionSelect.value=key;
+ }
 }
 function updatePlaybackHighlight(){
  document.body.classList.toggle("auto-playing",isAutoPlaying);
@@ -3217,7 +3482,8 @@ function focusCurrentSongEvent(force=false){
  if(target)requestAnimationFrame(()=>target.scrollIntoView({behavior:scrollBehavior(),block:"center",inline:"nearest"}));
 }
 function setMainView(view,scroll=true){
- const showLyrics=view!=="piano";
+ const showLyrics=view==="lyrics"||view==="edit";
+ const showStructure=view==="structure";
  const showEditor=view==="edit";
  const wasEditing=songEditMode;
  songEditMode=showEditor;
@@ -3228,8 +3494,11 @@ function setMainView(view,scroll=true){
  if(!showEditor){selectedSyncEvent=null;addingSyncChord=null;movingSyncEvent=false}
  updateSyncEditor();
  document.body.classList.toggle("show-full",showLyrics);
- pianoViewButton.setAttribute("aria-pressed",String(!showLyrics));
- lyricsViewButton.setAttribute("aria-pressed",String(view==="lyrics"));
+ document.body.classList.toggle("view-structure",showStructure);
+ pianoViewButton.setAttribute("aria-pressed",String(view==="piano"));
+ lyricsViewButton.setAttribute("aria-pressed",String(showLyrics));
+ structureViewButton.setAttribute("aria-pressed",String(showStructure));
+ if(showStructure)renderStructureMap();
  if(showLyrics){
    setSettingsOpen(false);
    if(isAutoPlaying)lyricsFollowPlayback=true;
@@ -3244,6 +3513,87 @@ function updateFullSongPosition(){
  if(!document.body.classList.contains("show-full"))return;
  renderFullSong();
  focusCurrentSongEvent();
+}
+// Estructura: mapa de secciones para saltar directo, sobre los mismos datos
+// que ya usa "Comenzar en" (sections[]) — sin vista nueva de datos, solo de
+// presentación.
+function renderStructureMap(){
+ structureMap.innerHTML="";
+ sections.forEach((section,si)=>{
+   const b=document.createElement("button");
+   b.type="button";
+   if(si===sectionIndex)b.setAttribute("aria-current","true");
+   const label=document.createElement("span");label.textContent=section.name;
+   const count=document.createElement("span");count.className="n";
+   count.textContent=`${section.events.length} cambio${section.events.length===1?"":"s"} de acorde`;
+   b.append(label,count);
+   b.onclick=()=>{
+     stopAuto();
+     sectionIndex=si;stepIndex=0;
+     sectionSelect.value=sectionIndex;
+     updateSessionSummary();
+     buildSteps();render();updateFullSongPosition();playCurrent();
+     setMainView("piano");
+   };
+   structureMap.appendChild(b);
+ });
+}
+// Router de pantallas principales (Cancionero · Tocar · Practicar). No
+// mueve el DOM de Tocar/Letra/Editar/Práctica — esos siguen gobernados por
+// setMainView(); esto solo decide qué franja de la app se ve.
+let activeScreen="tocar";
+function setActiveScreen(screen){
+ activeScreen=screen;
+ navCancionero.setAttribute("aria-selected",String(screen==="cancionero"));
+ navTocar.setAttribute("aria-selected",String(screen==="tocar"));
+ navPracticar.setAttribute("aria-selected",String(screen==="practicar"));
+ document.body.classList.toggle("screen-practicar",screen==="practicar");
+ cancioneroScreen.hidden=screen!=="cancionero";
+ tocarBody.hidden=screen==="cancionero";
+ if(screen==="cancionero"){
+   stopAuto();
+   practiceChooser.hidden=true;
+   practiceGuide.hidden=true;
+   renderSongList();
+ }else if(screen==="tocar"){
+   practiceChooser.hidden=true;
+   if(!practiceGuide.hidden){stopAuto();practiceGuide.hidden=true}
+ }else if(screen==="practicar"){
+   setMainView("piano");
+   practiceChooser.hidden=false;
+   renderPracticeTransitionOptions();
+   updatePracticeFullSongNote();
+   openPracticeGuide();
+ }
+ window.scrollTo({top:0,behavior:scrollBehavior()});
+}
+// Chooser de Practicar: elegir una transición puntual de cualquier parte de
+// la canción (no solo la que quedó activa en Tocar), o disparar la canción
+// completa a tempo reducido. Reutiliza el mismo motor de siempre — no hay
+// un segundo camino de reproducción.
+function renderPracticeTransitionOptions(){
+ practiceTransitionSelect.innerHTML="";
+ sections.forEach((section,si)=>{
+   const group=document.createElement("optgroup");
+   group.label=section.name;
+   section.events.forEach((event,ei)=>{
+     const next=nextLinearPosition(si,ei);
+     if(!next)return;
+     const nextEvent=sections[next.section].events[next.step];
+     const option=document.createElement("option");
+     option.value=`${si}:${ei}`;
+     option.textContent=`${chordText(event.chord)} → ${chordText(nextEvent.chord)}`;
+     group.appendChild(option);
+   });
+   if(group.childElementCount)practiceTransitionSelect.appendChild(group);
+ });
+ practiceTransitionSelect.value=`${sectionIndex}:${stepIndex}`;
+}
+function practiceReducedTempo(){
+ return Math.max(45,Math.round((+bpm.value*0.75)/5)*5);
+}
+function updatePracticeFullSongNote(){
+ practiceFullSongNote.textContent=`Se toca a ${practiceReducedTempo()} BPM (75% del tempo actual, ${bpm.value} BPM).`;
 }
 function buildSteps(){
  steps.innerHTML="";const s=currentSection();
@@ -3418,21 +3768,23 @@ function playFallback(notes,beats=4){
  notes.forEach((n,i)=>{const o=ctx.createOscillator(),g=ctx.createGain();sources.push(o);o.type=i===0?"sine":"triangle";o.frequency.value=frequency(n);g.gain.value=i===0?.7:.32;o.connect(g);g.connect(master);o.start(now);o.stop(now+duration+.1)});
  activeAudioGroup={master,sources};
 }
-async function playChord(chord,inversion=null,beats=4){
+async function playChord(chord,inversion=null,beats=4,handFocus="both"){
  // Acorde pendiente: no suena, pero la reproducción sigue su curso normal.
  // El silencio ocupa los mismos beats, así que el resto de la canción no se
  // desincroniza y el hueco se escucha donde realmente está.
  if(chordIsPending(chord))return;
  const audioRunning=await resumeAudio();
  if(!audioRunning)return;
- const v=resolveVoicing(chord,inversion),notes=[v.l,...v.r.map(x=>x[0])];
+ const v=resolveVoicing(chord,inversion);
+ const notes=handFocus==="left"?[v.l]:handFocus==="right"?v.r.map(x=>x[0]):[v.l,...v.r.map(x=>x[0])];
+ if(!notes.length)return;
  if(!pianoReady&&!pianoLoadFailed)await loadPiano();
  if(pianoReady)playSampledChord(notes,beats);
  else playFallback(notes,beats);
 }
 async function playCurrent(){
  const event=currentSection().events[stepIndex];
- return playChord(event.chord,event.inversion,event.beats);
+ return playChord(event.chord,event.inversion,event.beats,activeHandFocus());
 }
 function stopAuto(){
  const wasPracticing=isTransitionLoop;
@@ -3647,13 +3999,14 @@ sound.onclick=async()=>{
 };
 auto.onclick=()=>isAutoPlaying?pausePlayback():isPlaybackPaused?resumePlayback():startAuto();
 stop.onclick=stopAuto;
+function openPracticeGuide(){
+ practiceGuide.hidden=false;
+ updatePracticeGuide();
+}
 transitionLoop.onclick=()=>{
  if(isTransitionLoop){stopAuto();return}
- practiceGuide.hidden=!practiceGuide.hidden;
- if(!practiceGuide.hidden){
-   updatePracticeGuide();
-   practiceGuide.scrollIntoView({behavior:scrollBehavior(),block:"center"});
- }
+ if(practiceGuide.hidden)openPracticeGuide();else practiceGuide.hidden=true;
+ if(!practiceGuide.hidden)practiceGuide.scrollIntoView({behavior:scrollBehavior(),block:"center"});
 };
 practiceStart.onclick=()=>isTransitionLoop?stopAuto():startTransitionPractice();
 practiceClose.onclick=()=>{
@@ -3874,13 +4227,6 @@ function showDeleteToast(title){
  if(deleteToastTimer)clearTimeout(deleteToastTimer);
  deleteToastTimer=setTimeout(()=>{deleteToast.hidden=true;lastDeletedSong=null},8000);
 }
-deleteSongButton.onclick=()=>{
- if(songCatalog.length<=1){alert("No podés borrar la única canción del cancionero.");return}
- const song=currentSong();
- if(!confirm(`¿Borrar "${song.title}" del cancionero? Podés deshacerlo inmediatamente después.`))return;
- const title=song.title;
- if(deleteSong(currentSongId))showDeleteToast(title);
-};
 deleteToastUndo.onclick=()=>{
  if(deleteToastTimer)clearTimeout(deleteToastTimer);
  deleteToast.hidden=true;
@@ -3905,7 +4251,12 @@ importCancioneroFile.onchange=async()=>{
 };
 pianoViewButton.onclick=()=>setMainView("piano");
 lyricsViewButton.onclick=()=>setMainView("lyrics");
+structureViewButton.onclick=()=>setMainView("structure");
 openEditor.onclick=()=>setMainView("edit");
+backToCancionero.onclick=()=>setActiveScreen("cancionero");
+navCancionero.onclick=()=>setActiveScreen("cancionero");
+navTocar.onclick=()=>setActiveScreen("tocar");
+navPracticar.onclick=()=>setActiveScreen("practicar");
 let lastParsedSong=null;
 function renderImportPreview(parsed){
  const summary=summarizeParsedSong(parsed);
@@ -3982,7 +4333,7 @@ function renderImportPreview(parsed){
  importPreview.appendChild(sectionsBox);
  importPreview.hidden=false;
 }
-openImporter.onclick=()=>{
+cancioneroNewSong.onclick=()=>{
  importPanel.hidden=!importPanel.hidden;
  if(!importPanel.hidden)importPanel.scrollIntoView({behavior:scrollBehavior(),block:"start"});
 };
@@ -4013,6 +4364,7 @@ importSave.onclick=()=>{
  importStatus.textContent="";
  switchToSong(songId);
  initSongSelector();
+ setActiveScreen("tocar");
  setMainView("edit");
  saveCatalogToCloud();
 };
@@ -4027,11 +4379,36 @@ lyricsNotesToggle.onclick=()=>{
    if(previewEvent)lyricsPreviewDetail.textContent=lyricsCueDetail(previewEvent);
  }
 };
-bpm.oninput=e=>{bpmOut.textContent=e.target.value;updateSettingsSummary()};
+bpm.oninput=e=>{bpmOut.textContent=e.target.value;updateSettingsSummary();if(!practiceChooser.hidden)updatePracticeFullSongNote()};
+practiceTransitionSelect.onchange=()=>{
+ const [si,ei]=practiceTransitionSelect.value.split(":").map(Number);
+ stopAuto();
+ sectionIndex=si;stepIndex=ei;
+ sectionSelect.value=sectionIndex;
+ updateSessionSummary();
+ buildSteps();render();updateFullSongPosition();playCurrent();
+ openPracticeGuide();
+ practiceGuide.scrollIntoView({behavior:scrollBehavior(),block:"center"});
+};
+practiceFullSongButton.onclick=()=>{
+ const reduced=practiceReducedTempo();
+ bpm.value=reduced;bpmOut.textContent=reduced;updateSettingsSummary();
+ playMode.value="full";
+ stopAuto();
+ practiceGuide.hidden=true;
+ startAuto();
+};
 keyboardMode.value=keyboardViewMode;
 sustainMode.value=sustainViewMode;
+practiceHands.value=practiceHandMode;
 keyboardMode.onchange=e=>{keyboardViewMode=e.target.value;savePreference("mis36-keyboard-mode",keyboardViewMode);updateSettingsSummary();render()};
 sustainMode.onchange=e=>{sustainViewMode=e.target.value;savePreference("mis36-sustain-mode",sustainViewMode);updateSettingsSummary()};
+practiceHands.onchange=e=>{
+ practiceHandMode=e.target.value;
+ savePreference("mis36-practice-hands",practiceHandMode);
+ updatePracticeGuide();
+ if(isTransitionLoop)render();
+};
 nextPianoToggle.onclick=()=>{
  showNextPiano=!showNextPiano;
  savePreference("mis36-show-next-piano",String(showNextPiano));
