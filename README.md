@@ -12,10 +12,13 @@ sigue siendo la canción semilla del catálogo.
 
 ## Pantallas
 
-La app tiene tres pantallas principales, accesibles desde la barra superior:
+La app tiene tres pantallas principales, accesibles desde la barra superior
+(arranca en Cancionero):
 
-- **Cancionero**: biblioteca de canciones. Abrir, editar, borrar e importar
-  canciones nuevas pegando letra y acordes desde internet.
+- **Cancionero**: fichero de canciones — una solapa por canción y un panel de
+  detalle abajo con la seleccionada (abrir, editar, borrar, o saltar directo a
+  una subvista de Tocar). La solapa "＋" importa una canción nueva pegando
+  letra y acordes desde internet.
 - **Tocar**: la canción abierta, con tres subvistas:
   - *Teclado*: acorde actual y siguiente lado a lado, con el teclado visual,
     los dedos sugeridos y la inversión usada.
@@ -31,6 +34,11 @@ La app tiene tres pantallas principales, accesibles desde la barra superior:
   repetirla (con manos separadas opcionales), o tocar la canción completa a
   tempo reducido. Lleva un contador de repeticiones por canción y por
   transición, con tendencia semanal, que sincroniza entre dispositivos.
+
+El botón "⚙ Ajustes" del header abre un panel aparte (no es una cuarta
+pantalla) con los controles de reproducción (sección inicial, recorrido,
+ayuda visual, sonido, tempo) y, debajo, "Administrar biblioteca": sincronizar
+con la nube, y exportar/importar el cancionero completo o la canción abierta.
 
 ## Arquitectura
 
