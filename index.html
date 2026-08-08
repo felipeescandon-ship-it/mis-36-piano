@@ -3461,20 +3461,35 @@ function updatePracticeGuide(){
  practiceStart.disabled=false;
  const currentByFinger=new Map(currentVoicing.r.map(([note,finger])=>[String(finger),note]));
  const nextByFinger=new Map(nextVoicing.r.map(([note,finger])=>[String(finger),note]));
- const held=[],moved=[];
+ const currentByNote=new Map(currentVoicing.r.map(([note,finger])=>[note,String(finger)]));
+ const held=[],moved=[],swapped=[],consumedFingers=new Set();
+ // Una nota que se repite con otro dedo es sustitución de dedo, no "levantar
+ // y volver a poner": la tecla no se suelta, solo cambia qué dedo la pisa.
  nextByFinger.forEach((note,finger)=>{
    const from=currentByFinger.get(finger);
-   if(from===note)held.push(`${noteText(note,nextEvent.chord)} con dedo ${finger}`);
-   else if(from)moved.push(`dedo ${finger}: ${noteText(from,currentEvent.chord)} → ${noteText(note,nextEvent.chord)}`);
+   if(from===note){
+     held.push(`${noteText(note,nextEvent.chord)} con dedo ${finger}`);
+     consumedFingers.add(finger);
+     return;
+   }
+   const priorFinger=currentByNote.get(note);
+   if(priorFinger&&priorFinger!==finger){
+     swapped.push(`sustituí el dedo ${priorFinger} por el ${finger} en ${noteText(note,nextEvent.chord)}, sin soltar la tecla`);
+     consumedFingers.add(priorFinger);
+     return;
+   }
+   if(from)moved.push(`dedo ${finger}: ${noteText(from,currentEvent.chord)} → ${noteText(note,nextEvent.chord)}`);
    else moved.push(`coloca dedo ${finger} en ${noteText(note,nextEvent.chord)}`);
  });
  currentByFinger.forEach((note,finger)=>{
-   if(!nextByFinger.has(finger))moved.push(`levanta dedo ${finger} de ${noteText(note,currentEvent.chord)}`);
+   if(!nextByFinger.has(finger)&&!consumedFingers.has(finger))moved.push(`levanta dedo ${finger} de ${noteText(note,currentEvent.chord)}`);
  });
  practiceRoute.textContent=`${chordText(currentEvent.chord)} → ${chordText(nextEvent.chord)}`;
  const directions=[];
  if(practiceHandMode!=="left"){
-   directions.push(held.length?`Mantén ${held.join(" y ")}.`:"La mano derecha cambia de forma completa.");
+   if(held.length)directions.push(`Mantén ${held.join(" y ")}.`);
+   if(swapped.length)directions.push(...swapped.map(s=>s.charAt(0).toUpperCase()+s.slice(1)+"."));
+   if(!held.length&&!swapped.length)directions.push("La mano derecha cambia de forma completa.");
    if(moved.length)directions.push(`Mueve ${moved.join("; ")}.`);
  }
  if(practiceHandMode!=="right")directions.push(`Mano izquierda: ${noteText(currentVoicing.l,currentEvent.chord)} → ${noteText(nextVoicing.l,nextEvent.chord)}, con dedo 5.`);
