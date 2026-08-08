@@ -51,6 +51,35 @@ completo o de la canción abierta.
 El conmutador de notación ("Do · Re" / "C · D") vive en el header, junto a
 "⚙ Ajustes" — no depende de la pantalla en la que estés.
 
+## Biblioteca de acordes
+
+`index.html` tiene 43 acordes con voicing propio: mano izquierda, mano
+derecha con digitación y las tres inversiones. Un acorde que una canción usa
+pero la biblioteca no tiene queda **pendiente**: se guarda, se muestra y se
+cuenta, pero no suena. La app nunca inventa un voicing por fórmula.
+
+Trece de esos 43 son un vocabulario general pensado para que una canción
+pegada de internet suene sin construir nada a mano:
+
+- **Tríadas** (18 con las que ya había): C, G, F, Am, Em, Dm, D, A, E, Bm,
+  F#m, C#m, B, Bb, Eb, Gm, Cm, G#m.
+- **Dominantes**: G7, C7, D7, A7, E7.
+- **Color**: Cmaj7, Fmaj7, Am7, Dm7, Csus2, Gsus4, Cadd9.
+
+A diferencia de los acordes que nacieron de una canción concreta —cuya
+inversión por defecto se eligió para encadenar bien dentro de esa canción—
+estos usan la fundamental, que es lo que se lee en un cifrado.
+
+### Sostenidos, bemoles y maj7
+
+La biblioteca nombra con sostenidos y `7M` (`A#`, `C7M`), pero los cifrados
+de internet usan bemoles y `maj7` para los mismos acordes (`Bb`, `Cmaj7`).
+El importador guarda el símbolo **tal cual se pegó**, a propósito: no
+reescribe lo que escribió el autor. Para que ambas escrituras suenen,
+`canonicalChord()` traduce solo al momento de buscar el voicing. Lo guardado
+y lo que se ve en pantalla siguen siendo el símbolo original — pegar `Bb`
+muestra "Sib" en notación española, no "La#".
+
 ## Arquitectura
 
 La aplicación es intencionalmente pequeña:

@@ -1199,7 +1199,14 @@ const sectionName=document.getElementById("sectionName");
 const sectionCount=document.getElementById("sectionCount");
 const steps=document.getElementById("steps");
 const NOTE_ES={C:"Do","C#":"Do#",D:"Re","D#":"Re#",E:"Mi","E#":"Mi#",F:"Fa","F#":"Fa#",G:"Sol","G#":"Sol#",A:"La","A#":"La#",B:"Si","B#":"Si#"};
-const CHORD_ES={"E":"Mi","F#":"Fa#","F#m":"Fa#m","A":"La","Am":"Lam","C#m":"Do#m","C#":"Do#","G#m":"Sol#m","G#":"Sol#","D":"Re","B":"Si","B/D#":"Si/Re#","G":"Sol","C":"Do","Bm":"Sim","Em":"Mim","Dm":"Rem","G/B":"Sol/Si","G/D":"Sol/Re","F":"Fa","Gm":"Solm","F#m7":"Fa#m7","Bm7":"Sim7","Em7":"Mim7","D7M":"Re7M","F7M":"Fa7M","A#7M":"La#7M","A7":"La7","F#7":"Fa#7","A#°":"La#°"};
+const CHORD_ES={"E":"Mi","F#":"Fa#","F#m":"Fa#m","A":"La","Am":"Lam","C#m":"Do#m","C#":"Do#","G#m":"Sol#m","G#":"Sol#","D":"Re","B":"Si","B/D#":"Si/Re#","G":"Sol","C":"Do","Bm":"Sim","Em":"Mim","Dm":"Rem","G/B":"Sol/Si","G/D":"Sol/Re","F":"Fa","Gm":"Solm","F#m7":"Fa#m7","Bm7":"Sim7","Em7":"Mim7","D7M":"Re7M","F7M":"Fa7M","A#7M":"La#7M","A7":"La7","F#7":"Fa#7","A#°":"La#°",
+ "A#":"La#","D#":"Re#","Cm":"Dom","G7":"Sol7","C7":"Do7","D7":"Re7","E7":"Mi7",
+ "C7M":"Do7M","Am7":"Lam7","Dm7":"Rem7","Csus2":"Dosus2","Gsus4":"Solsus4","Cadd9":"Doadd9",
+ // Un cifrado escrito con bemoles se conserva como se pegó (Bb no se
+ // reescribe a La#), así que su nombre en español también se escribe con
+ // bemol: quien pegó "Bb" espera leer "Sib", no "La#".
+ "Bb":"Sib","Eb":"Mib","Ab":"Lab","Db":"Reb","Gb":"Solb",
+ "Bbm":"Sibm","Ebm":"Mibm","Abm":"Labm","Dbm":"Rebm","Gbm":"Solbm"};
 let notationMode="es";
 let songEditMode=false,selectedSyncEvent=null,addingSyncChord=null,movingSyncEvent=false;
 let lyricsPreviewPosition=null,lyricsPreviewAnchor=null;
@@ -1332,7 +1339,32 @@ const voicings={
 "A#7M":{l:"A#2",r:[["A#3",1],["D4",2],["F4",3],["A4",5]],inv:"fundamental"},
 "A7":{l:"A2",r:[["A3",1],["C#4",2],["E4",3],["G4",5]],inv:"fundamental"},
 "F#7":{l:"F#2",r:[["F#3",1],["A#3",2],["C#4",3],["E4",5]],inv:"fundamental"},
-"A#°":{l:"A#2",r:[["A#3",1],["C#4",3],["E4",5]],inv:"fundamental"}
+"A#°":{l:"A#2",r:[["A#3",1],["C#4",3],["E4",5]],inv:"fundamental"},
+// --- Vocabulario general de importación (30 acordes) ---
+// Los de arriba nacieron de canciones concretas, con la inversión elegida
+// para encadenar bien dentro de esa canción. Estos trece existen para que
+// una canción pegada de internet suene sin construir nada a mano, así que
+// su inversión por defecto es la fundamental: es la que se lee en un
+// cifrado y la que no asume un contexto que todavía no existe. Si alguna
+// canción pide otra, se cambia por evento en el editor, no aquí.
+// Mano derecha en el registro central (octavas 3-4) y bajo en la 2ª, como
+// el resto de la biblioteca.
+"A#":{l:"A#2",r:[["A#3",1],["D4",3],["F4",5]],inv:"fundamental"},
+"D#":{l:"D#2",r:[["D#3",1],["G3",3],["A#3",5]],inv:"fundamental"},
+"Cm":{l:"C2",r:[["C4",1],["D#4",3],["G4",5]],inv:"fundamental"},
+"G7":{l:"G2",r:[["G3",1],["B3",2],["D4",3],["F4",5]],inv:"fundamental"},
+"C7":{l:"C2",r:[["C4",1],["E4",2],["G4",3],["A#4",5]],inv:"fundamental"},
+"D7":{l:"D2",r:[["D4",1],["F#4",2],["A4",3],["C5",5]],inv:"fundamental"},
+"E7":{l:"E2",r:[["E3",1],["G#3",2],["B3",3],["D4",5]],inv:"fundamental"},
+"C7M":{l:"C2",r:[["C4",1],["E4",2],["G4",3],["B4",5]],inv:"fundamental"},
+"Am7":{l:"A2",r:[["A3",1],["C4",2],["E4",3],["G4",5]],inv:"fundamental"},
+"Dm7":{l:"D2",r:[["D4",1],["F4",2],["A4",3],["C5",5]],inv:"fundamental"},
+"Csus2":{l:"C2",r:[["C4",1],["D4",2],["G4",5]],inv:"fundamental"},
+"Gsus4":{l:"G2",r:[["G3",1],["C4",2],["D4",5]],inv:"fundamental"},
+// add9 es la tríada más la novena, sin séptima. Se voicea cerrado
+// (Do-Re-Mi-Sol, todo dentro de una quinta) en vez de con la novena arriba:
+// suena igual de reconocible y no obliga a abrir la mano una novena.
+"Cadd9":{l:"C2",r:[["C4",1],["D4",2],["E4",3],["G4",5]],inv:"fundamental"}
 };
 
 const defaultInversions={
@@ -1340,7 +1372,9 @@ const defaultInversions={
  "C#":"second","G#m":"first","G#":"first","D":"second","B":"root","B/D#":"root",
  "G":"first","C":"second","Bm":"first","Em":"first","Dm":"second","G/B":"root","G/D":"root",
  "F":"root","Gm":"first","F#m7":"root","Bm7":"root","Em7":"root","D7M":"root","F7M":"root",
- "A#7M":"root","A7":"root","F#7":"root","A#°":"root"
+ "A#7M":"root","A7":"root","F#7":"root","A#°":"root",
+ "A#":"root","D#":"root","Cm":"root","G7":"root","C7":"root","D7":"root","E7":"root",
+ "C7M":"root","Am7":"root","Dm7":"root","Csus2":"root","Gsus4":"root","Cadd9":"root"
 };
 const voicingVariants={
  "E":{
@@ -1432,6 +1466,50 @@ const voicingVariants={
  },
  "A#°":{
    root:[["A#3",1],["C#4",3],["E4",5]],first:[["C#4",1],["E4",2],["A#4",5]],second:[["E4",1],["A#4",2],["C#5",5]]
+ },
+ // Vocabulario general (ver bloque equivalente en `voicings`).
+ // Tríadas: fundamental 1-3-5, inversiones 1-2-5. Cuatríadas: siempre
+ // 1-2-3-5. Es el mismo patrón de dedos que ya usan los acordes de arriba.
+ "A#":{
+   root:[["A#3",1],["D4",3],["F4",5]],first:[["D4",1],["F4",2],["A#4",5]],second:[["F3",1],["A#3",2],["D4",5]]
+ },
+ "D#":{
+   root:[["D#3",1],["G3",3],["A#3",5]],first:[["G3",1],["A#3",2],["D#4",5]],second:[["A#3",1],["D#4",2],["G4",5]]
+ },
+ "Cm":{
+   root:[["C4",1],["D#4",3],["G4",5]],first:[["D#3",1],["G3",2],["C4",5]],second:[["G3",1],["C4",2],["D#4",5]]
+ },
+ "G7":{
+   root:[["G3",1],["B3",2],["D4",3],["F4",5]],first:[["B3",1],["D4",2],["F4",3],["G4",5]],second:[["D4",1],["F4",2],["G4",3],["B4",5]]
+ },
+ "C7":{
+   root:[["C4",1],["E4",2],["G4",3],["A#4",5]],first:[["E4",1],["G4",2],["A#4",3],["C5",5]],second:[["G3",1],["A#3",2],["C4",3],["E4",5]]
+ },
+ "D7":{
+   root:[["D4",1],["F#4",2],["A4",3],["C5",5]],first:[["F#3",1],["A3",2],["C4",3],["D4",5]],second:[["A3",1],["C4",2],["D4",3],["F#4",5]]
+ },
+ "E7":{
+   root:[["E3",1],["G#3",2],["B3",3],["D4",5]],first:[["G#3",1],["B3",2],["D4",3],["E4",5]],second:[["B3",1],["D4",2],["E4",3],["G#4",5]]
+ },
+ "C7M":{
+   root:[["C4",1],["E4",2],["G4",3],["B4",5]],first:[["E4",1],["G4",2],["B4",3],["C5",5]],second:[["G3",1],["B3",2],["C4",3],["E4",5]]
+ },
+ "Am7":{
+   root:[["A3",1],["C4",2],["E4",3],["G4",5]],first:[["C4",1],["E4",2],["G4",3],["A4",5]],second:[["E4",1],["G4",2],["A4",3],["C5",5]]
+ },
+ "Dm7":{
+   root:[["D4",1],["F4",2],["A4",3],["C5",5]],first:[["F3",1],["A3",2],["C4",3],["D4",5]],second:[["A3",1],["C4",2],["D4",3],["F4",5]]
+ },
+ // Los sus no tienen tercera, así que "inversión" aquí solo describe qué
+ // nota queda abajo — no hay mayor/menor que invertir.
+ "Csus2":{
+   root:[["C4",1],["D4",2],["G4",5]],first:[["D4",1],["G4",2],["C5",5]],second:[["G3",1],["C4",2],["D4",5]]
+ },
+ "Gsus4":{
+   root:[["G3",1],["C4",2],["D4",5]],first:[["C4",1],["D4",2],["G4",5]],second:[["D4",1],["G4",2],["C5",5]]
+ },
+ "Cadd9":{
+   root:[["C4",1],["D4",2],["E4",3],["G4",5]],first:[["E4",1],["G4",2],["C5",3],["D5",5]],second:[["G3",1],["C4",2],["D4",3],["E4",5]]
  }
 };
 
@@ -1471,18 +1549,43 @@ function inversionText(id){
  if(notationMode==="en")return {root:"Root position",first:"1st inversion",second:"2nd inversion"}[id];
  return {root:"Fundamental",first:"1.ª inversión",second:"2.ª inversión"}[id];
 }
+// La biblioteca nombra los acordes con sostenidos y "7M" (A#, C7M), pero los
+// cifrados de internet usan bemoles y "maj7" para exactamente los mismos
+// acordes (Bb, Cmaj7). Como el importador guarda el símbolo tal cual se pegó
+// —a propósito: nunca reescribe lo que escribió el autor— hace falta traducir
+// al buscar, o "Bb" quedaría mudo aunque su voicing exista bajo el nombre
+// "A#". La traducción es solo para buscar: lo guardado y lo que se ve en
+// pantalla siguen siendo el símbolo original.
+const FLAT_ROOTS={"Bb":"A#","Eb":"D#","Ab":"G#","Db":"C#","Gb":"F#","Cb":"B","Fb":"E"};
+function sharpenRoot(part){
+ const match=part.match(/^([A-G]b)(.*)$/);
+ return match&&FLAT_ROOTS[match[1]]?FLAT_ROOTS[match[1]]+match[2]:part;
+}
+function canonicalChord(chord){
+ if(typeof chord!=="string"||!chord||voicings[chord])return chord;
+ const [base,bass]=chord.split("/");
+ // "maj7"/"Maj7"/"M7" -> "7M". La alternancia distingue mayúsculas a
+ // propósito: "Am7" (menor con séptima) no debe convertirse en "A7M".
+ let canonical=sharpenRoot(base).replace(/(?:maj|Maj|MAJ|Ma|M)7$/,"7M");
+ if(bass)canonical+="/"+sharpenRoot(bass);
+ return voicings[canonical]?canonical:chord;
+}
 // Un acorde "pendiente" es uno que la canción usa pero que la biblioteca
 // curada todavía no tiene (por ejemplo, recién llegado de una canción nueva).
 // No es un error: es el estado normal previo a construir su voicing a mano.
 // La app lo conserva, lo muestra y lo cuenta, pero no lo hace sonar — nunca
 // inventa un voicing por fórmula (ver docs/plan-multi-cancion.md, Parte B).
-function chordIsPending(chord){return !voicings[chord]||!voicingVariants[chord]}
+function chordIsPending(chord){
+ const canonical=canonicalChord(chord);
+ return !voicings[canonical]||!voicingVariants[canonical];
+}
 const PENDING_VOICING=Object.freeze({l:null,r:[],inv:"",inversion:"root",pending:true});
 const PENDING_CHORD_HINT="Acorde pendiente · todavía no tiene posición en la biblioteca, no suena";
 function resolveVoicing(chord,inversion){
  if(chordIsPending(chord))return PENDING_VOICING;
- const id=voicingVariants[chord]?.[inversion]?inversion:defaultInversions[chord];
- return {...voicings[chord],r:voicingVariants[chord][id],inv:inversionText(id),inversion:id};
+ const canonical=canonicalChord(chord);
+ const id=voicingVariants[canonical]?.[inversion]?inversion:defaultInversions[canonical];
+ return {...voicings[canonical],r:voicingVariants[canonical][id],inv:inversionText(id),inversion:id};
 }
 
 const makeSection=(name,rows)=>({
@@ -1941,7 +2044,7 @@ function assignDefaultAnchors(targetSections=sections){
 // a la biblioteca.
 const CHORD_SYMBOL_PATTERN=/^[A-Za-z0-9#b°+/]{1,16}$/;
 function isWellFormedChordSymbol(value){return typeof value==="string"&&CHORD_SYMBOL_PATTERN.test(value)}
-function resolvedInversion(chord,inversion){return voicingVariants[chord]?.[inversion]?inversion:(defaultInversions[chord]||"root")}
+function resolvedInversion(chord,inversion){const canonical=canonicalChord(chord);return voicingVariants[canonical]?.[inversion]?inversion:(defaultInversions[canonical]||"root")}
 // Aplica el formato viejo de sincronización (diff de overrides contra la
 // canción semilla, versiones 2-4 del plan pre-Fase 4) sobre un array de
 // secciones ya clonado. Devuelve las claves de eventos originales borrados,
@@ -2542,8 +2645,8 @@ function validatedLegacyDiff(data){
    if(typeof key!=="string"||key.length>100||!/^\d+:(?:\d+:\d+|custom:[\w:-]+)$/.test(key))throw new Error("El archivo contiene un identificador no válido.");
    const section=+key.split(":",1)[0];
    if(!sections[section])throw new Error("El archivo contiene una sección no válida.");
-   if(!value||!voicings[value.chord])throw new Error("El archivo contiene un acorde no reconocido.");
-   if(!voicingVariants[value.chord]?.[value.inversion])throw new Error("El archivo contiene una inversión no reconocida.");
+   if(!value||!voicings[canonicalChord(value.chord)])throw new Error("El archivo contiene un acorde no reconocido.");
+   if(!voicingVariants[canonicalChord(value.chord)]?.[value.inversion])throw new Error("El archivo contiene una inversión no reconocida.");
    if(!Number.isInteger(value.line)||!Number.isInteger(value.anchor)||!Number.isInteger(value.position))throw new Error("El archivo contiene una posición no válida.");
    if(value.line<0||value.line>=sections[section].lines.length||value.anchor<0||value.anchor>200||value.position<0||value.position>1500)throw new Error("El archivo contiene una posición fuera de rango.");
    if(!Number.isFinite(+value.beats)||+value.beats<=0||+value.beats>32)throw new Error("El archivo contiene una duración no válida.");
@@ -2558,7 +2661,7 @@ function validatedLegacyDiff(data){
    const eventKey=`${value.section}:${value.uid}`;
    if(addedIds.has(eventKey)||!data.events[eventKey])throw new Error("El archivo contiene un evento agregado incoherente.");
    addedIds.add(eventKey);
-   if(!voicings[value.chord]||!voicingVariants[value.chord]?.[value.inversion])throw new Error("El archivo contiene un acorde agregado no válido.");
+   if(!voicings[canonicalChord(value.chord)]||!voicingVariants[canonicalChord(value.chord)]?.[value.inversion])throw new Error("El archivo contiene un acorde agregado no válido.");
    if(!Number.isInteger(value.line)||value.line<0||value.line>=sections[value.section].lines.length||!Number.isInteger(value.anchor)||value.anchor<0||value.anchor>200)throw new Error("El archivo contiene una posición agregada no válida.");
    if(!Number.isFinite(+value.beats)||+value.beats<=0||+value.beats>32)throw new Error("El archivo contiene una duración agregada no válida.");
  });
@@ -3308,11 +3411,17 @@ whites.forEach((w,i)=>{const n=w.slice(0,-1),o=w.slice(-1);if(i<whites.length-1&
 function baseNote(note){return note.match(/^([A-G]#?)/)[1]}
 // note es null cuando el acorde está pendiente (PENDING_VOICING.l/r vacíos):
 // no hay nota real que nombrar todavía.
-function noteText(note,chord=null){if(note===null)return "—";const physical=baseNote(note),spell=chord&&voicings[chord]?.spell,n=spell?.[note]||spell?.[physical]||physical;return notationMode==="es"?NOTE_ES[n]:n}
-function keyHint(note,chord){if(note===null)return "";const physical=baseNote(note),spell=chord&&voicings[chord]?.spell,written=spell?.[note]||spell?.[physical];if(!written)return "";return notationMode==="es"?` (tecla ${NOTE_ES[physical]})`:` (${physical} key)`}
+function noteText(note,chord=null){if(note===null)return "—";const physical=baseNote(note),spell=chord&&voicings[canonicalChord(chord)]?.spell,n=spell?.[note]||spell?.[physical]||physical;return notationMode==="es"?NOTE_ES[n]:n}
+function keyHint(note,chord){if(note===null)return "";const physical=baseNote(note),spell=chord&&voicings[canonicalChord(chord)]?.spell,written=spell?.[note]||spell?.[physical];if(!written)return "";return notationMode==="es"?` (tecla ${NOTE_ES[physical]})`:` (${physical} key)`}
 // Un acorde pendiente no tiene traducción al español todavía: se muestra su
 // símbolo original tal como llegó, en vez de "undefined".
-function chordText(chord){return notationMode==="es"?(CHORD_ES[chord]||chord):chord}
+// Prioriza el símbolo tal cual está escrito ("Bb" -> "Sib"); si no está en
+// la tabla, traduce por su nombre canónico ("Cmaj7" -> C7M -> "Do7M"), y si
+// tampoco, se muestra como se escribió.
+function chordText(chord){
+ if(notationMode!=="es")return chord;
+ return CHORD_ES[chord]||CHORD_ES[canonicalChord(chord)]||chord;
+}
 function renderChordNotes(element,notes){
  element.replaceChildren(...notes.map(note=>{
    const chip=document.createElement("span");
@@ -3338,7 +3447,8 @@ function renderSyncChordOptions(){
  if(voicings[selectedValue])syncChord.value=selectedValue;
  if(voicings[addValue])syncAddChord.value=addValue;
 }
-function renderSyncInversionOptions(chord,selectedId=defaultInversions[chord]){
+function renderSyncInversionOptions(chord,selectedId=defaultInversions[canonicalChord(chord)]){
+ const canonical=canonicalChord(chord);
  syncInversion.innerHTML="";
  ["root","first","second"].forEach(id=>{
    const option=document.createElement("option");
@@ -3346,7 +3456,7 @@ function renderSyncInversionOptions(chord,selectedId=defaultInversions[chord]){
    option.textContent=inversionText(id);
    syncInversion.appendChild(option);
  });
- syncInversion.value=voicingVariants[chord]?.[selectedId]?selectedId:defaultInversions[chord];
+ syncInversion.value=voicingVariants[canonical]?.[selectedId]?selectedId:defaultInversions[canonical];
 }
 function midi(note){const m=note.match(/^([A-G]#?)(\d)$/),s={C:0,"C#":1,D:2,"D#":3,E:4,F:5,"F#":6,G:7,"G#":8,A:9,"A#":10,B:11};return(+m[2]+1)*12+s[m[1]]}
 function frequency(note){return 440*Math.pow(2,(midi(note)-69)/12)}
@@ -4574,7 +4684,7 @@ syncChord.onchange=()=>{
 };
 syncInversion.onchange=()=>{
  const selected=selectedSyncData();
- if(!selected||!voicingVariants[selected.event.chord]?.[syncInversion.value]||selected.event.inversion===syncInversion.value)return;
+ if(!selected||!voicingVariants[canonicalChord(selected.event.chord)]?.[syncInversion.value]||selected.event.inversion===syncInversion.value)return;
  recordEditorChange();
  selected.event.inversion=syncInversion.value;
  saveSongSync();
