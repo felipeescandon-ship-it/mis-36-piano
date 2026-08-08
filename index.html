@@ -65,6 +65,20 @@ background:rgba(253,250,244,.96);box-shadow:0 12px 34px rgba(40,28,16,.2);backdr
 .settings-panel[hidden]{display:none}
 .settings-grid{display:grid;grid-template-columns:repeat(3,minmax(160px,1fr));gap:10px}
 .settings-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+.settings-status-row{display:flex;gap:12px;flex-wrap:wrap;margin-top:8px}
+.icon-action{min-width:44px;padding:10px;font-size:17px;line-height:1}
+.icon-action[aria-expanded="true"]{background:var(--accent);color:#fff}
+.data-menu{display:grid;gap:12px;margin-top:9px;padding:12px;border:1px solid var(--line);border-radius:13px;background:#fbf6ee}
+.data-menu[hidden]{display:none}
+.data-menu-group h4{margin:0 0 7px;font-size:11px;font-weight:900;letter-spacing:.09em;text-transform:uppercase;color:var(--muted)}
+.data-menu-row{display:flex;gap:8px;flex-wrap:wrap}
+.data-menu-row button{flex:0 1 auto;min-width:126px;background:#fff;border:1px solid var(--line)}
+.settings-advanced{margin-top:12px;padding-top:10px;border-top:1px solid var(--line)}
+.settings-advanced>summary{display:flex;align-items:center;min-height:44px;color:var(--muted);font-size:11px;font-weight:900;letter-spacing:.12em;text-transform:uppercase;cursor:pointer;list-style:none}
+.settings-advanced>summary::-webkit-details-marker{display:none}
+.settings-advanced>summary::before{content:"▸";margin-right:8px;font-size:10px}
+.settings-advanced[open]>summary::before{content:"▾"}
+.settings-advanced .setting{max-width:260px;padding-bottom:10px}
 .data-status{align-self:center;color:var(--muted);font-size:13px;font-weight:750}
 .data-status.ready{color:#11703c}.data-status.warning{color:#824700}.data-status.error{color:#992626}
 button,select,input{font:inherit}
@@ -604,39 +618,54 @@ body.screen-practicar #transitionLoop{display:none}
       </select>
     </label>
 
+    <div class="tempo">
+      <strong>Tempo: <span id="bpmOut">72</span> BPM</strong>
+      <input id="bpm" type="range" min="45" max="120" value="72" aria-label="Tempo">
+    </div>
+  </div>
+
+  <details class="settings-advanced">
+    <summary>Sonido avanzado</summary>
     <label class="setting">
-      <span>Sonido</span>
+      <span>Duración del sonido</span>
       <select id="sustainMode" aria-label="Duración del sonido">
         <option value="short">Sustain corto</option>
         <option value="natural" selected>Sustain natural</option>
         <option value="long">Sustain largo</option>
       </select>
     </label>
+  </details>
 
-    <div class="tempo">
-      <strong>Tempo: <span id="bpmOut">72</span> BPM</strong>
-      <input id="bpm" type="range" min="45" max="120" value="72" aria-label="Tempo">
-    </div>
-  </div>
   <div class="cancionero-manage">
     <h3>Administrar biblioteca</h3>
     <div class="settings-actions">
       <button id="cloudSyncNow" class="secondary" type="button">☁ Sincronizar ahora</button>
+      <button id="dataMenuToggle" class="secondary icon-action" type="button" aria-expanded="false" aria-controls="dataMenu" aria-label="Exportar o importar" title="Exportar o importar">⇅</button>
       <button id="cloudUseLocal" class="primary" type="button" hidden>Subir este dispositivo</button>
       <button id="cloudUseRemote" class="secondary" type="button" hidden>Cargar versión de la nube</button>
+    </div>
+    <div id="dataMenu" class="data-menu" hidden>
+      <div class="data-menu-group">
+        <h4>Cancionero completo</h4>
+        <div class="data-menu-row">
+          <button id="exportCancionero" class="secondary" type="button">↓ Exportar</button>
+          <button id="importCancionero" class="secondary" type="button">↑ Importar</button>
+        </div>
+      </div>
+      <div class="data-menu-group">
+        <h4 id="dataMenuSongLabel">Ajustes de la canción abierta</h4>
+        <div class="data-menu-row">
+          <button id="exportSongSync" class="secondary" type="button">↓ Exportar</button>
+          <button id="importSongSync" class="secondary" type="button">↑ Importar</button>
+        </div>
+      </div>
+      <input id="importCancioneroFile" type="file" accept=".json,application/json" hidden>
+      <input id="importSongSyncFile" type="file" accept=".json,application/json" hidden>
+    </div>
+    <div class="settings-status-row">
       <span id="cloudStatus" class="data-status" aria-live="polite">Nube: comprobando…</span>
       <span id="catalogSyncStatus" class="data-status" aria-live="polite"></span>
-    </div>
-    <div class="settings-actions">
-      <button id="exportCancionero" class="secondary" type="button">↓ Exportar cancionero completo</button>
-      <button id="importCancionero" class="secondary" type="button">↧ Importar cancionero completo</button>
-      <input id="importCancioneroFile" type="file" accept=".json,application/json" hidden>
       <span id="cancioneroStatus" class="data-status" aria-live="polite"></span>
-    </div>
-    <div class="settings-actions">
-      <button id="exportSongSync" class="secondary" type="button" hidden>↓ Exportar ajustes de la canción abierta</button>
-      <button id="importSongSync" class="secondary" type="button" hidden>↧ Importar ajustes de la canción abierta</button>
-      <input id="importSongSyncFile" type="file" accept=".json,application/json" hidden>
       <span id="songDataStatus" class="data-status" aria-live="polite"></span>
     </div>
   </div>
@@ -999,6 +1028,9 @@ const sound=document.getElementById("sound");
 const audioStatus=document.getElementById("audioStatus");
 const settingsToggle=document.getElementById("settingsToggle");
 const settingsPanel=document.getElementById("settingsPanel");
+const dataMenuToggle=document.getElementById("dataMenuToggle");
+const dataMenu=document.getElementById("dataMenu");
+const dataMenuSongLabel=document.getElementById("dataMenuSongLabel");
 const settingsSummary=document.getElementById("settingsSummary");
 const keyboardMode=document.getElementById("keyboardMode");
 const sustainMode=document.getElementById("sustainMode");
@@ -1199,6 +1231,16 @@ function setSettingsOpen(open){
  settingsPanel.hidden=!open;
  settingsToggle.setAttribute("aria-expanded",String(open));
  settingsToggle.textContent=open?"✕ Cerrar ajustes":"⚙ Ajustes";
+ // Cerrar Ajustes también repliega exportar/importar: son acciones puntuales,
+ // no un estado que convenga dejar abierto para la próxima vez.
+ if(!open)setDataMenuOpen(false);
+}
+function setDataMenuOpen(open){
+ dataMenu.hidden=!open;
+ dataMenuToggle.setAttribute("aria-expanded",String(open));
+ // La segunda pareja de botones actúa sobre la canción cargada, así que el
+ // título va en el encabezado del grupo en vez de repetirse en cada botón.
+ if(open)dataMenuSongLabel.textContent=`Ajustes de "${currentSong()?.title||"la canción abierta"}"`;
 }
 function updateSyncEditorCollapse(){
  syncEditor.classList.toggle("editor-collapsed",syncEditorCollapsed);
@@ -4355,6 +4397,7 @@ resumeLyricsFollow.onclick=()=>{
  focusCurrentSongEvent(true);
 };
 settingsToggle.onclick=()=>setSettingsOpen(settingsPanel.hidden);
+dataMenuToggle.onclick=()=>setDataMenuOpen(dataMenu.hidden);
 document.addEventListener(window.PointerEvent?"pointerdown":"touchstart",unlockAudioFromGesture,{capture:true,passive:true});
 window.addEventListener("touchmove",pauseLyricsFollowFromUser,{passive:true});
 window.addEventListener("wheel",pauseLyricsFollowFromUser,{passive:true});
