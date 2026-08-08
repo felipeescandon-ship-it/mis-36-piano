@@ -37,8 +37,11 @@ La app tiene tres pantallas principales, accesibles desde la barra superior
 
 El botón "⚙ Ajustes" del header abre un panel aparte (no es una cuarta
 pantalla) con los controles de reproducción (sección inicial, recorrido,
-ayuda visual, sonido, tempo) y, debajo, "Administrar biblioteca": sincronizar
-con la nube, y exportar/importar el cancionero completo o la canción abierta.
+ayuda visual, tempo). La duración del sonido (sustain corto/natural/largo)
+vive en "Sonido avanzado", plegado, porque se configura una vez; el modo
+vigente se sigue leyendo en el resumen de la barra de Tocar. Debajo,
+"Administrar biblioteca": sincronizar con la nube y un icono "⇅" que
+despliega exportar/importar, del cancionero completo o de la canción abierta.
 
 ## Arquitectura
 
