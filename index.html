@@ -634,8 +634,8 @@ body.screen-practicar #transitionLoop{display:none}
       <span id="cancioneroStatus" class="data-status" aria-live="polite"></span>
     </div>
     <div class="settings-actions">
-      <button id="exportSongSync" class="secondary" type="button" hidden>↓ Exportar ajustes de la canción abierta</button>
-      <button id="importSongSync" class="secondary" type="button" hidden>↧ Importar ajustes de la canción abierta</button>
+      <button id="exportSongSync" class="secondary" type="button">↓ Exportar ajustes de la canción abierta</button>
+      <button id="importSongSync" class="secondary" type="button">↧ Importar ajustes de la canción abierta</button>
       <input id="importSongSyncFile" type="file" accept=".json,application/json" hidden>
       <span id="songDataStatus" class="data-status" aria-live="polite"></span>
     </div>
@@ -1151,6 +1151,10 @@ let lyricsPreviewPosition=null,lyricsPreviewAnchor=null;
 let editorUndoStack=[],editorRedoStack=[];
 const scrollBehavior=()=>window.matchMedia?.("(prefers-reduced-motion: reduce)").matches?"auto":"smooth";
 function readPreference(key,fallback){try{return localStorage.getItem(key)||fallback}catch{return fallback}}
+// Reintentos ante 429 (demasiadas escrituras): backoff exponencial con
+// techo, para no martillar el servidor si el tráfico de sync es constante.
+const SYNC_RETRY_MAX_DELAY_MS=30000,SYNC_RETRY_MAX_ATTEMPTS=6;
+function syncRetryDelay(retryCount){return Math.min(1600*(2**retryCount),SYNC_RETRY_MAX_DELAY_MS)}
 function savePreference(key,value){try{localStorage.setItem(key,value)}catch{}}
 notationMode=readPreference("mis36-notation-mode","es");
 if(!["es","en"].includes(notationMode))notationMode="es";
@@ -1836,7 +1840,7 @@ let CLOUD_REVISION_KEY=songStorageKey(currentSongId,"cloud-revision");
 let CLOUD_DIRTY_KEY=songStorageKey(currentSongId,"cloud-dirty");
 let hadLocalSongSync=Boolean(readPreference(SONG_SYNC_KEY,""));
 let cloudRevision=readPreference(CLOUD_REVISION_KEY,"");
-let cloudSaveTimer=null,cloudRequestRunning=false,cloudRemoteDocument=null;
+let cloudSaveTimer=null,cloudRequestRunning=false,cloudRemoteDocument=null,cloudSaveRetryCount=0;
 let cloudChangeGeneration=0,cloudSaveQueued=false;
 const deletedSongEvents=new Set();
 function lyricWords(text){return text.trim().split(/\s+/).filter(Boolean)}
@@ -2184,6 +2188,7 @@ function switchToSong(songId){
  if(songId===currentSongId||!songExists(songId))return;
  stopAuto();
  if(cloudSaveTimer){clearTimeout(cloudSaveTimer);cloudSaveTimer=null}
+ cloudSaveRetryCount=0;
  currentSongId=songId;
  sections=cloneSongSections(songId);
  SONG_SYNC_KEY=songStorageKey(songId,"sync-v1");
@@ -2352,8 +2357,8 @@ function renderSongDetail(){
 }
 function openSongFromCancionero(songId){
  switchToSong(songId);
- setMainView("lyrics");
  setActiveScreen("tocar");
+ setMainView("lyrics");
 }
 function editSongFromCancionero(songId){
  switchToSong(songId);
@@ -2373,7 +2378,10 @@ function saveSongSync(syncCloud=true){
  }catch{
    setLocalSaveStatus("Dispositivo: no fue posible guardar","error");
  }
- if(syncCloud&&songHasCloudSync(currentSongId))scheduleCloudSave();
+ if(syncCloud){
+   try{localStorage.setItem(songStorageKey(currentSongId,"content-updated-at"),new Date().toISOString())}catch{}
+   if(songHasCloudSync(currentSongId))scheduleCloudSave();
+ }
 }
 function setLocalSaveStatus(textValue,state=""){
  syncSaveStatus.textContent=textValue;
@@ -2690,7 +2698,7 @@ async function cloudFetch(resource,options={}){
 // documento global en vez de uno por canción.
 const CATALOG_CLOUD_REVISION_KEY="piano-catalog-cloud-revision";
 let catalogCloudRevision=readPreference(CATALOG_CLOUD_REVISION_KEY,"");
-let catalogRequestRunning=false,catalogSaveTimer=null;
+let catalogRequestRunning=false,catalogSaveTimer=null,catalogSaveRetryCount=0;
 function setCatalogSyncStatus(textValue,state=""){
  if(!catalogSyncStatus)return;
  catalogSyncStatus.textContent=textValue;
@@ -2708,7 +2716,7 @@ function buildCatalogManifest(){
      originalKey:song.originalKey||"",
      order,
      revision:readPreference(songStorageKey(songId,"cloud-revision"),""),
-     updatedAt:nowIso,
+     updatedAt:readPreference(songStorageKey(songId,"content-updated-at"),nowIso),
      deleted:false
    };
  }).filter(Boolean);
@@ -2749,10 +2757,17 @@ async function saveCatalogToCloud(force=false){
    if(response.status===503){setCatalogSyncStatus("Catálogo: nube pendiente de activar","warning");return false}
    if(response.status===429){
      if(catalogSaveTimer)clearTimeout(catalogSaveTimer);
-     catalogSaveTimer=setTimeout(()=>saveCatalogToCloud(force),1600);
+     if(catalogSaveRetryCount>=SYNC_RETRY_MAX_ATTEMPTS){
+       catalogSaveRetryCount=0;
+       setCatalogSyncStatus("Catálogo: sin sincronizar (mucho tráfico) · se reintentará luego","warning");
+       return false;
+     }
+     const delay=syncRetryDelay(catalogSaveRetryCount++);
+     catalogSaveTimer=setTimeout(()=>saveCatalogToCloud(force),delay);
      return false;
    }
    if(!response.ok)throw new Error(result.message||result.error||"No fue posible guardar el catálogo.");
+   catalogSaveRetryCount=0;
    catalogCloudRevision=result.revision;
    savePreference(CATALOG_CLOUD_REVISION_KEY,catalogCloudRevision);
    setCatalogSyncStatus("Catálogo: sincronizado","ready");
@@ -2807,6 +2822,7 @@ async function loadCatalogFromCloud(forceRefresh=false){
    }
    const remoteEntries=result.manifest.entries;
    let changed=false,switchAway=false;
+   const toMaterialize=[];
    for(const entry of remoteEntries){
      if(entry.deleted){
        // Borrada en otro dispositivo: se saca del catálogo local también,
@@ -2821,16 +2837,24 @@ async function loadCatalogFromCloud(forceRefresh=false){
        continue;
      }
      if(!songExists(entry.songId)){
-       if(await materializeRemoteSong(entry)){
-         if(!songCatalog.includes(entry.songId))songCatalog.push(entry.songId);
-         changed=true;
-       }
+       toMaterialize.push(entry);
      }else if(dynamicSongs[entry.songId]){
        const local=dynamicSongs[entry.songId];
        if(local.title!==entry.title||local.artist!==entry.artist||local.originalKey!==entry.originalKey){
          dynamicSongs[entry.songId]={...local,title:entry.title,artist:entry.artist,originalKey:entry.originalKey};
          changed=true;
        }
+     }
+   }
+   if(toMaterialize.length){
+     // Canciones nuevas para este dispositivo: se traen en paralelo en vez
+     // de una por una, para no encadenar N round-trips secuenciales en el
+     // primer arranque de un dispositivo nuevo.
+     const materialized=await Promise.all(toMaterialize.map(entry=>
+       materializeRemoteSong(entry).then(ok=>ok?entry.songId:null)
+     ));
+     for(const songId of materialized){
+       if(songId&&!songCatalog.includes(songId)){songCatalog.push(songId);changed=true}
      }
    }
    if(changed)saveDynamicSongs();
@@ -2871,7 +2895,7 @@ async function loadCatalogFromCloud(forceRefresh=false){
 // retroceder ni perder una repetición ya registrada en ningún dispositivo.
 const PRACTICE_CLOUD_REVISION_KEY="piano-practice-cloud-revision";
 let practiceCloudRevision=readPreference(PRACTICE_CLOUD_REVISION_KEY,"");
-let practiceRequestRunning=false,practiceSyncTimer=null;
+let practiceRequestRunning=false,practiceSyncTimer=null,practiceSyncRetryCount=0;
 function mergeCounterMap(localMap,remoteMap,flags){
  Object.entries(remoteMap||{}).forEach(([key,value])=>{
    const current=localMap[key]||0;
@@ -2920,11 +2944,17 @@ async function savePracticeToCloud(force=false){
    if(response.status===503)return false;
    if(response.status===429){
      if(practiceSyncTimer)clearTimeout(practiceSyncTimer);
-     practiceSyncTimer=setTimeout(()=>savePracticeToCloud(force),1600);
+     if(practiceSyncRetryCount>=SYNC_RETRY_MAX_ATTEMPTS){
+       practiceSyncRetryCount=0;
+       return false;
+     }
+     const delay=syncRetryDelay(practiceSyncRetryCount++);
+     practiceSyncTimer=setTimeout(()=>savePracticeToCloud(force),delay);
      return false;
    }
    const result=await response.json().catch(()=>({}));
    if(!response.ok)throw new Error(result.message||result.error||"No fue posible guardar la práctica.");
+   practiceSyncRetryCount=0;
    practiceCloudRevision=result.revision;
    savePreference(PRACTICE_CLOUD_REVISION_KEY,practiceCloudRevision);
    return true;
@@ -3008,11 +3038,18 @@ async function saveCloudSongSync(force=false){
      return false;
    }
    if(response.status===429){
+     if(cloudSaveRetryCount>=SYNC_RETRY_MAX_ATTEMPTS){
+       cloudSaveRetryCount=0;
+       setCloudStatus("Nube: sin sincronizar (mucho tráfico) · copia local segura","warning");
+       return false;
+     }
+     const delay=syncRetryDelay(cloudSaveRetryCount++);
      setCloudStatus("Nube: esperando para guardar…","warning");
-     cloudSaveTimer=setTimeout(()=>saveCloudSongSync(force),1600);
+     cloudSaveTimer=setTimeout(()=>saveCloudSongSync(force),delay);
      return false;
    }
    if(!response.ok)throw new Error(result.message||result.error||"No fue posible guardar.");
+   cloudSaveRetryCount=0;
    const documentValue=validatedCloudDocument(result);
    cloudRevision=documentValue.revision;
    cloudRemoteDocument=documentValue;
@@ -3311,7 +3348,7 @@ function marker(k,note,finger,type,isBlack,chord,inactive=false){
  const l=document.createElement("div");l.className="label"+(isBlack?" black-label":"")+(inactive?" hand-inactive":"");l.textContent=noteText(note,chord);l.title=noteText(note,chord)+keyHint(note,chord);k.appendChild(l);
  const f=document.createElement("div");f.className="finger "+(type==="left"?"left-f":type==="preview"?"preview-f":"right-f")+(isBlack?" black-f":"")+(inactive?" hand-inactive":"");f.textContent=finger;k.appendChild(f);
 }
-let sectionIndex=0,stepIndex=0,timer=null,cueTimer=null,audioCtx=null,isAutoPlaying=false,isPlaybackPaused=false,isTransitionLoop=false,lyricsFollowPlayback=true,isFullSongReducedPractice=false;
+let sectionIndex=0,stepIndex=0,timer=null,cueTimer=null,audioCtx=null,isAutoPlaying=false,isPlaybackPaused=false,isTransitionLoop=false,lyricsFollowPlayback=true,isFullSongReducedPractice=false,preReducedTempoBpm=null;
 let playQueue=[],queueIndex=0;
 let transitionPracticeCompleted=0,transitionPracticeTotal=4,transitionPracticeStart=null;
 // El foco de mano solo aplica durante el loop de práctica de una transición:
@@ -3905,7 +3942,7 @@ function updatePracticeFullSongNote(){
 }
 function buildSteps(){
  steps.innerHTML="";const s=currentSection();
- s.events.forEach((event,i)=>{const b=document.createElement("button");b.className="step";if(isLoopPosition(sectionIndex,i))b.classList.add("loop-step");b.innerHTML=`${i+1}<small>${chordText(event.chord)}</small>`;b.onclick=()=>{stopAuto();stepIndex=i;render();playCurrent()};steps.appendChild(b)});
+ s.events.forEach((event,i)=>{const b=document.createElement("button");b.className="step";if(isLoopPosition(sectionIndex,i))b.classList.add("loop-step");b.append(String(i+1));const small=document.createElement("small");small.textContent=chordText(event.chord);b.append(small);b.onclick=()=>{stopAuto();stepIndex=i;render();playCurrent()};steps.appendChild(b)});
 }
 function loadSection(i){
  sectionIndex=+i;stepIndex=0;
@@ -3953,6 +3990,7 @@ async function resumeAudio(){
 }
 function unlockAudioFromGesture(){
  const ctx=ensureAudio();
+ if(ctx.state==="running"){beginPianoPreload();return}
  try{
    const source=ctx.createBufferSource();
    source.buffer=ctx.createBuffer(1,1,ctx.sampleRate);
@@ -4099,6 +4137,10 @@ function stopAuto(){
  const practiceStartPosition=transitionPracticeStart;
  const completedReps=transitionPracticeCompleted;
  const naturalSongCompletion=isFullSongReducedPractice&&playQueue.length>0&&queueIndex>=playQueue.length;
+ if(isFullSongReducedPractice&&preReducedTempoBpm!=null){
+   bpm.value=preReducedTempoBpm;bpmOut.textContent=preReducedTempoBpm;updateSettingsSummary();
+   preReducedTempoBpm=null;
+ }
  if(timer){clearTimeout(timer);timer=null}
  resetLyricsUpcomingCue();
  if(audioCtx&&activeAudioGroup)dampActiveChord(audioCtx,audioCtx.currentTime,.12);
@@ -4514,6 +4556,7 @@ notation.onclick=()=>{
  buildSteps();
  render();
  renderFullSong();
+ if(!practiceChooser.hidden)renderPracticeTransitionOptions();
 };
 exportSongSync.onclick=exportSongSyncFile;
 importSongSync.onclick=()=>importSongSyncFile.click();
@@ -4592,7 +4635,9 @@ function renderImportPreview(parsed){
  importPreview.appendChild(headline);
  if(summary.pendingChords.length){
    const pendingLine=document.createElement("p");
-   pendingLine.innerHTML=`<strong>${summary.pendingChords.length} acorde${summary.pendingChords.length>1?"s":""} pendiente${summary.pendingChords.length>1?"s":""}</strong> (sin posición en la biblioteca todavía — se guardan igual, no sonarán hasta que se agreguen):`;
+   const pendingStrong=document.createElement("strong");
+   pendingStrong.textContent=`${summary.pendingChords.length} acorde${summary.pendingChords.length>1?"s":""} pendiente${summary.pendingChords.length>1?"s":""}`;
+   pendingLine.append(pendingStrong," (sin posición en la biblioteca todavía — se guardan igual, no sonarán hasta que se agreguen):");
    importPreview.appendChild(pendingLine);
    const tagRow=document.createElement("div");
    tagRow.className="import-summary-chords";
@@ -4767,6 +4812,7 @@ practiceTransitionSelect.onchange=()=>{
 };
 practiceFullSongButton.onclick=async()=>{
  const reduced=practiceReducedTempo();
+ preReducedTempoBpm=bpm.value;
  bpm.value=reduced;bpmOut.textContent=reduced;updateSettingsSummary();
  playMode.value="full";
  isFullSongReducedPractice=false;
@@ -4793,7 +4839,8 @@ nextPianoToggle.onclick=()=>{
 };
 nextKeyboardWrap.addEventListener("scroll",()=>syncPianoScroll(nextKeyboardWrap,currentKeyboardWrap),{passive:true});
 currentKeyboardWrap.addEventListener("scroll",()=>syncPianoScroll(currentKeyboardWrap,nextKeyboardWrap),{passive:true});
-verifyVoicingLibraryIntegrity();updateNotationToggle();updateLyricsNotesToggle();renderSyncChordOptions();renderSyncInversionOptions("E");initializeSongSync();updateSettingsSummary();updateNextPianoVisibility();updateSongIdentityUi();initSections();buildSteps();render();renderFullSong();updateSessionSummary();updateTransportControls();if(songHasCloudSync(currentSongId))loadCloudSongSync();else setCloudStatus("Nube: disponible próximamente para esta canción","warning");
+if(!verifyVoicingLibraryIntegrity())setAudioStatus("Aviso: algunos acordes no coinciden con su versión aprobada","error");
+updateNotationToggle();updateLyricsNotesToggle();renderSyncChordOptions();renderSyncInversionOptions("E");initializeSongSync();updateSettingsSummary();updateNextPianoVisibility();updateSongIdentityUi();initSections();buildSteps();render();renderFullSong();updateSessionSummary();updateTransportControls();if(songHasCloudSync(currentSongId))loadCloudSongSync();else setCloudStatus("Nube: disponible próximamente para esta canción","warning");
 setActiveScreen("cancionero");
 loadCatalogFromCloud();
 loadPracticeFromCloud();

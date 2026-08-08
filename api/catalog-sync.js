@@ -4,6 +4,8 @@ const CURRENT_PATH = "catalog/current.json";
 const HISTORY_PREFIX = "catalog/history/";
 const CLOUD_FORMAT = "piano-catalog-cloud-v1";
 const SONG_ID_PATTERN = /^[a-z0-9-]{1,64}$/;
+// Sin caracteres de control (permite acentos, símbolos y emoji normales).
+const NO_CONTROL_CHARS_PATTERN = /^[^\x00-\x1F\x7F]*$/;
 class ValidationError extends Error {}
 
 function json(value, status = 200) {
@@ -58,10 +60,10 @@ function validateManifest(data) {
     }
     if (seenIds.has(entry.songId)) throw new ValidationError("Canción repetida en el catálogo.");
     seenIds.add(entry.songId);
-    if (typeof entry.title !== "string" || entry.title.length > 200) {
+    if (typeof entry.title !== "string" || entry.title.length > 200 || !NO_CONTROL_CHARS_PATTERN.test(entry.title)) {
       throw new ValidationError("Título no válido.");
     }
-    if (typeof entry.artist !== "string" || entry.artist.length > 200) {
+    if (typeof entry.artist !== "string" || entry.artist.length > 200 || !NO_CONTROL_CHARS_PATTERN.test(entry.artist)) {
       throw new ValidationError("Artista no válido.");
     }
     if (typeof entry.originalKey !== "string" || entry.originalKey.length > 20) {
