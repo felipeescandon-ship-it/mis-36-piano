@@ -745,6 +745,27 @@ body.screen-practicar #transitionLoop{display:none}
   </div>
 </div>
 
+<section id="addSectionPanel" class="card practice-guide" aria-labelledby="addSectionTitle" hidden>
+  <div class="practice-guide-head">
+    <div>
+      <span class="lyrics-eyebrow">Agregar a esta canción</span>
+      <h2 id="addSectionTitle">Nueva sección</h2>
+    </div>
+    <button id="addSectionClose" class="secondary" type="button">Cerrar</button>
+  </div>
+  <div class="practice-guide-body import-panel-body">
+    <label class="section-control import-textarea-label">
+      <span>Letra con acordes (mismo formato que "Nueva canción": "Tono:" y secciones entre corchetes si las tiene)</span>
+      <textarea id="addSectionText" rows="12" placeholder="[Puente]&#10;C          G          Am         F&#10;Letra de la sección nueva aquí"></textarea>
+    </label>
+    <div class="import-actions">
+      <button id="addSectionAnalyze" class="secondary" type="button">Analizar</button>
+      <button id="addSectionSave" class="primary" type="button" disabled>＋ Agregar a la canción</button>
+      <span id="addSectionStatus" class="data-status" aria-live="polite"></span>
+    </div>
+  </div>
+</section>
+
 <section id="fullView" class="full-view">
 <div class="lyrics-page">
 <div class="lyrics-header">
@@ -757,6 +778,8 @@ body.screen-practicar #transitionLoop{display:none}
       <span>Ir a la sección</span>
       <select id="editorSectionSelect" aria-label="Sección que quieres editar"></select>
     </label>
+    <button id="addSectionOpen" class="secondary" type="button" aria-expanded="false" aria-controls="addSectionPanel">＋ Sección</button>
+    <button id="deleteSectionBtn" class="danger" type="button">Eliminar sección</button>
     <div class="editor-history" role="group" aria-label="Historial de edición">
       <button id="editorUndo" class="secondary" type="button" disabled aria-label="Deshacer último cambio" title="Deshacer">Deshacer</button>
       <button id="editorRedo" class="secondary" type="button" disabled aria-label="Rehacer último cambio" title="Rehacer">Rehacer</button>
@@ -1016,6 +1039,14 @@ const importAnalyze=document.getElementById("importAnalyze");
 const importSave=document.getElementById("importSave");
 const importStatus=document.getElementById("importStatus");
 const importPreview=document.getElementById("importPreview");
+const addSectionOpen=document.getElementById("addSectionOpen");
+const addSectionPanel=document.getElementById("addSectionPanel");
+const addSectionClose=document.getElementById("addSectionClose");
+const addSectionText=document.getElementById("addSectionText");
+const addSectionAnalyze=document.getElementById("addSectionAnalyze");
+const addSectionSave=document.getElementById("addSectionSave");
+const addSectionStatus=document.getElementById("addSectionStatus");
+const deleteSectionBtn=document.getElementById("deleteSectionBtn");
 const deleteToast=document.getElementById("deleteToast");
 const deleteToastText=document.getElementById("deleteToastText");
 const deleteToastUndo=document.getElementById("deleteToastUndo");
@@ -3746,7 +3777,7 @@ function setMainView(view,scroll=true){
    editorUndoStack=[];
    editorRedoStack=[];
  }
- if(!showEditor){selectedSyncEvent=null;addingSyncChord=null;movingSyncEvent=false}
+ if(!showEditor){selectedSyncEvent=null;addingSyncChord=null;movingSyncEvent=false;addSectionPanel.hidden=true}
  updateSyncEditor();
  document.body.classList.toggle("show-full",showLyrics);
  document.body.classList.toggle("view-structure",showStructure);
@@ -4545,6 +4576,7 @@ navCancionero.onclick=()=>setActiveScreen("cancionero");
 navTocar.onclick=()=>setActiveScreen("tocar");
 navPracticar.onclick=()=>setActiveScreen("practicar");
 let lastParsedSong=null;
+let lastParsedAddition=null;
 function renderImportPreview(parsed){
  const summary=summarizeParsedSong(parsed);
  importPreview.innerHTML="";
@@ -4653,6 +4685,63 @@ importSave.onclick=()=>{
  setActiveScreen("tocar");
  setMainView("edit");
  saveCatalogToCloud();
+};
+// Agregar sección reutiliza el mismo analizador que "Nueva canción"
+// (parseSongText produce secciones en la forma name/lines/events que ya usa
+// el resto de la app) y el mismo aplicador que carga una canción guardada
+// (applyFullDocument): se le pasa el documento actual con la sección nueva
+// pegada al final, y crea la sección en el índice que todavía no existe.
+addSectionOpen.onclick=()=>{
+ addSectionPanel.hidden=!addSectionPanel.hidden;
+ if(!addSectionPanel.hidden)addSectionPanel.scrollIntoView({behavior:scrollBehavior(),block:"start"});
+};
+addSectionClose.onclick=()=>{addSectionPanel.hidden=true};
+addSectionAnalyze.onclick=()=>{
+ const raw=addSectionText.value;
+ if(!raw.trim()){addSectionStatus.textContent="Pegá primero la letra con acordes.";return}
+ lastParsedAddition=parseSongText(raw);
+ const summary=summarizeParsedSong(lastParsedAddition);
+ addSectionSave.disabled=!summary.sectionsCount||!summary.eventsCount;
+ addSectionStatus.textContent=addSectionSave.disabled
+   ?"No se detectó nada para agregar."
+   :`Se agregará${summary.sectionsCount===1?"":"n"} ${summary.sectionsCount} sección${summary.sectionsCount===1?"":"es"} (${summary.eventsCount} acordes) al final de la canción.`;
+};
+addSectionSave.onclick=()=>{
+ if(!lastParsedAddition){addSectionStatus.textContent="Analizá el texto primero.";return}
+ const insertAt=sections.length;
+ const fullDocument={
+   version:5,
+   sections:[...sectionsToDocument(sections).sections,...lastParsedAddition.sections.map(section=>({
+     name:section.name,lines:section.lines,
+     events:section.events.map(event=>({uid:event.uid,chord:event.chord,inversion:event.inversion,line:event.line,anchor:event.anchor,beats:event.beats}))
+   }))]
+ };
+ applyFullDocument(sections,fullDocument);
+ initSections();
+ loadSection(insertAt);
+ renderFullSong();
+ updateSyncEditor();
+ saveSongSync();
+ editorUndoStack=[];editorRedoStack=[];updateEditorHistory();
+ addSectionPanel.hidden=true;
+ addSectionText.value="";addSectionStatus.textContent="";lastParsedAddition=null;addSectionSave.disabled=true;
+};
+// Eliminar sección es estructural (cambia cuántas secciones hay), así que
+// no es compatible con el historial de deshacer/rehacer por acorde (ese
+// asume que la cantidad de secciones no cambia): se confirma antes, como la
+// eliminación de una canción completa, y se limpia el historial después.
+deleteSectionBtn.onclick=()=>{
+ if(sections.length<=1){alert("No podés eliminar la única sección de la canción.");return}
+ const name=sections[sectionIndex].name;
+ if(!confirm(`¿Eliminar la sección "${name}"? Se borran su letra y sus acordes para siempre.`))return;
+ sections.splice(sectionIndex,1);
+ const nextIndex=Math.min(sectionIndex,sections.length-1);
+ initSections();
+ loadSection(nextIndex);
+ renderFullSong();
+ updateSyncEditor();
+ saveSongSync();
+ editorUndoStack=[];editorRedoStack=[];updateEditorHistory();
 };
 lyricsNotesToggle.onclick=()=>{
  showLyricsChordNotes=!showLyricsChordNotes;
