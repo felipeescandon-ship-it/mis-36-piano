@@ -3086,6 +3086,19 @@ async function saveCloudSongSync(force=false){
 async function loadCloudSongSync(forceRefresh=false){
  if(!songHasCloudSync(currentSongId)){setCloudStatus("Nube: disponible próximamente para esta canción","warning");return false;}
  if(cloudRequestRunning&&!forceRefresh)return false;
+ // El guardado automático se demora 2.5s (scheduleCloudSave) para no llamar a
+ // la API en cada tecla. Si comparamos contra la nube antes de que ese envío
+ // salga, vemos una versión remota vieja y la marcamos como "conflicto" —
+ // aunque no hay ningún conflicto real, solo un cambio local que no tuvo
+ // tiempo de subir. Eso llevaba a que recargar rápido después de borrar una
+ // sección (o pulsar "Sincronizar ahora" antes de esos 2.5s) mostrara la
+ // sección ya borrada como si siguiera existiendo. Subir primero lo
+ // pendiente evita el falso conflicto sin tocar la detección de conflictos
+ // reales entre dispositivos (que sigue viva vía baseRevision/409).
+ if(!cloudRequestRunning&&readPreference(CLOUD_DIRTY_KEY,"")==="1"){
+   if(cloudSaveTimer){clearTimeout(cloudSaveTimer);cloudSaveTimer=null}
+   await saveCloudSongSync(false);
+ }
  const loadingSongId=currentSongId;
  cloudRequestRunning=true;
  cloudSyncNow.disabled=true;
