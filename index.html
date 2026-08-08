@@ -65,6 +65,14 @@ background:rgba(253,250,244,.96);box-shadow:0 12px 34px rgba(40,28,16,.2);backdr
 .settings-panel[hidden]{display:none}
 .settings-grid{display:grid;grid-template-columns:repeat(3,minmax(160px,1fr));gap:10px}
 .settings-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+.settings-status-row{display:flex;gap:12px;flex-wrap:wrap;margin-top:8px}
+.icon-action{min-width:44px;padding:10px;font-size:17px;line-height:1}
+.settings-advanced{margin-top:12px;padding-top:10px;border-top:1px solid var(--line)}
+.settings-advanced>summary{display:flex;align-items:center;min-height:44px;color:var(--muted);font-size:11px;font-weight:900;letter-spacing:.12em;text-transform:uppercase;cursor:pointer;list-style:none}
+.settings-advanced>summary::-webkit-details-marker{display:none}
+.settings-advanced>summary::before{content:"▸";margin-right:8px;font-size:10px}
+.settings-advanced[open]>summary::before{content:"▾"}
+.settings-advanced .setting{max-width:260px;padding-bottom:10px}
 .data-status{align-self:center;color:var(--muted);font-size:13px;font-weight:750}
 .data-status.ready{color:#11703c}.data-status.warning{color:#824700}.data-status.error{color:#992626}
 button,select,input{font:inherit}
@@ -604,33 +612,37 @@ body.screen-practicar #transitionLoop{display:none}
       </select>
     </label>
 
+    <div class="tempo">
+      <strong>Tempo: <span id="bpmOut">72</span> BPM</strong>
+      <input id="bpm" type="range" min="45" max="120" value="72" aria-label="Tempo">
+    </div>
+  </div>
+
+  <details class="settings-advanced">
+    <summary>Sonido avanzado</summary>
     <label class="setting">
-      <span>Sonido</span>
+      <span>Duración del sonido</span>
       <select id="sustainMode" aria-label="Duración del sonido">
         <option value="short">Sustain corto</option>
         <option value="natural" selected>Sustain natural</option>
         <option value="long">Sustain largo</option>
       </select>
     </label>
+  </details>
 
-    <div class="tempo">
-      <strong>Tempo: <span id="bpmOut">72</span> BPM</strong>
-      <input id="bpm" type="range" min="45" max="120" value="72" aria-label="Tempo">
-    </div>
-  </div>
   <div class="cancionero-manage">
     <h3>Administrar biblioteca</h3>
     <div class="settings-actions">
       <button id="cloudSyncNow" class="secondary" type="button">☁ Sincronizar ahora</button>
+      <button id="exportCancionero" class="secondary icon-action" type="button" aria-label="Exportar cancionero completo" title="Exportar cancionero completo">↓</button>
+      <button id="importCancionero" class="secondary icon-action" type="button" aria-label="Importar cancionero completo" title="Importar cancionero completo">↑</button>
+      <input id="importCancioneroFile" type="file" accept=".json,application/json" hidden>
       <button id="cloudUseLocal" class="primary" type="button" hidden>Subir este dispositivo</button>
       <button id="cloudUseRemote" class="secondary" type="button" hidden>Cargar versión de la nube</button>
+    </div>
+    <div class="settings-status-row">
       <span id="cloudStatus" class="data-status" aria-live="polite">Nube: comprobando…</span>
       <span id="catalogSyncStatus" class="data-status" aria-live="polite"></span>
-    </div>
-    <div class="settings-actions">
-      <button id="exportCancionero" class="secondary" type="button">↓ Exportar cancionero completo</button>
-      <button id="importCancionero" class="secondary" type="button">↧ Importar cancionero completo</button>
-      <input id="importCancioneroFile" type="file" accept=".json,application/json" hidden>
       <span id="cancioneroStatus" class="data-status" aria-live="polite"></span>
     </div>
     <div class="settings-actions">
