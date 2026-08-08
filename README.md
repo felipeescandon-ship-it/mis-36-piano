@@ -35,13 +35,21 @@ La app tiene tres pantallas principales, accesibles desde la barra superior
   tempo reducido. Lleva un contador de repeticiones por canción y por
   transición, con tendencia semanal, que sincroniza entre dispositivos.
 
-El botón "⚙ Ajustes" del header abre un panel aparte (no es una cuarta
-pantalla) con los controles de reproducción (sección inicial, recorrido,
-ayuda visual, tempo). La duración del sonido (sustain corto/natural/largo)
-vive en "Sonido avanzado", plegado, porque se configura una vez; el modo
-vigente se sigue leyendo en el resumen de la barra de Tocar. Debajo,
-"Administrar biblioteca": sincronizar con la nube y un icono "⇅" que
-despliega exportar/importar, del cancionero completo o de la canción abierta.
+El botón "⚙ Ajustes" del header abre un menú anclado al propio botón (no
+un bloque en el flujo de la página: abrirlo y cerrarlo no desplaza el resto
+de la app). En escritorio flota bajo el botón; en móvil (≤640px) se muestra
+como una hoja que sube desde abajo. Se cierra con Escape, tocando fuera o
+volviendo a pulsar "⚙ Ajustes".
+
+Su contenido depende de la pantalla activa: en Cancionero, sin canción
+cargada, solo muestra "Administrar biblioteca"; en Tocar y Practicar
+también muestra los controles de reproducción (sección inicial, recorrido,
+ayuda visual, sonido, tempo). "Administrar biblioteca" tiene "☁ Sincronizar
+ahora" y un icono "⇅" que despliega exportar/importar, del cancionero
+completo o de la canción abierta.
+
+El conmutador de notación ("Do · Re" / "C · D") vive en el header, junto a
+"⚙ Ajustes" — no depende de la pantalla en la que estés.
 
 ## Arquitectura
 
