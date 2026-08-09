@@ -398,10 +398,10 @@ button.song-line-end{padding:3px 8px}
 .practice-status.completed{background:#e8f2e9;color:#376c49}
 .practice-song-summary{margin-top:5px;font-size:12.5px;font-weight:750;color:var(--muted)}
 .practice-song-summary.has-reps{color:var(--accentDark)}
-.practice-chooser-body{display:flex!important;flex-wrap:wrap;align-items:flex-end;gap:16px}
+.practice-chooser-body{display:grid!important;grid-template-columns:minmax(0,1fr) minmax(0,1fr);align-items:start;gap:24px}
 .practice-chooser-select{flex:1 1 260px;min-width:0}
 .practice-chooser-select select{width:100%}
-.practice-chooser-full{display:flex;flex-direction:column;gap:5px;flex:1 1 260px}
+.practice-chooser-full{display:flex;flex-direction:column;gap:5px;min-width:0;padding-top:20px}
 .practice-chooser-full .sub{margin:0;color:var(--muted);font-size:12.5px}
 #customPanel{margin-bottom:16px!important;border-color:var(--line);border-radius:16px;box-shadow:0 10px 28px rgba(45,39,34,.08)}
 #customPanel .content{padding:18px 20px}
@@ -515,6 +515,8 @@ button.song-line-end{padding:3px 8px}
  .song-editing .editor-finish{flex:1 1 calc(36% - 4px);margin-left:0}
  .song-editing .editor-finish::before{content:none}
  .practice-selectors{grid-template-columns:1fr}
+ .practice-chooser-body{grid-template-columns:1fr!important;gap:14px}
+ .practice-chooser-full{padding-top:0}
  .transport-home{width:100%}
  .transport{grid-template-columns:42px minmax(112px,1fr) 42px 42px;width:100%}
  #settingsToggle{grid-column:2;justify-self:end;align-self:stretch}
@@ -644,7 +646,7 @@ button.song-line-end{padding:3px 8px}
 #cancioneroScreen{--c-paper:var(--panel);--c-shell1:transparent;--c-shell2:var(--line);--c-ink:var(--ink);--c-muted:var(--muted);--c-line:var(--line)}
 .cancionero-head h2{font-family:Lora,Georgia,serif}
 .song-fichero-shell{border-radius:0;background:transparent;padding:0;box-shadow:none}
-.song-list{position:relative;z-index:2;display:flex;align-items:flex-end;gap:8px;overflow-x:auto;padding:0 8px;border-bottom:0;min-height:80px}
+.song-list{position:relative;z-index:2;display:flex;align-items:flex-end;gap:8px;overflow-x:auto;overflow-y:hidden;padding:0;border-bottom:0;min-height:80px}
 .song-tab{position:relative;flex:0 0 208px;min-width:0;max-width:none;min-height:72px;padding:14px 18px;border:1px solid var(--c-line);border-radius:14px 14px 0 0;background:#efebe5;color:var(--c-ink);cursor:pointer;text-align:left;font:inherit;transition:background-color .15s ease,transform .15s ease}
 .song-tab:hover:not(.active){background:#f7f4ef}
 .song-tab.active{min-height:80px;margin-bottom:-1px;padding-top:17px;background:var(--c-paper);color:var(--c-ink);border-bottom-color:var(--c-paper);box-shadow:0 -6px 18px rgba(59,45,34,.05);transform:none;z-index:2}
@@ -653,7 +655,8 @@ button.song-line-end{padding:3px 8px}
 .song-tab-artist{display:block;margin-top:6px;color:var(--c-muted);font-size:12px;font-weight:570;opacity:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .song-tab-add{display:inline-flex;flex:0 0 152px;align-items:center;justify-content:center;gap:7px;min-height:72px;border:1px dashed var(--c-line);border-radius:14px 14px 0 0;background:transparent;color:var(--c-muted);font-weight:700;font-size:18px;cursor:pointer}
 .song-tab-add::after{content:"Nueva canción";font-size:12px;font-weight:700}
-.song-detail-panel{position:relative;z-index:1;min-height:268px;background:var(--c-paper);border:1px solid var(--c-line);border-radius:16px;box-shadow:0 12px 32px rgba(59,45,34,.065);padding:32px 40px}
+.song-detail-panel{position:relative;z-index:1;min-height:268px;background:var(--c-paper);border:1px solid var(--c-line);border-radius:0 0 16px 16px;box-shadow:0 12px 32px rgba(59,45,34,.065);padding:32px 40px}
+
 .song-detail-top{display:grid;grid-template-columns:minmax(0,1fr) 430px;align-items:start;justify-content:space-between;gap:56px}
 .song-detail-heading{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
 .song-detail-heading h3{margin:0;font-family:Lora,Georgia,serif;font-size:clamp(32px,3.4vw,44px);line-height:1.12;letter-spacing:-.035em;color:var(--c-ink)}
@@ -691,7 +694,7 @@ button.song-line-end{padding:3px 8px}
 }
 
 /* ===== Barra de la canción abierta + subpestañas de Tocar ===== */
-.songbar{display:flex;flex-wrap:wrap;align-items:center;gap:12px;margin-bottom:10px}
+.songbar{display:flex;flex-wrap:wrap;align-items:center;gap:16px;margin:16px 0 14px;padding-inline:4px}
 .songbar-back{white-space:nowrap}
 .songbar-main{flex:1 1 160px;min-width:0}
 .songbar-title{margin:0;font-family:Lora,Georgia,serif;font-size:clamp(19px,2.6vw,24px);font-weight:700;letter-spacing:-.01em}
@@ -713,6 +716,8 @@ body.view-structure #structureView{display:block;margin-bottom:16px}
 /* ===== Pantalla Practicar: sin subpestañas ni acceso duplicado a práctica ===== */
 body.screen-practicar .view-switch-bar{display:none}
 body.screen-practicar #transitionLoop{display:none}
+body.screen-practicar #practiceChooser{margin-bottom:16px}
+body.screen-practicar #practiceGuide:not([hidden]){margin-bottom:16px}
 
 @media (max-width:640px){
   .app-nav{gap:10px;padding:8px 10px}
@@ -721,13 +726,142 @@ body.screen-practicar #transitionLoop{display:none}
   .app-nav-sync{display:none!important}
   .songbar{gap:8px}
 }
+
+/* ===== Header claro cálido — refinamiento final ===== */
+.app-nav{
+  background:#FCFAF7;
+  color:#2F2824;
+  border:1px solid #E8DED2;
+  box-shadow:0 5px 18px rgba(70,52,38,.07);
+}
+
+.app-nav-brand{
+  color:#2F2824;
+  font-family:Lora,Georgia,serif;
+  font-weight:700;
+  font-size:15px;
+}
+
+/* Logo abstracto inspirado en teclas de piano */
+.app-nav-brand .piano-mark{
+  position:relative;
+  display:inline-block;
+  width:22px;
+  height:27px;
+  flex:0 0 22px;
+  border-radius:2px;
+  background:
+    linear-gradient(
+      90deg,
+      #2F2824 0 18%,
+      transparent 18% 28%,
+      #2F2824 28% 46%,
+      transparent 46% 56%,
+      #A8461F 56% 74%,
+      transparent 74% 82%,
+      #2F2824 82% 100%
+    );
+}
+
+.app-nav-tabs{
+  background:#F4F0EB;
+}
+
+.app-nav-tabs button{
+  color:#70675F;
+}
+
+.app-nav-tabs button:hover{
+  color:#2F2824;
+}
+
+.app-nav-tabs button[aria-selected="true"]{
+  background:#FFFEFB;
+  color:#29221C;
+  border:1px solid #E5DDD4;
+  box-shadow:0 2px 7px rgba(60,43,30,.07);
+}
+
+.app-nav-right{
+  color:#2F2824;
+}
+
+.app-nav-gear{
+  color:#554C45;
+  background:transparent;
+}
+
+.app-nav-gear:hover{
+  background:#F3EFEA;
+  color:#29221C;
+}
+
+#settingsToggle[aria-expanded="true"],
+#libraryToggle[aria-expanded="true"]{
+  background:#F3EFEA;
+  color:#29221C;
+  border-color:#DED7CE;
+}
+
+#settingsToggle[aria-expanded="true"]:hover,
+#libraryToggle[aria-expanded="true"]:hover{
+  background:#EEE8E1;
+  color:#29221C;
+}
+
+.app-nav-right .notation-toggle{
+  color:#554C45;
+  background:transparent;
+}
+
+.app-nav-right .notation-toggle:hover{
+  background:#F3EFEA;
+  color:#29221C;
+}
+
+/* Estado nube */
+.app-nav-sync.warning{
+  color:#925000;
+  background:#FBF1D9;
+}
+
+.app-nav-sync.warning .dot{
+  background:#C98515;
+}
+
+.app-nav-sync.ready{
+  color:#376C49;
+  background:#EEF6EF;
+}
+
+.app-nav-sync.error{
+  color:#992626;
+  background:#FCE8E6;
+}
+
+/* Evitar scrollbar vertical en las solapas */
+.song-list{
+  overflow-x:auto;
+  overflow-y:hidden;
+}
+
+@media(max-width:640px){
+  .app-nav{
+    background:#FCFAF7;
+  }
+
+  .app-nav-tabs{
+    background:#F4F0EB;
+  }
+}
+
 </style>
 </head>
 <body>
 <div class="app">
 <a class="skip-link" href="#mainContent">Saltar al contenido</a>
 <header class="app-nav">
-  <div class="app-nav-brand"><span class="mark">🎹</span> Piano Estudio</div>
+  <div class="app-nav-brand"><span class="mark piano-mark" aria-hidden="true"></span> Piano Estudio</div>
   <div class="app-nav-tabs" role="tablist" aria-label="Navegación principal">
     <button id="navCancionero" type="button" role="tab" aria-selected="true">Cancionero</button>
     <button id="navTocar" type="button" role="tab" aria-selected="false">Tocar</button>
