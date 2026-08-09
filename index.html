@@ -9,7 +9,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,600;0,700;1,500&display=swap" rel="stylesheet">
 <style>
 :root{
-  --bg:#f6efe3;--panel:#fff;--ink:#241a10;--muted:#6b5c4c;
+  --bg:#f6efe3;--panel:#fff;--paper:#fdfaf4;--ink:#241a10;--muted:#6b5c4c;
   --blue:#155fc0;--blueSoft:#dbeafe;--green:#168447;--greenSoft:#dcfce7;
   --amber:#925000;--amberSoft:#fff0cc;--line:#e6dcc9;--navy:#1f150e;
   --focus:#0b6ff4;--shadow:0 12px 30px rgba(40,28,16,.12);
@@ -79,7 +79,7 @@ select{background:#f3f6fa;color:#173354;border:1px solid var(--line)}
 .tempo{display:grid;grid-template-columns:auto 1fr;gap:8px;align-items:center}.tempo strong{grid-column:1/-1}.tempo input{width:100%}
 .audio-status{padding:7px 10px;border-radius:9px;background:#eef3f9;color:#46536a;font-size:13px;font-weight:800}.audio-status.ready{background:var(--greenSoft);color:#11703c}.audio-status.loading{background:var(--amberSoft);color:#824700}.audio-status.error{background:#fee2e2;color:#992626}
 .stack{display:flex;flex-direction:column;gap:10px}
-.card{background:#fff;border:1px solid var(--line);border-radius:20px;overflow:hidden;box-shadow:var(--shadow)}
+.card{background:var(--paper);border:1px solid var(--line);border-radius:20px;overflow:hidden;box-shadow:var(--shadow)}
 .card h2{margin:0;padding:14px 18px;border-bottom:1px solid var(--line);font-size:18px}
 .card-titlebar{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:9px 12px 9px 18px;border-bottom:1px solid var(--line)}
 .card-titlebar h2{padding:0;border:0}
@@ -136,7 +136,7 @@ display:grid;place-items:center;color:#fff;font-weight:900;z-index:7;border:2px 
 .label.hand-inactive{opacity:.55}
 #nextKeyboardWrap[hidden]{display:none}
 .current{border-color:#b8d4f3;box-shadow:0 16px 38px rgba(21,95,192,.13)}
-.current .card-titlebar,.current>h2{background:linear-gradient(90deg,#f3f8ff,#fff)}
+.current .card-titlebar,.current>h2{background:linear-gradient(90deg,#f3f8ff,var(--paper))}
 .current .content{padding:22px}
 .current .meta{align-items:center;margin-bottom:16px}
 .current .chord{font-size:clamp(60px,8vw,92px);color:#0b4f9f;letter-spacing:-.04em}
@@ -168,7 +168,7 @@ font-weight:900;border-radius:20px;padding:2px 7px 2px 6px;border:1.5px solid #f
 .swap-badge.black-badge{bottom:10px}
 .seq{margin-top:16px}
 .section-title{display:flex;justify-content:space-between;gap:12px;align-items:center;margin-bottom:10px}
-.sequence-title{margin:0;color:#123e72;font-size:18px}
+.sequence-title{margin:0;color:#123e72;font-family:Lora,Georgia,serif;font-style:italic;font-weight:600;font-size:19px}
 .steps{display:flex;gap:8px;overflow-x:auto;padding:2px 2px 10px}
 .step{min-width:82px;background:#fff;border:1px solid var(--line);border-radius:11px;padding:9px;text-align:center;font-weight:850}
 .step small{display:block;color:var(--muted);font-weight:600;margin-top:3px}
@@ -325,7 +325,7 @@ button.song-line-end{padding:3px 8px}
 .lyrics-preview-actions{display:flex;gap:7px;flex-wrap:wrap}
 .practice-guide{margin:0;border-color:var(--neutralLine);box-shadow:0 12px 30px rgba(61,42,28,.12)}
 .practice-guide[hidden]{display:none}
-.practice-guide-head{display:flex;align-items:flex-start;justify-content:space-between;gap:14px;padding:15px 18px;border-bottom:1px solid var(--neutralLine);background:linear-gradient(135deg,#f7f2e8,#fff)}
+.practice-guide-head{display:flex;align-items:flex-start;justify-content:space-between;gap:14px;padding:15px 18px;border-bottom:1px solid var(--neutralLine);background:linear-gradient(135deg,#f7f2e8,var(--paper))}
 .practice-guide-head h2{padding:0;border:0;color:var(--neutral)}
 .practice-guide-body{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:16px;align-items:end;padding:16px 18px}
 .practice-instruction{display:grid;gap:7px}
@@ -567,7 +567,7 @@ button.song-line-end{padding:3px 8px}
 .songbar{display:flex;flex-wrap:wrap;align-items:center;gap:12px;margin-bottom:10px}
 .songbar-back{white-space:nowrap}
 .songbar-main{flex:1 1 160px;min-width:0}
-.songbar-title{margin:0;font-size:clamp(19px,2.6vw,24px);letter-spacing:-.01em}
+.songbar-title{margin:0;font-family:Lora,Georgia,serif;font-size:clamp(19px,2.6vw,24px);font-weight:700;letter-spacing:-.01em}
 .songbar-meta{color:var(--muted);font-size:12.5px;font-weight:750}
 .songbar-edit{white-space:nowrap}
 .view-switch.tocar-subtabs button{min-width:0}
