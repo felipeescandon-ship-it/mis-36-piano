@@ -14,8 +14,8 @@
   --amber:#925000;--amberSoft:#fff0cc;--line:#e6dcc9;--navy:#1f150e;
   --focus:#0b6ff4;--shadow:0 12px 30px rgba(40,28,16,.12);
   --accent:#a8461f;--accentSoft:#f3ddd0;--accentDark:#7c3417;
-  --neutral:#3d2a1c;--neutralSoft:#efe4d3;--neutralLine:#d9cdb8;
-  --held:#0a6f93;--heldFill:rgba(10,111,147,.14);--heldGlow:rgba(10,111,147,.35)
+  --neutral:var(--accentDark);--neutralSoft:var(--accentSoft);--neutralLine:var(--line);
+  --held:#0a6f93;--heldFill:rgba(10,111,147,.14);--heldGlow:rgba(10,111,147,.35);--heldDark:#0b5d7a
 }
 *{box-sizing:border-box}
 body{margin:0;background:linear-gradient(#f6efe3,#fbf8f2);color:var(--ink);
@@ -25,12 +25,6 @@ transform:translateY(-160%);padding:10px 14px;border-radius:10px;background:#fff
 box-shadow:0 8px 24px rgba(7,26,51,.25)}
 .skip-link:focus{transform:translateY(0)}
 .app{max-width:1240px;margin:auto;padding:20px}
-.app-header{display:flex;align-items:center;justify-content:space-between;gap:20px;background:linear-gradient(135deg,#06172d,#123e72);color:#fff;border-radius:22px;
-padding:16px 22px;box-shadow:var(--shadow)}
-.app-header h1{margin:2px 0 4px;font-size:clamp(28px,4vw,42px)}
-.app-header p{margin:0;color:#d8e7fa}
-.current-song-name{margin:0 0 4px;font-size:clamp(18px,2.6vw,26px);font-weight:800;color:#bcdcff}
-.eyebrow{color:#8fc2ff;font-size:11px;font-weight:900;letter-spacing:.14em;text-transform:uppercase}
 .notation-toggle{min-width:76px;min-height:52px;flex:0 0 auto;padding:9px 13px;border:1px solid rgba(255,255,255,.26);border-radius:16px;background:rgba(255,255,255,.10);color:#fff;font-size:15px;font-weight:900;letter-spacing:.02em}
 .notation-toggle:hover{background:rgba(255,255,255,.17)}
 .toolbar{display:grid;gap:10px;background:#fff;border:1px solid var(--line);
@@ -163,12 +157,12 @@ display:grid;place-items:center;color:#fff;font-weight:900;z-index:7;border:2px 
 .black.upcoming{background:#b9c1cc;box-shadow:inset 0 0 0 2px rgba(255,255,255,.72)}
 .white.held-note::before{content:"";position:absolute;inset:4px;border:2px solid var(--held);border-radius:5px;
 background:var(--heldFill);box-shadow:0 0 0 1px rgba(10,111,147,.12);z-index:5;pointer-events:none}
-.black.held-note{box-shadow:inset 0 0 0 2px #7ddaf0,0 0 0 2px var(--heldGlow)}
+.black.held-note{box-shadow:inset 0 0 0 2px var(--held),0 0 0 2px var(--heldGlow)}
 .white.finger-swap::before{content:"";position:absolute;inset:4px;border:2px dashed var(--held);border-radius:5px;
 background:var(--heldFill);z-index:5;pointer-events:none}
-.black.finger-swap{box-shadow:inset 0 0 0 2px #7ddaf0;outline:2px dashed var(--held);outline-offset:2px}
-.swap-badge{position:absolute;left:calc(50% + 17px);bottom:9px;background:var(--held);color:#fff;font-size:10px;
-font-weight:900;border-radius:20px;padding:2px 6px 2px 5px;white-space:nowrap;z-index:8;pointer-events:none}
+.black.finger-swap{box-shadow:inset 0 0 0 2px var(--held);outline:2px dashed var(--held);outline-offset:2px}
+.swap-badge{position:absolute;left:calc(50% + 17px);bottom:9px;background:var(--heldDark);color:#fff;font-size:10.5px;
+font-weight:900;border-radius:20px;padding:2px 7px 2px 6px;border:1.5px solid #fff;box-shadow:0 2px 6px rgba(10,111,147,.4);white-space:nowrap;z-index:8;pointer-events:none}
 .swap-badge.black-badge{bottom:10px}
 .seq{margin-top:16px}
 .section-title{display:flex;justify-content:space-between;gap:12px;align-items:center;margin-bottom:10px}
@@ -211,8 +205,8 @@ font-weight:900;border-radius:20px;padding:2px 6px 2px 5px;white-space:nowrap;z-
 .legend-block:last-child{border-right:0}
 .key{display:flex;gap:8px;align-items:center;margin:7px 0}
 .swatch{width:17px;height:17px;border-radius:4px}.green{background:var(--green)}.blue{background:var(--blue)}.amber{background:var(--amber)}.gray{background:#8b96a6}
-.held-swatch{background:var(--blue);border:3px solid #7ddaf0}
-.swap-swatch{background:var(--blue);border:3px dashed #7ddaf0}
+.held-swatch{background:var(--blue);border:3px solid var(--held)}
+.swap-swatch{background:var(--blue);border:3px dashed var(--held)}
 .digits{display:flex;gap:14px;flex-wrap:wrap;justify-content:center}
 .digit{text-align:center;font-size:12px}.circle{width:31px;height:31px;border-radius:50%;display:grid;place-items:center;
 background:var(--blue);color:#fff;font-weight:900;margin:auto auto 4px}
@@ -392,8 +386,6 @@ button.song-line-end{padding:3px 8px}
 }
 @media(max-width:600px){
  .app{padding:12px}
- .app-header{padding:17px 18px;border-radius:18px}
- .app-header p{font-size:13px}
  .notation-toggle{min-width:68px;min-height:48px;padding:8px 10px;font-size:14px}
  .lyrics-page{padding:0 16px 20px;border-radius:18px}
  .lyrics-header{display:grid;margin:0 -16px 4px;padding:18px 16px 16px}
@@ -527,34 +519,34 @@ button.song-line-end{padding:3px 8px}
 .cancionero-head{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px}
 .cancionero-head h2{margin:0;font-size:clamp(20px,3vw,26px)}
 .cancionero-head p{margin:2px 0 0;color:var(--muted);font-size:13px}
-#cancioneroScreen{--c-paper:oklch(98% 0.008 75);--c-shell1:oklch(88% 0.02 60);--c-shell2:oklch(84% 0.02 60);--c-ink:oklch(24% 0.02 55);--c-muted:oklch(45% 0.03 55);--c-line:oklch(88% 0.015 60)}
+#cancioneroScreen{--c-paper:var(--bg);--c-shell1:var(--neutralSoft);--c-shell2:var(--line);--c-ink:var(--ink);--c-muted:var(--muted);--c-line:var(--line)}
 .cancionero-head h2{font-family:Lora,Georgia,serif;letter-spacing:-.01em}
 .song-fichero-shell{border-radius:22px;background:linear-gradient(180deg,var(--c-shell1),var(--c-shell2));padding:22px 18px 10px;box-shadow:inset 0 2px 8px rgba(0,0,0,.06)}
 .song-list{display:flex;align-items:stretch;gap:6px;overflow-x:auto;padding:0 2px 2px;border-bottom:3px solid var(--c-shell2);min-height:70px}
-.song-tab{flex:0 0 auto;min-width:170px;max-width:230px;min-height:64px;padding:10px 16px 12px;border:0;border-top:4px solid oklch(52% 0.13 var(--hue,40));border-radius:12px 12px 0 0;background:oklch(91% 0.02 var(--hue,40));color:oklch(32% 0.05 var(--hue,40));cursor:pointer;text-align:left;font:inherit}
+.song-tab{flex:0 0 auto;min-width:170px;max-width:230px;min-height:64px;padding:10px 16px 12px;border:0;border-top:4px solid var(--accent);border-radius:12px 12px 0 0;background:var(--accentSoft);color:var(--accentDark);cursor:pointer;text-align:left;font:inherit}
 .song-tab.active{background:var(--c-paper);color:var(--c-ink);box-shadow:0 -6px 16px rgba(30,20,10,.10);transform:translateY(-4px);position:relative;z-index:2}
 .song-tab-title{display:block;font-family:Lora,Georgia,serif;font-weight:700;font-size:15px;line-height:1.2;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .song-tab-artist{display:block;margin-top:3px;font-size:11.5px;font-weight:600;opacity:.85;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.song-tab-add{flex:0 0 56px;border:2px dashed oklch(70% 0.02 60);border-radius:12px 12px 0 0;background:transparent;color:var(--c-muted);font-weight:800;font-size:20px;cursor:pointer}
-.song-detail-panel{background:var(--c-paper);border-radius:0 0 16px 16px;box-shadow:0 20px 44px rgba(30,20,10,.16);padding:26px 30px;border-top:1px solid oklch(90% 0.01 60)}
+.song-tab-add{flex:0 0 56px;border:2px dashed var(--c-line);border-radius:12px 12px 0 0;background:transparent;color:var(--c-muted);font-weight:800;font-size:20px;cursor:pointer}
+.song-detail-panel{background:var(--c-paper);border-radius:0 0 16px 16px;box-shadow:0 20px 44px rgba(30,20,10,.16);padding:26px 30px;border-top:1px solid var(--c-line)}
 .song-detail-top{display:flex;align-items:flex-start;justify-content:space-between;gap:24px;flex-wrap:wrap}
 .song-detail-heading{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
 .song-detail-heading h3{margin:0;font-family:Lora,Georgia,serif;font-size:28px;letter-spacing:-.01em;color:var(--c-ink)}
-.song-detail-index{font-family:Lora,Georgia,serif;font-style:italic;font-size:12px;color:oklch(70% 0.02 60);white-space:nowrap}
-.song-detail-seed{font-size:10px;font-weight:900;letter-spacing:.1em;text-transform:uppercase;color:oklch(52% 0.13 var(--hue,40));border:1px solid oklch(52% 0.13 var(--hue,40));border-radius:5px;padding:2px 7px}
+.song-detail-index{font-family:Lora,Georgia,serif;font-style:italic;font-size:12px;color:var(--c-muted);opacity:.7;white-space:nowrap}
+.song-detail-seed{font-size:10px;font-weight:900;letter-spacing:.1em;text-transform:uppercase;color:var(--accent);border:1px solid var(--accent);border-radius:5px;padding:2px 7px}
 .song-detail-meta{margin-top:6px;color:var(--c-muted);font-size:14px;font-weight:600}
 .song-detail-progress{margin-top:14px;font-size:13px;font-weight:750}
-.song-detail-progress.has-reps{color:oklch(52% 0.13 var(--hue,40))}
+.song-detail-progress.has-reps{color:var(--accent)}
 .song-detail-progress.no-reps{color:var(--c-muted)}
 .song-detail-actions{display:flex;flex-direction:column;align-items:stretch;gap:8px;flex:0 0 auto;min-width:220px}
-.song-detail-open{min-height:48px;padding:0 22px;border:0;border-radius:11px;background:oklch(52% 0.13 var(--hue,40));color:#fff;font-size:15px;font-weight:800;cursor:pointer}
+.song-detail-open{min-height:48px;padding:0 22px;border:0;border-radius:11px;background:var(--accent);color:#fff;font-size:15px;font-weight:800;cursor:pointer}
 .song-detail-views{display:flex;gap:6px;flex-wrap:wrap}
 .song-detail-views button{flex:1 1 auto;min-height:40px;padding:0 10px;border:1px solid var(--c-line);border-radius:9px;background:#fff;color:var(--c-muted);font-size:12px;font-weight:750;cursor:pointer;white-space:nowrap}
 .song-detail-practice{min-height:44px;padding:0 14px;border:1px solid var(--c-line);border-radius:11px;background:transparent;color:var(--c-muted);font-size:13px;font-weight:750;cursor:pointer}
 .song-detail-links{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:2px}
 .song-detail-links button{display:inline-flex;align-items:center;min-height:44px;padding:0 6px;border:0;background:transparent;font-size:12.5px;font-weight:750;cursor:pointer}
 .song-detail-edit{color:var(--c-muted)}
-.song-detail-delete{color:oklch(55% 0.14 30)}
+.song-detail-delete{color:#9f1d1d}
 .song-detail-links button:disabled{opacity:.45;cursor:not-allowed}
 .cancionero-manage{margin-top:4px;padding-top:15px;border-top:1px solid var(--line)}
 .cancionero-manage h3{margin:0 0 9px;font-size:11px;font-weight:900;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
@@ -611,7 +603,44 @@ body.screen-practicar #transitionLoop{display:none}
   <div class="app-nav-right">
     <span id="navSyncChip" class="app-nav-sync" role="status" aria-live="polite"><span class="dot"></span><span id="navSyncText">Nube</span></span>
     <button id="notation" class="notation-toggle" type="button" aria-label="Usar nombres de notas en inglés" title="Usar nombres de notas en inglés">Do · Re</button>
+    <button id="libraryToggle" class="app-nav-gear secondary" type="button" aria-expanded="false" aria-controls="libraryPanel" aria-label="Mi biblioteca" title="Mi biblioteca">☁ Biblioteca</button>
     <button id="settingsToggle" class="app-nav-gear secondary" type="button" aria-expanded="false" aria-controls="settingsPanel">⚙ Ajustes</button>
+  </div>
+
+  <div id="libraryPanel" class="settings-panel" role="dialog" aria-label="Mi biblioteca" hidden>
+  <div class="cancionero-manage">
+    <h3>☁ Mi biblioteca</h3>
+    <div class="settings-actions">
+      <button id="cloudSyncNow" class="secondary" type="button">☁ Sincronizar ahora</button>
+      <button id="dataMenuToggle" class="secondary icon-action" type="button" aria-expanded="false" aria-controls="dataMenu" aria-label="Exportar o importar" title="Exportar o importar">⇅</button>
+      <button id="cloudUseLocal" class="primary" type="button" hidden>Subir este dispositivo</button>
+      <button id="cloudUseRemote" class="secondary" type="button" hidden>Cargar versión de la nube</button>
+    </div>
+    <div id="dataMenu" class="data-menu" hidden>
+      <div class="data-menu-group">
+        <h4>Cancionero completo (respaldo)</h4>
+        <div class="data-menu-row">
+          <button id="exportCancionero" class="secondary" type="button">↓ Exportar</button>
+          <button id="importCancionero" class="secondary" type="button">↑ Restaurar</button>
+        </div>
+      </div>
+      <div class="data-menu-group">
+        <h4 id="dataMenuSongLabel">Canción abierta (respaldo)</h4>
+        <div class="data-menu-row">
+          <button id="exportSongSync" class="secondary" type="button">↓ Exportar</button>
+          <button id="importSongSync" class="secondary" type="button">↑ Restaurar</button>
+        </div>
+      </div>
+      <input id="importCancioneroFile" type="file" accept=".json,application/json" hidden>
+      <input id="importSongSyncFile" type="file" accept=".json,application/json" hidden>
+    </div>
+    <div class="settings-status-row">
+      <span id="cloudStatus" class="data-status" aria-live="polite">Nube: comprobando…</span>
+      <span id="catalogSyncStatus" class="data-status" aria-live="polite"></span>
+      <span id="cancioneroStatus" class="data-status" aria-live="polite"></span>
+      <span id="songDataStatus" class="data-status" aria-live="polite"></span>
+    </div>
+  </div>
   </div>
 
   <div id="settingsPanel" class="settings-panel" role="dialog" aria-label="Ajustes" hidden>
@@ -654,43 +683,9 @@ body.screen-practicar #transitionLoop{display:none}
         </select>
       </label>
     </div>
-
-  <div class="cancionero-manage">
-    <h3>Administrar biblioteca</h3>
-    <div class="settings-actions">
-      <button id="cloudSyncNow" class="secondary" type="button">☁ Sincronizar ahora</button>
-      <button id="dataMenuToggle" class="secondary icon-action" type="button" aria-expanded="false" aria-controls="dataMenu" aria-label="Exportar o importar" title="Exportar o importar">⇅</button>
-      <button id="cloudUseLocal" class="primary" type="button" hidden>Subir este dispositivo</button>
-      <button id="cloudUseRemote" class="secondary" type="button" hidden>Cargar versión de la nube</button>
-    </div>
-    <div id="dataMenu" class="data-menu" hidden>
-      <div class="data-menu-group">
-        <h4>Cancionero completo</h4>
-        <div class="data-menu-row">
-          <button id="exportCancionero" class="secondary" type="button">↓ Exportar</button>
-          <button id="importCancionero" class="secondary" type="button">↑ Importar</button>
-        </div>
-      </div>
-      <div class="data-menu-group">
-        <h4 id="dataMenuSongLabel">Ajustes de la canción abierta</h4>
-        <div class="data-menu-row">
-          <button id="exportSongSync" class="secondary" type="button">↓ Exportar</button>
-          <button id="importSongSync" class="secondary" type="button">↑ Importar</button>
-        </div>
-      </div>
-      <input id="importCancioneroFile" type="file" accept=".json,application/json" hidden>
-      <input id="importSongSyncFile" type="file" accept=".json,application/json" hidden>
-    </div>
-    <div class="settings-status-row">
-      <span id="cloudStatus" class="data-status" aria-live="polite">Nube: comprobando…</span>
-      <span id="catalogSyncStatus" class="data-status" aria-live="polite"></span>
-      <span id="cancioneroStatus" class="data-status" aria-live="polite"></span>
-      <span id="songDataStatus" class="data-status" aria-live="polite"></span>
-    </div>
-  </div>
   </div>
 </header>
-<button id="settingsScrim" class="settings-scrim" type="button" aria-label="Cerrar ajustes" hidden></button>
+<button id="settingsScrim" class="settings-scrim" type="button" aria-label="Cerrar ajustes o biblioteca" hidden></button>
 
 <section id="cancioneroScreen" class="app-screen" aria-labelledby="cancioneroTitle">
   <div class="cancionero-head">
@@ -1020,8 +1015,8 @@ body.screen-practicar #transitionLoop{display:none}
 <div class="key"><span class="swatch green"></span>Mano izquierda: bajo, dedo 5</div>
 <div class="key"><span class="swatch blue"></span>Mano derecha: acorde sonando</div>
 <div class="key"><span class="swatch gray"></span>Sombra gris: próxima posición; todavía no se toca</div>
-<div class="key"><span class="swatch held-swatch"></span>Contorno celeste: mantén ese dedo</div>
-<div class="key"><span class="swatch swap-swatch"></span>Contorno punteado: misma tecla, cambiá al dedo indicado</div>
+<div class="key"><span class="swatch held-swatch"></span>Contorno azul petróleo: mantén ese dedo</div>
+<div class="key"><span class="swatch swap-swatch"></span>Contorno punteado + insignia "⇄": misma tecla, cambiá al dedo indicado</div>
 </div>
 <div class="legend-block">
 <div class="key"><span class="circle" style="background:var(--green)">5</span>Meñique de la mano izquierda</div>
@@ -1051,6 +1046,8 @@ const settingsPanel=document.getElementById("settingsPanel");
 const settingsScrim=document.getElementById("settingsScrim");
 const settingsPlaybackGroup=document.getElementById("settingsPlaybackGroup");
 const settingsNoSongNote=document.getElementById("settingsNoSongNote");
+const libraryToggle=document.getElementById("libraryToggle");
+const libraryPanel=document.getElementById("libraryPanel");
 const dataMenuToggle=document.getElementById("dataMenuToggle");
 const dataMenu=document.getElementById("dataMenu");
 const dataMenuSongLabel=document.getElementById("dataMenuSongLabel");
@@ -1257,11 +1254,14 @@ function setTransportLocation(showLyrics){
  const target=showLyrics&&!songEditMode?lyricsPlaybackDock:transportHome;
  if(mainTransport.parentElement!==target)target.prepend(mainTransport);
 }
-// Ajustes es un menú anclado al propio botón (no un bloque en el flujo de
-// la página): abrirlo y cerrarlo ya no desplaza el resto de la app. El
-// contenido de reproducción (sección, recorrido, sonido, tempo) solo tiene
-// sentido con una canción cargada, así que se oculta en Cancionero — el
-// resto (sincronizar, exportar/importar) sirve en cualquier pantalla.
+// Ajustes y Mi biblioteca son dos menús independientes, cada uno anclado a
+// su propio botón (no un bloque en el flujo de la página): abrir o cerrar
+// cualquiera de los dos ya no desplaza el resto de la app, y solo uno de
+// los dos permanece abierto a la vez. Ajustes es exclusivamente reproducción
+// (sección, recorrido, sonido, tempo) y solo tiene sentido con una canción
+// cargada, así que se oculta en Cancionero. Mi biblioteca (sincronizar,
+// exportar/importar, respaldo) sirve en cualquier pantalla, con o sin
+// canción abierta.
 function updateSettingsPanelForScreen(){
  const hasSong=activeScreen!=="cancionero";
  settingsPlaybackGroup.hidden=!hasSong;
@@ -1269,13 +1269,24 @@ function updateSettingsPanelForScreen(){
 }
 function setSettingsOpen(open){
  settingsPanel.hidden=!open;
- settingsScrim.hidden=!open;
+ settingsScrim.hidden=!open&&libraryPanel.hidden;
  settingsToggle.setAttribute("aria-expanded",String(open));
- settingsToggle.textContent=open?"✕ Cerrar ajustes":"⚙ Ajustes";
+ settingsToggle.textContent=open?"✕ Cerrar":"⚙ Ajustes";
+ settingsToggle.setAttribute("aria-label","Ajustes");
  if(open){
    updateSettingsPanelForScreen();
+   setLibraryOpen(false);
+ }
+}
+function setLibraryOpen(open){
+ libraryPanel.hidden=!open;
+ settingsScrim.hidden=!open&&settingsPanel.hidden;
+ libraryToggle.setAttribute("aria-expanded",String(open));
+ libraryToggle.textContent=open?"✕ Cerrar":"☁ Biblioteca";
+ if(open){
+   setSettingsOpen(false);
  }else{
-   // Cerrar Ajustes también repliega exportar/importar: son acciones
+   // Cerrar Mi biblioteca también repliega exportar/importar: son acciones
    // puntuales, no un estado que convenga dejar abierto para la próxima vez.
    setDataMenuOpen(false);
  }
@@ -1285,7 +1296,7 @@ function setDataMenuOpen(open){
  dataMenuToggle.setAttribute("aria-expanded",String(open));
  // La segunda pareja de botones actúa sobre la canción cargada, así que el
  // título va en el encabezado del grupo en vez de repetirse en cada botón.
- if(open)dataMenuSongLabel.textContent=`Ajustes de "${currentSong()?.title||"la canción abierta"}"`;
+ if(open)dataMenuSongLabel.textContent=`Respaldo de "${currentSong()?.title||"la canción abierta"}"`;
 }
 function updateSyncEditorCollapse(){
  syncEditor.classList.toggle("editor-collapsed",syncEditorCollapsed);
@@ -2433,7 +2444,6 @@ function undoDeleteSong(){
 // un único panel de detalle abajo para la solapa activa. Construida con
 // DOM/textContent (nunca innerHTML con datos de la canción) porque
 // título/artista pueden venir del importador de texto pegado por el usuario.
-function songHue(songId){let h=0;for(let i=0;i<songId.length;i++){h=(h*31+songId.charCodeAt(i))%360}return h}
 function openSongInView(songId,view){switchToSong(songId);setActiveScreen("tocar");setMainView(view)}
 function practiceSongFromCancionero(songId){switchToSong(songId);setActiveScreen("practicar")}
 function renderSongList(){
@@ -2447,7 +2457,6 @@ function renderSongList(){
    const active=songId===cancioneroActiveId;
    const tab=document.createElement("button");
    tab.type="button";tab.className="song-tab"+(active?" active":"");
-   tab.style.setProperty("--hue",songHue(songId));
    tab.setAttribute("aria-pressed",String(active));
    const titleEl=document.createElement("span");titleEl.className="song-tab-title";titleEl.textContent=song.title;
    const artistEl=document.createElement("span");artistEl.className="song-tab-artist";
@@ -2468,7 +2477,6 @@ function renderSongDetail(){
  const songId=cancioneroActiveId;
  const song=songMeta(songId);
  if(!song)return;
- songDetailPanel.style.setProperty("--hue",songHue(songId));
 
  const top=document.createElement("div");top.className="song-detail-top";
  const left=document.createElement("div");left.style.flex="1";left.style.minWidth="0";
@@ -4562,7 +4570,13 @@ resumeLyricsFollow.onclick=()=>{
  focusCurrentSongEvent(true);
 };
 settingsToggle.onclick=()=>setSettingsOpen(settingsPanel.hidden);
-settingsScrim.onclick=()=>{setSettingsOpen(false);settingsToggle.focus()};
+libraryToggle.onclick=()=>setLibraryOpen(libraryPanel.hidden);
+settingsScrim.onclick=()=>{
+ const wasSettings=!settingsPanel.hidden;
+ setSettingsOpen(false);
+ setLibraryOpen(false);
+ (wasSettings?settingsToggle:libraryToggle).focus();
+};
 dataMenuToggle.onclick=()=>setDataMenuOpen(dataMenu.hidden);
 document.addEventListener(window.PointerEvent?"pointerdown":"touchstart",unlockAudioFromGesture,{capture:true,passive:true});
 window.addEventListener("touchmove",pauseLyricsFollowFromUser,{passive:true});
@@ -4572,6 +4586,12 @@ document.addEventListener("keydown",event=>{
    event.preventDefault();
    setSettingsOpen(false);
    settingsToggle.focus();
+   return;
+ }
+ if(event.key==="Escape"&&!libraryPanel.hidden){
+   event.preventDefault();
+   setLibraryOpen(false);
+   libraryToggle.focus();
    return;
  }
  if(event.key==="Escape"&&!lyricsChordPreview.hidden){
