@@ -3730,7 +3730,7 @@ async function loadCloudSongSync(forceRefresh=false){
  }finally{
    cloudRequestRunning=false;
    cloudSyncNow.disabled=false;
-   if(cloudSaveQueued&&cloudUseLocal.hidden){
+   if(cloudSaveQueued&&cloudConflictDetails.hidden){
      cloudSaveQueued=false;
      if(cloudSaveTimer)clearTimeout(cloudSaveTimer);
      cloudSaveTimer=setTimeout(()=>saveCloudSongSync(false),250);
