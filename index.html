@@ -616,6 +616,86 @@ button.song-line-end{padding:3px 8px}
 #libraryPanel .data-menu{gap:12px;margin-top:12px;padding:13px;background:#fbf6ee}
 #libraryPanel .data-menu-group h4{font-size:10px}
 #libraryPanel .settings-status-row{display:grid;gap:4px;margin-top:12px}
+#libraryPanel .cloud-conflict-details{
+  display:grid;
+  gap:14px;
+  margin-top:14px;
+  padding:16px;
+  border:1px solid #ead7b3;
+  border-radius:14px;
+  background:#fffaf0;
+}
+#libraryPanel .cloud-conflict-details[hidden]{display:none}
+#libraryPanel .cloud-conflict-copy{
+  display:grid;
+  gap:4px;
+}
+#libraryPanel .cloud-conflict-copy strong{
+  color:var(--ink);
+  font-size:15px;
+}
+#libraryPanel .cloud-conflict-copy span{
+  color:var(--muted);
+  font-size:12.5px;
+  line-height:1.4;
+}
+#libraryPanel .cloud-version-grid{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:10px;
+}
+#libraryPanel .cloud-version-card{
+  display:grid;
+  gap:5px;
+  min-width:0;
+  padding:13px 14px;
+  border:1px solid var(--line);
+  border-radius:12px;
+  background:var(--paper);
+}
+#libraryPanel .cloud-version-card.is-newer{
+  border-color:#c9a36a;
+  box-shadow:inset 0 3px 0 #c98515;
+}
+#libraryPanel .cloud-version-label{
+  color:var(--muted);
+  font-size:10px;
+  font-weight:900;
+  letter-spacing:.08em;
+  text-transform:uppercase;
+}
+#libraryPanel .cloud-version-card strong{
+  color:var(--ink);
+  font-size:13px;
+}
+#libraryPanel .cloud-version-time{
+  color:var(--muted);
+  font-size:11.5px;
+  line-height:1.35;
+}
+#libraryPanel .cloud-conflict-actions{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:10px;
+}
+#libraryPanel .cloud-conflict-actions button{
+  min-height:48px;
+  background:var(--paper);
+  color:var(--ink);
+  border:1px solid var(--line);
+  box-shadow:none;
+}
+#libraryPanel .cloud-conflict-actions button:hover{
+  border-color:#bcae9f;
+  background:#f7f3ee;
+}
+@media(max-width:640px){
+  #libraryPanel .cloud-version-grid,
+  #libraryPanel .cloud-conflict-actions{
+    grid-template-columns:1fr;
+  }
+}
+
 #libraryPanel .data-status{font-size:12.5px}
 .settings-scrim{position:fixed;inset:0;z-index:200;background:transparent;border:0;padding:0;margin:0;cursor:default}
 .settings-scrim[hidden]{display:none}
@@ -877,12 +957,37 @@ body.screen-practicar #practiceGuide:not([hidden]){margin-bottom:16px}
   <div id="libraryPanel" class="settings-panel" role="dialog" aria-label="Mi biblioteca" hidden>
   <div class="cancionero-manage">
     <h3>☁ Mi biblioteca</h3>
-    <div class="settings-actions">
+    <div class="settings-actions cloud-sync-actions">
       <button id="cloudSyncNow" class="secondary" type="button">☁ Sincronizar ahora</button>
       <button id="dataMenuToggle" class="secondary icon-action" type="button" aria-expanded="false" aria-controls="dataMenu" aria-label="Exportar o importar" title="Exportar o importar">⇅</button>
-      <button id="cloudUseLocal" class="primary" type="button" hidden>Subir este dispositivo</button>
-      <button id="cloudUseRemote" class="secondary" type="button" hidden>Cargar versión de la nube</button>
     </div>
+
+    <div id="cloudConflictDetails" class="cloud-conflict-details" hidden>
+      <div class="cloud-conflict-copy">
+        <strong id="cloudConflictTitle">Hay dos versiones distintas</strong>
+        <span>Nada se reemplazará hasta que elijas cuál conservar.</span>
+      </div>
+
+      <div class="cloud-version-grid">
+        <div id="cloudLocalCard" class="cloud-version-card">
+          <span class="cloud-version-label">Este dispositivo</span>
+          <strong id="cloudLocalSummary">Cambios locales</strong>
+          <span id="cloudLocalTime" class="cloud-version-time"></span>
+        </div>
+
+        <div id="cloudRemoteCard" class="cloud-version-card">
+          <span class="cloud-version-label">Nube</span>
+          <strong id="cloudRemoteSummary">Versión guardada</strong>
+          <span id="cloudRemoteTime" class="cloud-version-time"></span>
+        </div>
+      </div>
+
+      <div id="cloudConflictActions" class="cloud-conflict-actions">
+        <button id="cloudUseLocal" class="secondary" type="button">Conservar este dispositivo</button>
+        <button id="cloudUseRemote" class="secondary" type="button">Conservar versión de la nube</button>
+      </div>
+    </div>
+
     <div id="dataMenu" class="data-menu" hidden>
       <div class="data-menu-group">
         <h4>Cancionero completo (respaldo)</h4>
@@ -1340,6 +1445,14 @@ const songDataStatus=document.getElementById("songDataStatus");
 const cloudSyncNow=document.getElementById("cloudSyncNow");
 const cloudUseLocal=document.getElementById("cloudUseLocal");
 const cloudUseRemote=document.getElementById("cloudUseRemote");
+const cloudConflictDetails=document.getElementById("cloudConflictDetails");
+const cloudConflictTitle=document.getElementById("cloudConflictTitle");
+const cloudLocalCard=document.getElementById("cloudLocalCard");
+const cloudRemoteCard=document.getElementById("cloudRemoteCard");
+const cloudLocalSummary=document.getElementById("cloudLocalSummary");
+const cloudRemoteSummary=document.getElementById("cloudRemoteSummary");
+const cloudLocalTime=document.getElementById("cloudLocalTime");
+const cloudRemoteTime=document.getElementById("cloudRemoteTime");
 const cloudStatus=document.getElementById("cloudStatus");
 const catalogSyncStatus=document.getElementById("catalogSyncStatus");
 const pianoViewButton=document.getElementById("pianoViewButton");
@@ -2295,6 +2408,7 @@ sections=cloneSongSections(currentSongId);
 let SONG_SYNC_KEY=songStorageKey(currentSongId,"sync-v1");
 let CLOUD_REVISION_KEY=songStorageKey(currentSongId,"cloud-revision");
 let CLOUD_DIRTY_KEY=songStorageKey(currentSongId,"cloud-dirty");
+let CLOUD_LOCAL_UPDATED_AT_KEY=songStorageKey(currentSongId,"cloud-local-updated-at");
 let hadLocalSongSync=Boolean(readPreference(SONG_SYNC_KEY,""));
 let cloudRevision=readPreference(CLOUD_REVISION_KEY,"");
 let cloudSaveTimer=null,cloudRequestRunning=false,cloudRemoteDocument=null;
@@ -2650,6 +2764,7 @@ function switchToSong(songId){
  SONG_SYNC_KEY=songStorageKey(songId,"sync-v1");
  CLOUD_REVISION_KEY=songStorageKey(songId,"cloud-revision");
  CLOUD_DIRTY_KEY=songStorageKey(songId,"cloud-dirty");
+ CLOUD_LOCAL_UPDATED_AT_KEY=songStorageKey(songId,"cloud-local-updated-at");
  hadLocalSongSync=Boolean(readPreference(SONG_SYNC_KEY,""));
  cloudRevision=readPreference(CLOUD_REVISION_KEY,"");
  cloudRequestRunning=false;cloudRemoteDocument=null;cloudSaveQueued=false;
@@ -2984,6 +3099,7 @@ async function importSongSyncFromFile(file){
  localStorage.setItem(SONG_SYNC_KEY,JSON.stringify(imported));
  localStorage.removeItem(CLOUD_REVISION_KEY);
  localStorage.setItem(CLOUD_DIRTY_KEY,"1");
+ localStorage.setItem(CLOUD_LOCAL_UPDATED_AT_KEY,new Date().toISOString());
  return true;
 }
 // Fase 8: exportar/importar el cancionero completo (todas las canciones,
@@ -3090,9 +3206,56 @@ function setCloudStatus(textValue,state=""){
  navSyncText.textContent=textValue;
  navSyncChip.className="app-nav-sync"+(state?" "+state:"");
 }
-function showCloudChoice(show){
- cloudUseLocal.hidden=!show;
- cloudUseRemote.hidden=!show;
+function formatCloudTime(value){
+ if(!value)return "Hora del cambio no registrada";
+ const date=new Date(value);
+ if(Number.isNaN(date.getTime()))return "Hora no disponible";
+ try{
+   return new Intl.DateTimeFormat(undefined,{
+     dateStyle:"medium",
+     timeStyle:"short"
+   }).format(date);
+ }catch{
+   return date.toLocaleString();
+ }
+}
+
+function showCloudChoice(show,remoteDocument=null){
+ cloudConflictDetails.hidden=!show;
+ if(!show){
+   cloudLocalCard.classList.remove("is-newer");
+   cloudRemoteCard.classList.remove("is-newer");
+   return;
+ }
+
+ const localUpdatedAt=readPreference(CLOUD_LOCAL_UPDATED_AT_KEY,"");
+ const remoteUpdatedAt=remoteDocument?.updatedAt||cloudRemoteDocument?.updatedAt||"";
+
+ const localTime=Date.parse(localUpdatedAt);
+ const remoteTime=Date.parse(remoteUpdatedAt);
+ const localValid=Number.isFinite(localTime);
+ const remoteValid=Number.isFinite(remoteTime);
+
+ cloudLocalTime.textContent=formatCloudTime(localUpdatedAt);
+ cloudRemoteTime.textContent=formatCloudTime(remoteUpdatedAt);
+
+ cloudLocalCard.classList.remove("is-newer");
+ cloudRemoteCard.classList.remove("is-newer");
+
+ cloudLocalSummary.textContent="Cambios sin sincronizar";
+ cloudRemoteSummary.textContent="Versión guardada en la nube";
+
+ if(localValid&&remoteValid&&localTime>remoteTime){
+   cloudConflictTitle.textContent="Este dispositivo tiene cambios más recientes";
+   cloudLocalSummary.textContent="Más reciente";
+   cloudLocalCard.classList.add("is-newer");
+ }else if(localValid&&remoteValid&&remoteTime>localTime){
+   cloudConflictTitle.textContent="La nube tiene cambios más recientes";
+   cloudRemoteSummary.textContent="Más reciente";
+   cloudRemoteCard.classList.add("is-newer");
+ }else{
+   cloudConflictTitle.textContent="Hay dos versiones distintas";
+ }
 }
 function cloudDocumentsMatch(first,second){
  try{return JSON.stringify(first)===JSON.stringify(second)}catch{return false}
@@ -3123,6 +3286,7 @@ function applyCloudDocument(documentValue){
  localStorage.setItem(SONG_SYNC_KEY,JSON.stringify(validated.song));
  localStorage.setItem(CLOUD_REVISION_KEY,validated.revision);
  localStorage.removeItem(CLOUD_DIRTY_KEY);
+ localStorage.removeItem(CLOUD_LOCAL_UPDATED_AT_KEY);
  cloudRevision=validated.revision;
  setCloudStatus("Nube: versión cargada","ready");
  setTimeout(()=>location.reload(),350);
@@ -3130,6 +3294,7 @@ function applyCloudDocument(documentValue){
 function scheduleCloudSave(){
  cloudChangeGeneration++;
  localStorage.setItem(CLOUD_DIRTY_KEY,"1");
+ localStorage.setItem(CLOUD_LOCAL_UPDATED_AT_KEY,new Date().toISOString());
  if(cloudSaveTimer)clearTimeout(cloudSaveTimer);
  setCloudStatus("Nube: cambios pendientes…","warning");
  cloudSaveTimer=setTimeout(()=>saveCloudSongSync(false),2500);
@@ -3479,6 +3644,7 @@ async function saveCloudSongSync(force=false){
    savedSuccessfully=true;
    if(savingGeneration===cloudChangeGeneration&&!cloudSaveQueued){
      localStorage.removeItem(CLOUD_DIRTY_KEY);
+     localStorage.removeItem(CLOUD_LOCAL_UPDATED_AT_KEY);
      setCloudStatus("Nube: sincronizada","ready");
    }else{
      localStorage.setItem(CLOUD_DIRTY_KEY,"1");
@@ -3545,6 +3711,7 @@ async function loadCloudSongSync(forceRefresh=false){
      cloudRevision=documentValue.revision;
      localStorage.setItem(CLOUD_REVISION_KEY,cloudRevision);
      localStorage.removeItem(CLOUD_DIRTY_KEY);
+     localStorage.removeItem(CLOUD_LOCAL_UPDATED_AT_KEY);
      showCloudChoice(false);
      setCloudStatus("Nube: sincronizada","ready");
      return true;
@@ -3553,8 +3720,8 @@ async function loadCloudSongSync(forceRefresh=false){
      applyCloudDocument(documentValue);
      return true;
    }
-   setCloudStatus("Nube: hay dos versiones. Elige cuál conservar.","warning");
-   showCloudChoice(true);
+   setCloudStatus("Nube: conflicto entre versiones","warning");
+   showCloudChoice(true,documentValue);
    return false;
  }catch(error){
    console.warn("Cloud load unavailable",error);
