@@ -1033,7 +1033,7 @@ body.screen-practicar #practiceGuide:not([hidden]){margin-bottom:16px}
   </div>
 
   <div class="toolbar-status">
-    <span id="audioStatus" class="audio-status" role="status" aria-live="polite">Piano: toca para cargar</span>
+    <span id="audioStatus" class="audio-status" role="status" aria-live="polite">Piano: preparando…</span>
     <span id="settingsSummary" class="settings-summary">72 BPM · Sustain natural · Anticipar próximas teclas</span>
   </div>
 </div>
@@ -1304,6 +1304,9 @@ body.screen-practicar #practiceGuide:not([hidden]){margin-bottom:16px}
 </main>
 </div>
 
+<!-- Motor de sonido: script clásico, sin defer, para que window.PianoEngine
+     exista antes de que corra el script principal de la app. -->
+<script src="assets/audio-engine.js"></script>
 <script>
 const prev=document.getElementById("prev");
 const sound=document.getElementById("sound");
@@ -3733,8 +3736,8 @@ function renderSyncInversionOptions(chord,selectedId=defaultInversions[canonical
  });
  syncInversion.value=voicingVariants[canonical]?.[selectedId]?selectedId:defaultInversions[canonical];
 }
-function midi(note){const m=note.match(/^([A-G]#?)(\d)$/),s={C:0,"C#":1,D:2,"D#":3,E:4,F:5,"F#":6,G:7,"G#":8,A:9,"A#":10,B:11};return(+m[2]+1)*12+s[m[1]]}
-function frequency(note){return 440*Math.pow(2,(midi(note)-69)/12)}
+// La conversión nota→MIDI y nota→frecuencia vive ahora en el motor de sonido
+// (assets/audio-engine.js), que es el único que necesita saber de afinación.
 
 function keyboard(el,chord,preview,nextChord=null,inversion=null,nextInversion=null,handFocus="both"){
  const v=resolveVoicing(chord,inversion),left=[v.l],right=v.r.map(x=>x[0]),fingers=Object.fromEntries(v.r);
@@ -3795,13 +3798,10 @@ let transitionPracticeCompleted=0,transitionPracticeTotal=4,transitionPracticeSt
 // El foco de mano solo aplica durante el loop de práctica de una transición:
 // fuera de él (reproducción normal, edición, vista previa) siempre son ambas manos.
 function activeHandFocus(){return isTransitionLoop&&practiceHandMode!=="both"?practiceHandMode:"both"}
-let pianoSamples=[],pianoLoading=null,pianoReady=false,pianoLoadFailed=false,pianoPreloadStarted=false,reverbNode=null,activeAudioGroup=null;
-const PIANO_BASE="https://tonejs.github.io/audio/salamander/";
-const PIANO_FILES={
- "A1":"A1.mp3","C2":"C2.mp3","D#2":"Ds2.mp3","F#2":"Fs2.mp3","A2":"A2.mp3",
- "C3":"C3.mp3","D#3":"Ds3.mp3","F#3":"Fs3.mp3","A3":"A3.mp3",
- "C4":"C4.mp3","D#4":"Ds4.mp3","F#4":"Fs4.mp3","A4":"A4.mp3"
-};
+// El motor de sonido vive en assets/audio-engine.js. Acá solo se decide QUÉ
+// suena y CUÁNDO; el motor decide con qué (piano muestreado o sintetizador).
+const engine=window.PianoEngine;
+let pianoLoadFailed=false;
 function currentSection(){return sections[sectionIndex]}
 function nextPosition(si,ei){
  const section=sections[si];
@@ -4422,86 +4422,45 @@ function initSections(){
  });
 }
 function ensureAudio(){
- if(!audioCtx)audioCtx=new(window.AudioContext||window.webkitAudioContext)();
+ audioCtx=engine.ensureContext();
  return audioCtx;
 }
 async function resumeAudio(){
- const ctx=ensureAudio();
- if(ctx.state!=="running"){
-   try{await ctx.resume()}catch{}
- }
- if(ctx.state!=="running"){
-   setAudioStatus("Audio bloqueado: toca de nuevo");
-   return false;
- }
- return true;
+ ensureAudio();
+ const running=await engine.resume();
+ if(!running)setAudioStatus("Audio bloqueado: toca de nuevo");
+ return running;
 }
 function unlockAudioFromGesture(){
- const ctx=ensureAudio();
- try{
-   const source=ctx.createBufferSource();
-   source.buffer=ctx.createBuffer(1,1,ctx.sampleRate);
-   source.connect(ctx.destination);
-   source.start(0);
- }catch{}
- if(ctx.state!=="running"){
-   ctx.resume().then(()=>{
-     if(pianoReady)setAudioStatus("Piano: listo","ready");
-     beginPianoPreload();
-   }).catch(()=>setAudioStatus("Audio bloqueado: toca de nuevo"));
- }else beginPianoPreload();
+ ensureAudio();
+ engine.unlockFromGesture().then(running=>{
+   if(!running){setAudioStatus("Audio bloqueado: toca de nuevo");return}
+   beginPianoPreload();
+ });
 }
 function setAudioStatus(textValue,state=""){
  audioStatus.textContent=textValue;
  audioStatus.className="audio-status"+(state?" "+state:"");
 }
-function makeReverb(ctx){
- if(reverbNode)return reverbNode;
- const seconds=1.8,length=Math.floor(ctx.sampleRate*seconds),impulse=ctx.createBuffer(2,length,ctx.sampleRate);
- for(let channel=0;channel<2;channel++){
-   const data=impulse.getChannelData(channel);
-   for(let i=0;i<length;i++)data[i]=(Math.random()*2-1)*Math.pow(1-i/length,2.7);
+// El texto de estado es un reflejo del motor, no un estado propio: así el
+// indicador nunca se desincroniza de lo que realmente está sonando.
+engine.onStatus(status=>{
+ pianoLoadFailed=status.phase==="failed";
+ if(status.phase==="ready")setAudioStatus("Piano: listo","ready");
+ else if(status.phase==="loading"){
+   const pct=status.total?Math.round(status.loaded/status.total*100):0;
+   setAudioStatus(pct?`Piano: cargando… ${pct}%`:"Piano: cargando…","loading");
  }
- const convolver=ctx.createConvolver();convolver.buffer=impulse;
- const wet=ctx.createGain();wet.gain.value=.12;convolver.connect(wet);wet.connect(ctx.destination);
- reverbNode=convolver;return reverbNode;
-}
+ else if(status.phase==="failed")setAudioStatus("Sonido básico disponible · Escuchar para reintentar","error");
+ else if(status.phase==="deferred")setAudioStatus("Sonido básico · Toca para bajar el piano real","error");
+});
 function beginPianoPreload(){
- if(pianoPreloadStarted||pianoReady||pianoLoadFailed)return;
- pianoPreloadStarted=true;
- loadPiano();
-}
-async function loadPiano(force=false){
  ensureAudio();
- if(pianoReady)return true;
- if(pianoLoading)return pianoLoading;
- if(pianoLoadFailed&&!force)return false;
- if(force)pianoLoadFailed=false;
- pianoPreloadStarted=true;
- setAudioStatus("Piano: cargando…","loading");
- const controller=new AbortController();
- const timeout=setTimeout(()=>controller.abort(),12000);
- pianoLoading=Promise.all(Object.entries(PIANO_FILES).map(async([note,file])=>{
-   const response=await fetch(PIANO_BASE+file,{cache:"force-cache",signal:controller.signal});
-   if(!response.ok)throw new Error("No se pudo cargar "+file);
-   const buffer=await audioCtx.decodeAudioData(await response.arrayBuffer());
-   return {note,midi:midi(note),buffer};
- })).then(samples=>{
-   pianoSamples=samples.sort((a,b)=>a.midi-b.midi);pianoReady=true;
-   pianoLoadFailed=false;
-   setAudioStatus("Piano: listo","ready");return true;
- }).catch(error=>{
-   console.warn("Piano muestreado no disponible; se usa respaldo.",error);
-   pianoReady=false;pianoLoadFailed=true;setAudioStatus("Sonido básico disponible · Escuchar para reintentar","error");return false;
- }).finally(()=>{
-   clearTimeout(timeout);
-   pianoLoading=null;
- });
- return pianoLoading;
+ return engine.beginPreload();
 }
-function nearestSample(note){
- const target=midi(note);
- return pianoSamples.reduce((best,sample)=>Math.abs(sample.midi-target)<Math.abs(best.midi-target)?sample:best,pianoSamples[0]);
+function loadPiano(force=false){
+ ensureAudio();
+ return engine.load({force});
 }
 function sustainProfile(beats=4){
  const safeBeats=Math.max(.25,Number(beats)||4);
@@ -4519,61 +4478,37 @@ function sustainProfile(beats=4){
  };
 }
 function dampActiveChord(ctx,at,release=.12){
- if(!activeAudioGroup)return;
- const {master,sources}=activeAudioGroup;
- try{
-   if(typeof master.gain.cancelAndHoldAtTime==="function")master.gain.cancelAndHoldAtTime(at);
-   else{
-     const currentLevel=Math.max(.0001,master.gain.value||.0001);
-     master.gain.cancelScheduledValues(at);
-     master.gain.setValueAtTime(currentLevel,at);
-   }
-   master.gain.exponentialRampToValueAtTime(.0001,at+release);
- }catch{}
- sources.forEach(source=>{try{source.stop(at+release+.03)}catch{}});
- activeAudioGroup=null;
+ engine.dampAt(at,release);
 }
-function playSampledChord(notes,beats=4){
- const ctx=ensureAudio(),now=ctx.currentTime+.025,profile=sustainProfile(beats);
- dampActiveChord(ctx,now,profile.release);
- const master=ctx.createGain();master.gain.value=.82;
- const compressor=ctx.createDynamicsCompressor();
- compressor.threshold.value=-18;compressor.knee.value=16;compressor.ratio.value=3;
- master.connect(compressor);compressor.connect(ctx.destination);compressor.connect(makeReverb(ctx));
- const sources=[];
- notes.forEach((note,index)=>{
-   const sample=nearestSample(note),source=ctx.createBufferSource(),gain=ctx.createGain();
-   sources.push(source);
-   source.buffer=sample.buffer;source.playbackRate.value=Math.pow(2,(midi(note)-sample.midi)/12);
-   const start=now+index*.012,level=index===0?.78:.48,duration=index===0?profile.bass:profile.chord;
-   gain.gain.setValueAtTime(.0001,start);gain.gain.exponentialRampToValueAtTime(level,start+.018);
-   gain.gain.setValueAtTime(level,start+Math.max(.2,duration-profile.fade));
-   gain.gain.exponentialRampToValueAtTime(.0001,start+duration);
-   source.connect(gain);gain.connect(master);source.start(start);source.stop(start+duration+.12);
+// Las notas que suenan para un acorde, según qué mano se esté practicando.
+// Devuelve [] cuando el acorde está pendiente: el hueco se respeta en el
+// tiempo, así que el resto de la canción no se desincroniza.
+function chordNotes(chord,inversion=null,handFocus="both"){
+ if(chordIsPending(chord))return [];
+ const v=resolveVoicing(chord,inversion);
+ return handFocus==="left"?[v.l]:handFocus==="right"?v.r.map(x=>x[0]):[v.l,...v.r.map(x=>x[0])];
+}
+// Capa "smart" en tiempo absoluto: el llamador dice qué acorde y en qué
+// instante del reloj del AudioContext, nunca qué motor. Devuelve el handle
+// cancelable del motor para que el transporte pueda descartar lo ya programado.
+function playChordAt(chord,inversion,beats,handFocus,when){
+ const notes=chordNotes(chord,inversion,handFocus);
+ if(!notes.length)return null;
+ const profile=sustainProfile(beats);
+ return engine.playChordAt(notes,when,{
+  velocity:.78,
+  duration:profile.chord,
+  release:profile.release
  });
- activeAudioGroup={master,sources};
-}
-function playFallback(notes,beats=4){
- const ctx=ensureAudio(),now=ctx.currentTime,profile=sustainProfile(beats),duration=profile.chord;
- dampActiveChord(ctx,now,profile.release);
- const master=ctx.createGain();master.gain.setValueAtTime(.0001,now);master.gain.exponentialRampToValueAtTime(.25,now+.03);master.gain.setValueAtTime(.25,now+Math.max(.2,duration-profile.fade));master.gain.exponentialRampToValueAtTime(.0001,now+duration);master.connect(ctx.destination);
- const sources=[];
- notes.forEach((n,i)=>{const o=ctx.createOscillator(),g=ctx.createGain();sources.push(o);o.type=i===0?"sine":"triangle";o.frequency.value=frequency(n);g.gain.value=i===0?.7:.32;o.connect(g);g.connect(master);o.start(now);o.stop(now+duration+.1)});
- activeAudioGroup={master,sources};
 }
 async function playChord(chord,inversion=null,beats=4,handFocus="both"){
- // Acorde pendiente: no suena, pero la reproducción sigue su curso normal.
- // El silencio ocupa los mismos beats, así que el resto de la canción no se
- // desincroniza y el hueco se escucha donde realmente está.
  if(chordIsPending(chord))return;
  const audioRunning=await resumeAudio();
  if(!audioRunning)return;
- const v=resolveVoicing(chord,inversion);
- const notes=handFocus==="left"?[v.l]:handFocus==="right"?v.r.map(x=>x[0]):[v.l,...v.r.map(x=>x[0])];
- if(!notes.length)return;
- if(!pianoReady&&!pianoLoadFailed)await loadPiano();
- if(pianoReady)playSampledChord(notes,beats);
- else playFallback(notes,beats);
+ // Arranca la descarga del piano real si no empezó, pero no la espera: suena
+ // ya, con el motor que esté disponible en este instante.
+ beginPianoPreload();
+ playChordAt(chord,inversion,beats,handFocus,engine.now+.02);
 }
 async function playCurrent(){
  const event=currentSection().events[stepIndex];
@@ -4584,9 +4519,10 @@ function stopAuto(){
  const practiceStartPosition=transitionPracticeStart;
  const completedReps=transitionPracticeCompleted;
  const naturalSongCompletion=isFullSongReducedPractice&&playQueue.length>0&&queueIndex>=playQueue.length;
+ stopTransport();
  if(timer){clearTimeout(timer);timer=null}
  resetLyricsUpcomingCue();
- if(audioCtx&&activeAudioGroup)dampActiveChord(audioCtx,audioCtx.currentTime,.12);
+ if(audioCtx)dampActiveChord(audioCtx,audioCtx.currentTime,.12);
  isAutoPlaying=false;
  isPlaybackPaused=false;
  isTransitionLoop=false;
@@ -4632,9 +4568,12 @@ function buildPlayQueue(){
  return queue;
 }
 
-function playQueueItem(){
- if(queueIndex>=playQueue.length){stopAuto();return}
- const item=playQueue[queueIndex];
+// Actualiza la UI para un paso de la cola. Separado del audio a propósito: el
+// audio se programa con antelación y la UI se dispara en el instante exacto.
+function showQueueItem(index){
+ queueIndex=index;
+ const item=playQueue[index];
+ if(!item)return;
  sectionIndex=item.section;
  stepIndex=item.step;
  sectionSelect.value=sectionIndex;
@@ -4642,8 +4581,113 @@ function playQueueItem(){
  buildSteps();
  render();
  updateFullSongPosition();
- playCurrent();
  scheduleLyricsUpcomingCue();
+}
+
+/*
+ * Transporte con look-ahead.
+ *
+ * El pulso ya no es una cadena de setTimeout donde cada retraso del hilo
+ * principal se acumula en el siguiente acorde. Un "productor" entrega los pasos
+ * de a uno con su instante absoluto, y el pump los programa en el reloj del
+ * AudioContext hasta TRANSPORT_LOOKAHEAD segundos por delante. Si el hilo
+ * principal se traba, el audio ya está programado y sigue sonando en su sitio;
+ * lo único que llega tarde es el resaltado visual.
+ *
+ * El productor lee el BPM en el momento de generar cada paso, así que cambiar
+ * el tempo durante la reproducción sigue aplicando desde el acorde siguiente,
+ * igual que antes.
+ */
+const TRANSPORT_LOOKAHEAD=.6,TRANSPORT_TICK=25;
+const transport={pumpId:null,nextStep:null,nextAt:0,pending:[],exhausted:false,endsAt:0,onFinish:null};
+function beatSeconds(){
+ return 60/Math.max(40,Number(bpm.value)||72);
+}
+function transportRunning(){
+ return transport.pumpId!==null;
+}
+function stopTransport(){
+ if(transport.pumpId!==null){clearInterval(transport.pumpId);transport.pumpId=null}
+ transport.nextStep=null;
+ transport.pending=[];
+ transport.exhausted=false;
+ transport.onFinish=null;
+}
+function scheduleStepAudio(step){
+ if(step.kind==="click"){engine.clickAt(step.when,step.accent);return}
+ const event=sections[step.position.section]?.events[step.position.step];
+ if(!event)return;
+ playChordAt(event.chord,event.inversion,event.beats,activeHandFocus(),step.when);
+}
+function pumpTransport(){
+ const now=engine.now;
+ while(!transport.exhausted&&transport.nextAt<=now+TRANSPORT_LOOKAHEAD){
+   const step=transport.nextStep(transport.nextAt);
+   if(!step){
+     transport.exhausted=true;
+     transport.endsAt=transport.nextAt;
+     break;
+   }
+   scheduleStepAudio(step);
+   transport.pending.push(step);
+   transport.nextAt=step.when+step.length;
+ }
+ while(transport.pending.length&&transport.pending[0].when<=now){
+   const step=transport.pending.shift();
+   if(step.onUi)step.onUi();
+ }
+ if(transport.exhausted&&!transport.pending.length&&now>=transport.endsAt){
+   const finish=transport.onFinish;
+   stopTransport();
+   if(finish)finish();
+ }
+}
+function startTransport(producer,onFinish){
+ stopTransport();
+ transport.nextStep=producer;
+ // Un pelo de margen para que el primer paso se programe en lugar de correr
+ // contra el reloj.
+ transport.nextAt=engine.now+.12;
+ transport.onFinish=onFinish;
+ transport.pumpId=setInterval(pumpTransport,TRANSPORT_TICK);
+ pumpTransport();
+}
+function queueStepProducer(fromIndex){
+ let index=fromIndex;
+ return at=>{
+  if(index>=playQueue.length)return null;
+  const current=index++;
+  const item=playQueue[current];
+  const event=sections[item.section]?.events[item.step];
+  if(!event)return null;
+  const beats=event.beats||4;
+  return {when:at,length:beatSeconds()*beats,kind:"chord",position:item,onUi:()=>showQueueItem(current)};
+ };
+}
+function practiceStepProducer(pulses){
+ let pulse=0,rep=0,slot=0;
+ return at=>{
+  if(pulse<pulses){
+    const remaining=pulses-pulse;
+    const accent=pulse===0;
+    pulse++;
+    return {when:at,length:beatSeconds(),kind:"click",accent,onUi:()=>{practiceStatus.textContent=`Cuenta previa: ${remaining}`}};
+  }
+  if(rep>=transitionPracticeTotal)return null;
+  const item=playQueue[slot];
+  const event=sections[item.section]?.events[item.step];
+  if(!event)return null;
+  const beats=event.beats||4;
+  const currentRep=rep,currentSlot=slot;
+  slot++;
+  if(slot>=playQueue.length){slot=0;rep++}
+  return {when:at,length:beatSeconds()*beats,kind:"chord",position:item,onUi:()=>{
+    // Repeticiones ya cerradas: es lo que se registra si se detiene a mitad.
+    transitionPracticeCompleted=currentRep;
+    showQueueItem(currentSlot);
+    practiceStatus.textContent=`Repetición ${currentRep+1} de ${transitionPracticeTotal} · ${currentSlot===0?"acorde de salida":"acorde de llegada"}`;
+  }};
+ };
 }
 
 async function startAuto(){
@@ -4651,16 +4695,25 @@ async function startAuto(){
  const audioRunning=await resumeAudio();
  if(!audioRunning)return;
  lyricsFollowPlayback=true;
- if(!pianoReady&&!pianoLoadFailed)await loadPiano();
+ beginPianoPreload();
  playQueue=buildPlayQueue();
  if(!playQueue.length){auto.textContent="Selecciona una sección";setTimeout(()=>auto.textContent="▶ Reproducir",1400);return}
- isAutoPlaying=true;queueIndex=0;playQueueItem();scheduleNextQueueItem();updateTransportControls();
+ isAutoPlaying=true;queueIndex=0;
+ startTransport(queueStepProducer(0),finishQueuePlayback);
+ updateTransportControls();
+}
+function finishQueuePlayback(){
+ // stopAuto distingue "la canción terminó sola" de "se detuvo a mano" por el
+ // cursor de la cola, así que lo dejamos al final antes de cerrar.
+ queueIndex=playQueue.length;
+ stopAuto();
 }
 function pausePlayback(){
  if(!isAutoPlaying||isTransitionLoop)return;
+ stopTransport();
  if(timer){clearTimeout(timer);timer=null}
  resetLyricsUpcomingCue();
- if(audioCtx&&activeAudioGroup)dampActiveChord(audioCtx,audioCtx.currentTime,.12);
+ if(audioCtx)dampActiveChord(audioCtx,audioCtx.currentTime,.12);
  isAutoPlaying=false;
  isPlaybackPaused=true;
  updatePlaybackHighlight();
@@ -4671,25 +4724,15 @@ async function resumePlayback(){
  if(!audioRunning)return;
  isPlaybackPaused=false;
  isAutoPlaying=true;
- playQueueItem();
- scheduleNextQueueItem();
+ startTransport(queueStepProducer(queueIndex),finishQueuePlayback);
  updateTransportControls();
-}
-function playCountInClick(accent=false){
- const ctx=ensureAudio(),now=ctx.currentTime,oscillator=ctx.createOscillator(),gain=ctx.createGain();
- oscillator.type="sine";
- oscillator.frequency.value=accent?1040:780;
- gain.gain.setValueAtTime(.0001,now);
- gain.gain.exponentialRampToValueAtTime(accent ? .18 : .11,now+.008);
- gain.gain.exponentialRampToValueAtTime(.0001,now+.08);
- oscillator.connect(gain);gain.connect(ctx.destination);
- oscillator.start(now);oscillator.stop(now+.1);
 }
 function finishTransitionPractice(){
  const practiceStartPosition=transitionPracticeStart;
+ stopTransport();
  if(timer){clearTimeout(timer);timer=null}
  resetLyricsUpcomingCue();
- if(audioCtx&&activeAudioGroup)dampActiveChord(audioCtx,audioCtx.currentTime,.12);
+ if(audioCtx)dampActiveChord(audioCtx,audioCtx.currentTime,.12);
  isAutoPlaying=false;
  isPlaybackPaused=false;
  isTransitionLoop=false;
@@ -4713,48 +4756,14 @@ function finishTransitionPractice(){
    render();
  }else updatePlaybackHighlight();
 }
-function scheduleTransitionPracticeItem(){
- const item=playQueue[queueIndex];
- const beats=sections[item.section].events[item.step].beats||4;
- timer=setTimeout(()=>{
-   if(!isTransitionLoop)return;
-   if(queueIndex===0){
-     queueIndex=1;
-     practiceStatus.textContent=`Repetición ${transitionPracticeCompleted+1} de ${transitionPracticeTotal} · acorde de llegada`;
-     playQueueItem();
-     scheduleTransitionPracticeItem();
-     return;
-   }
-   transitionPracticeCompleted++;
-   if(transitionPracticeCompleted>=transitionPracticeTotal){
-     finishTransitionPractice();
-     return;
-   }
-   queueIndex=0;
-   practiceStatus.textContent=`Repetición ${transitionPracticeCompleted+1} de ${transitionPracticeTotal} · acorde de salida`;
-   playQueueItem();
-   scheduleTransitionPracticeItem();
- },60000/+bpm.value*beats);
-}
-function beginTransitionPractice(){
+// La cuenta previa y el loop son un solo tramo continuo del mismo transporte:
+// así el primer acorde cae exactamente en el pulso que la cuenta anunció, que
+// es justo lo que con setTimeout se desviaba.
+function startPracticeCountIn(pulses){
  if(!isTransitionLoop)return;
  queueIndex=0;
- practiceStatus.textContent=`Repetición 1 de ${transitionPracticeTotal} · acorde de salida`;
- playQueueItem();
- scheduleTransitionPracticeItem();
-}
-function startPracticeCountIn(pulses){
- if(!pulses){beginTransitionPractice();return}
- let pulse=1;
- const tick=()=>{
-   if(!isTransitionLoop)return;
-   const remaining=pulses-pulse+1;
-   practiceStatus.textContent=`Cuenta previa: ${remaining}`;
-   playCountInClick(pulse===1);
-   pulse++;
-   timer=setTimeout(pulse>pulses?beginTransitionPractice:tick,60000/+bpm.value);
- };
- tick();
+ transitionPracticeCompleted=0;
+ startTransport(practiceStepProducer(pulses),finishTransitionPractice);
 }
 async function startTransitionPractice(){
  const loopStart={section:sectionIndex,step:stepIndex};
@@ -4767,7 +4776,7 @@ async function startTransitionPractice(){
  const audioRunning=await resumeAudio();
  if(!audioRunning)return;
  lyricsFollowPlayback=true;
- if(!pianoReady&&!pianoLoadFailed)await loadPiano();
+ beginPianoPreload();
  playQueue=[loopStart,loopEnd];
  transitionPracticeStart=loopStart;
  transitionPracticeTotal=Number(practiceRepetitions.value)||4;
@@ -4781,14 +4790,6 @@ async function startTransitionPractice(){
  updatePlaybackHighlight();
  startPracticeCountIn(Number(practiceCountIn.value)||0);
 }
-function scheduleNextQueueItem(){
- const beats=currentSection().events[stepIndex].beats||4;
- timer=setTimeout(()=>{
-   queueIndex++;
-   if(queueIndex>=playQueue.length){stopAuto();return}
-   playQueueItem();scheduleNextQueueItem();
- },60000/+bpm.value*beats);
-}
 function moveManually(position){
  stopAuto();
  sectionIndex=position.section;stepIndex=position.step;sectionSelect.value=sectionIndex;
@@ -4798,7 +4799,7 @@ function moveManually(position){
 prev.onclick=()=>moveManually(previousPosition(sectionIndex,stepIndex));
 next.onclick=()=>moveManually(nextPosition(sectionIndex,stepIndex));
 sound.onclick=async()=>{
- if(pianoLoadFailed)await loadPiano(true);
+ if(pianoLoadFailed||engine.status.phase==="deferred")await loadPiano(true);
  playCurrent();
 };
 auto.onclick=()=>isAutoPlaying?pausePlayback():isPlaybackPaused?resumePlayback():startAuto();
@@ -4821,7 +4822,7 @@ lyricsPreviewListen.onclick=()=>{
  if(!lyricsPreviewPosition||isAutoPlaying)return;
  const event=sections[lyricsPreviewPosition.section]?.events[lyricsPreviewPosition.step];
  if(event)(async()=>{
-   if(pianoLoadFailed)await loadPiano(true);
+   if(pianoLoadFailed||engine.status.phase==="deferred")await loadPiano(true);
    playChord(event.chord,event.inversion,event.beats);
  })();
 };
@@ -5304,6 +5305,21 @@ verifyVoicingLibraryIntegrity();updateNotationToggle();updateLyricsNotesToggle()
 setActiveScreen("cancionero");
 loadCatalogFromCloud();
 loadPracticeFromCloud();
+
+// La descarga del piano real arranca acá, con la app: no en el primer toque de
+// tecla. Para cuando alguien pulse algo, o ya está lista o suena el
+// sintetizador — pero nunca se espera a la red con una nota pendiente.
+// (En iOS el AudioContext nace suspendido; el primer gesto lo reanuda y la
+// carga ya viene en camino.)
+beginPianoPreload();
+
+if("serviceWorker" in navigator){
+ window.addEventListener("load",()=>{
+   navigator.serviceWorker.register("sw.js").catch(error=>{
+     console.warn("Service worker no registrado; la app funciona igual, sin offline.",error);
+   });
+ });
+}
 </script>
 </body>
 </html>
