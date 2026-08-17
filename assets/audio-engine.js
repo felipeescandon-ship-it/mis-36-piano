@@ -290,13 +290,14 @@
           console.warn(`Piano cargado con ${fetchStats.failed} muestras faltantes de ${fetchStats.ok + fetchStats.failed}.`);
         }
         piano = instrument;
-        // El piano comparte el envío de reverberación con el sintetizador para
-        // que el cruce entre motores no cambie el espacio del sonido.
-        try {
-          piano.output.addEffect("sala", ensureReverb(), 0.12);
-        } catch (error) {
-          /* sin reverb el piano suena igual, solo más seco */
-        }
+        // El piano va SECO, a propósito: comparando mezclas de oído, la versión
+        // sin reverberación fue la elegida — las muestras ya traen su propio
+        // espacio grabado y agregarle más ensucia el ataque.
+        //
+        // Antes había acá un addEffect("sala", reverb, 0.12) que además estaba
+        // mal: el nodo de reverb ya aplica su propio wet de 0.12, así que el
+        // envío quedaba en 0.12 × 0.12 = 0.0144 y el piano sonaba casi seco por
+        // accidente. Ahora es seco por decisión.
         setStatus("ready");
         return true;
       })

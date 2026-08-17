@@ -4496,7 +4496,10 @@ function playChordAt(chord,inversion,beats,handFocus,when){
  if(!notes.length)return null;
  const profile=sustainProfile(beats);
  return engine.playChordAt(notes,when,{
-  velocity:.78,
+  // 0.6 y no 0.78: elegido de oído comparando mezclas. Con 0.78 el piano cae en
+  // las capas fuertes del instrumento y suena golpeado; 0.6 usa capas más
+  // suaves, que es el sonido de tecla limpia que buscamos.
+  velocity:.6,
   duration:profile.chord,
   release:profile.release
  });
