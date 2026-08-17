@@ -130,6 +130,11 @@ red con una nota pendiente. Si ninguna muestra carga, la carga se marca fallida 
 el sintetizador se queda: un piano "listo" sin buffers sonaría en silencio, que
 es peor que un sonido básico. Lo mismo si ningún formato decodifica.
 
+El piano va **seco**: elegido de oído comparando mezclas. Las muestras ya traen su
+propio espacio grabado y agregarle reverberación ensucia el ataque. La velocity de
+los acordes es 0.6 y no 0.78 por la misma razón — con 0.78 el instrumento cae en
+sus capas fuertes y suena golpeado en lugar de a tecla limpia.
+
 **3. ADSR con velocity real.** En el sintetizador la velocity no es un
 multiplicador de volumen: mueve el attack (más fuerte, más rápido), el sustain y
 el brillo armónico (energía en 2.º y 3.er armónico). Medido entre velocity 0.12 y
