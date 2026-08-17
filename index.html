@@ -1466,6 +1466,7 @@ const NOTE_ES={C:"Do","C#":"Do#",D:"Re","D#":"Re#",E:"Mi","E#":"Mi#",F:"Fa","F#"
 const CHORD_ES={"E":"Mi","F#":"Fa#","F#m":"Fa#m","A":"La","Am":"Lam","C#m":"Do#m","C#":"Do#","G#m":"Sol#m","G#":"Sol#","D":"Re","B":"Si","B/D#":"Si/Re#","G":"Sol","C":"Do","Bm":"Sim","Em":"Mim","Dm":"Rem","G/B":"Sol/Si","G/D":"Sol/Re","F":"Fa","Gm":"Solm","F#m7":"Fa#m7","Bm7":"Sim7","Em7":"Mim7","D7M":"Re7M","F7M":"Fa7M","A#7M":"La#7M","A7":"La7","F#7":"Fa#7","A#°":"La#°",
  "A#":"La#","D#":"Re#","Cm":"Dom","G7":"Sol7","C7":"Do7","D7":"Re7","E7":"Mi7",
  "C7M":"Do7M","Am7":"Lam7","Dm7":"Rem7","Csus2":"Dosus2","Gsus4":"Solsus4","Cadd9":"Doadd9",
+ "Am/G":"Lam/Sol","C/E":"Do/Mi","C9":"Do9","D9":"Re9","D4":"Re4",
  // Un cifrado escrito con bemoles se conserva como se pegó (Bb no se
  // reescribe a La#), así que su nombre en español también se escribe con
  // bemol: quien pegó "Bb" espera leer "Sib", no "La#".
@@ -1642,7 +1643,17 @@ const voicings={
 // add9 es la tríada más la novena, sin séptima. Se voicea cerrado
 // (Do-Re-Mi-Sol, todo dentro de una quinta) en vez de con la novena arriba:
 // suena igual de reconocible y no obliga a abrir la mano una novena.
-"Cadd9":{l:"C2",r:[["C4",1],["D4",2],["E4",3],["G4",5]],inv:"fundamental"}
+"Cadd9":{l:"C2",r:[["C4",1],["D4",2],["E4",3],["G4",5]],inv:"fundamental"},
+// Acordes con bajo alterno (mismo patrón que G/B y G/D): la mano derecha
+// toca la tríada en fundamental y el bajo es la nota del cifrado tras la "/".
+"Am/G":{l:"G2",r:[["A3",1],["C4",3],["E4",5]],inv:"acorde de Lam con Sol en el bajo"},
+"C/E":{l:"E2",r:[["C4",1],["E4",3],["G4",5]],inv:"acorde de Do con Mi en el bajo"},
+// Novena dominante sin quinta (1-3-b7-9), mismo criterio de 4 notas que el
+// resto de cuatríadas de la biblioteca.
+"C9":{l:"C2",r:[["C4",1],["E4",2],["A#4",3],["D5",5]],inv:"fundamental"},
+"D9":{l:"D2",r:[["D4",1],["F#4",2],["C5",3],["E5",5]],inv:"fundamental"},
+// Sus4: sin tercera, mismo patrón que Gsus4 (1-4-5).
+"D4":{l:"D2",r:[["D4",1],["G4",2],["A4",5]],inv:"fundamental"}
 };
 
 const defaultInversions={
@@ -1652,7 +1663,8 @@ const defaultInversions={
  "F":"root","Gm":"first","F#m7":"root","Bm7":"root","Em7":"root","D7M":"root","F7M":"root",
  "A#7M":"root","A7":"root","F#7":"root","A#°":"root",
  "A#":"root","D#":"root","Cm":"root","G7":"root","C7":"root","D7":"root","E7":"root",
- "C7M":"root","Am7":"root","Dm7":"root","Csus2":"root","Gsus4":"root","Cadd9":"root"
+ "C7M":"root","Am7":"root","Dm7":"root","Csus2":"root","Gsus4":"root","Cadd9":"root",
+ "Am/G":"root","C/E":"root","C9":"root","D9":"root","D4":"root"
 };
 const voicingVariants={
  "E":{
@@ -1788,6 +1800,24 @@ const voicingVariants={
  },
  "Cadd9":{
    root:[["C4",1],["D4",2],["E4",3],["G4",5]],first:[["E4",1],["G4",2],["C5",3],["D5",5]],second:[["G3",1],["C4",2],["D4",3],["E4",5]]
+ },
+ // Bajo alterno: la mano derecha es la misma tríada que el acorde base
+ // (Am/C), sin depender de la inversión — el bajo fijo en `voicings` es lo
+ // que cambia.
+ "Am/G":{
+   root:[["A3",1],["C4",3],["E4",5]],first:[["C4",1],["E4",2],["A4",5]],second:[["E3",1],["A3",2],["C4",5]]
+ },
+ "C/E":{
+   root:[["C4",1],["E4",3],["G4",5]],first:[["E3",1],["G3",2],["C4",5]],second:[["G3",1],["C4",2],["E4",5]]
+ },
+ "C9":{
+   root:[["C4",1],["E4",2],["A#4",3],["D5",5]],first:[["E4",1],["A#4",2],["C5",3],["D5",5]],second:[["A#4",1],["C5",2],["D5",3],["E5",5]]
+ },
+ "D9":{
+   root:[["D4",1],["F#4",2],["C5",3],["E5",5]],first:[["F#4",1],["C5",2],["D5",3],["E5",5]],second:[["C5",1],["D5",2],["E5",3],["F#5",5]]
+ },
+ "D4":{
+   root:[["D4",1],["G4",2],["A4",5]],first:[["G4",1],["A4",2],["D5",5]],second:[["A4",1],["D5",2],["G5",5]]
  }
 };
 
