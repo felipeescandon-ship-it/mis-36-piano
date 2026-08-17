@@ -108,12 +108,19 @@ decisiones sostienen eso:
 velocity y release samples propios. Ni la librería ni las muestras vienen de un
 CDN — `assets/vendor/smplr.mjs` y `assets/piano-samples/` se sirven same-origin,
 porque el service worker no puede cachear recursos cross-origin. Sin
-autohospedaje no hay piano real offline. Se guardan los dos formatos (`ogg` y
-`m4a`) porque smplr elige uno según el navegador: Safari no reproduce ogg, y
-Firefox sin códecs del sistema puede no reproducir m4a. Ocupa el doble en el
-repo, pero cada usuario descarga solo el formato que usa (~20MB, una vez).
+autohospedaje no hay piano real offline. Ocupa el doble en el repo, pero cada
+usuario descarga solo el formato que usa (~20MB, una vez).
 `scripts/fetch-piano-samples.mjs` regenera la carpeta; la lista de muestras la
 extrae del `LAYERS` de la propia librería, no de una copia a mano.
+
+El formato se elige **decodificando una muestra de verdad** (`pickFormat()`), no
+preguntándole al navegador. El camino de smplr falla justo donde importa: decide
+con `canPlayType()` y, en Safari, tanto `audio/m4a` como `audio/aac` devuelven
+`""`, así que descarta m4a, se queda sin candidatos y cae al primer formato de la
+lista — que es `ogg`, el único que Safari no decodifica. Las 226 descargas dan 200
+OK, todas las decodificaciones fallan sin ruido y el piano queda "listo" y mudo.
+Un decode real de 74KB no se equivoca. Los archivos `ogg` son Ogg/**Opus** (no
+Vorbis) y los `m4a` son AAC-LC, que es lo que Safari sí decodifica.
 
 **2. Fallback transparente a síntesis.** Quien dispara notas llama siempre a la
 capa "smart" (`playChordAt` / `playChordNow`) y nunca sabe qué motor suena. La
@@ -121,7 +128,7 @@ descarga arranca al iniciar la app —no en el primer toque de tecla— con la
 promesa cacheada, y mientras tanto suena el sintetizador. Nunca se espera a la
 red con una nota pendiente. Si ninguna muestra carga, la carga se marca fallida y
 el sintetizador se queda: un piano "listo" sin buffers sonaría en silencio, que
-es peor que un sonido básico.
+es peor que un sonido básico. Lo mismo si ningún formato decodifica.
 
 **3. ADSR con velocity real.** En el sintetizador la velocity no es un
 multiplicador de volumen: mueve el attack (más fuerte, más rápido), el sustain y

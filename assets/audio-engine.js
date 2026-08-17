@@ -24,16 +24,53 @@
   const VENDOR_URL = "assets/vendor/smplr.mjs";
   const SAMPLE_BASE = "assets/piano-samples";
 
+  // Formatos disponibles en assets/piano-samples/, en orden de preferencia: ogg
+  // pesa menos, m4a es el que reproduce Safari. Cada navegador descarga uno solo.
+  const FORMATS = ["ogg", "m4a"];
+  // Muestra de prueba para elegir formato. Existe en los dos, y es la nota media
+  // del piano, así que sigue existiendo si se regeneran las muestras.
+  const PROBE_SAMPLE = "pp_c3";
+
+  /*
+   * Elige el formato decodificando una muestra de verdad.
+   *
+   * No se le pregunta al navegador ni se mira el user-agent, porque ese camino
+   * falla justo donde importa: smplr decide con canPlayType() y, en Safari,
+   * canPlayType("audio/m4a") y canPlayType("audio/aac") devuelven "" — así que
+   * descarta m4a, se queda sin candidatos y cae al primer formato de la lista,
+   * que es ogg, el único que Safari NO puede decodificar. Las 226 descargas dan
+   * 200 OK, todas las decodificaciones fallan sin ruido y el piano queda "listo"
+   * y mudo.
+   *
+   * Un decode real de 74KB no se equivoca: si suena, suena.
+   */
+  function pickFormat(ctx) {
+    const attempt = index => {
+      if (index >= FORMATS.length) return Promise.resolve(null);
+      const format = FORMATS[index];
+      return fetch(`${SAMPLE_BASE}/${format}/${PROBE_SAMPLE}.${format}`, { cache: "force-cache" })
+        .then(response => {
+          if (!response.ok) throw new Error(`${response.status}`);
+          return response.arrayBuffer();
+        })
+        .then(bytes => ctx.decodeAudioData(bytes))
+        .then(() => format, () => attempt(index + 1));
+    };
+    return attempt(0);
+  }
+
   // smplr pide "<base>/<nombre de muestra>.<formato>", con nombres tipo
   // "PP D#0" — espacios y almohadillas. En vez de guardar en disco archivos con
   // esos caracteres (el '#' de una URL es delimitador de fragmento y los hosts
   // estáticos lo tratan de forma inconsistente), guardamos slugs ASCII y
   // reescribimos la URL en la capa de storage, que es un punto de extensión
   // público de la librería. El mapa de muestras sigue siendo el de smplr.
+
   // Contador de la carga en curso. smplr no falla cuando una muestra no está:
   // se queda sin buffer para esa región y sigue. Si no contáramos acá, un 404
   // masivo daría un piano "listo" que suena en silencio, que es peor que el
-  // sintetizador. Con esto, cero muestras válidas = carga fallida.
+  // sintetizador. Junto con pickFormat() —que descarta el formato que no
+  // decodifica— son las dos guardas contra un piano mudo que se cree listo.
   let fetchStats = null;
 
   const SAMPLE_STORAGE = {
@@ -151,7 +188,8 @@
 
   // --- Estado de carga del piano muestreado -------------------------------
 
-  const status = { phase: "idle", loaded: 0, total: 0, usingSamples: false };
+  const status = { phase: "idle", loaded: 0, total: 0, usingSamples: false, format: null };
+  let sampleFormat = null;
   const statusListeners = new Set();
   let piano = null;
   let loadPromise = null;
@@ -160,6 +198,7 @@
     status.phase = phase;
     if (extra) Object.assign(status, extra);
     status.usingSamples = phase === "ready" && !!piano;
+    status.format = sampleFormat;
     statusListeners.forEach(listener => {
       try {
         listener(status);
@@ -199,10 +238,17 @@
     setStatus("loading", { loaded: 0, total: 0 });
     fetchStats = { ok: 0, failed: 0 };
 
-    loadPromise = import(new URL(VENDOR_URL, document.baseURI).href)
-      .then(smplr => {
+    loadPromise = Promise.all([import(new URL(VENDOR_URL, document.baseURI).href), pickFormat(ctx)])
+      .then(([smplr, format]) => {
+        if (!format) {
+          throw new Error("Ningún formato de muestra se pudo decodificar en este navegador");
+        }
+        sampleFormat = format;
         const instrument = new smplr.SplendidGrandPiano(ctx, {
           baseUrl: SAMPLE_BASE,
+          // Un solo formato, ya verificado: así smplr no vuelve a elegir por su
+          // cuenta y no puede terminar pidiendo uno que no se decodifica.
+          formats: [format],
           storage: SAMPLE_STORAGE,
           destination: masterBus,
           decayTime: 0.5,
@@ -231,6 +277,7 @@
       .catch(error => {
         console.warn("Piano muestreado no disponible; sigue el sintetizador.", error);
         piano = null;
+        sampleFormat = null;
         setStatus("failed");
         return false;
       })
