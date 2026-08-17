@@ -92,8 +92,61 @@ La aplicación es intencionalmente pequeña:
   canción y transición) como otro documento global; como son contadores que solo
   crecen, los conflictos se resuelven combinando por máximo en vez de pedir que
   el usuario elija una versión;
+- `assets/audio-engine.js` es el motor de sonido (ver abajo);
+- `sw.js` cachea la app y las muestras para que funcione offline;
 - `localStorage` conserva ajustes y estados pendientes;
 - la nube mantiene revisiones inmutables para resolver conflictos y recuperar datos.
+
+## Motor de sonido
+
+El sonido está en `assets/audio-engine.js`, aparte de `index.html`. `index.html`
+decide **qué** acorde suena y **cuándo**; el motor decide **con qué**. Cinco
+decisiones sostienen eso:
+
+**1. Muestras reales autohospedadas.** El piano es `SplendidGrandPiano` de
+[smplr](https://github.com/danigb/smplr): 226 muestras con cinco capas de
+velocity y release samples propios. Ni la librería ni las muestras vienen de un
+CDN — `assets/vendor/smplr.mjs` y `assets/piano-samples/` se sirven same-origin,
+porque el service worker no puede cachear recursos cross-origin. Sin
+autohospedaje no hay piano real offline. Se guardan los dos formatos (`ogg` y
+`m4a`) porque smplr elige uno según el navegador: Safari no reproduce ogg, y
+Firefox sin códecs del sistema puede no reproducir m4a. Ocupa el doble en el
+repo, pero cada usuario descarga solo el formato que usa (~20MB, una vez).
+`scripts/fetch-piano-samples.mjs` regenera la carpeta; la lista de muestras la
+extrae del `LAYERS` de la propia librería, no de una copia a mano.
+
+**2. Fallback transparente a síntesis.** Quien dispara notas llama siempre a la
+capa "smart" (`playChordAt` / `playChordNow`) y nunca sabe qué motor suena. La
+descarga arranca al iniciar la app —no en el primer toque de tecla— con la
+promesa cacheada, y mientras tanto suena el sintetizador. Nunca se espera a la
+red con una nota pendiente. Si ninguna muestra carga, la carga se marca fallida y
+el sintetizador se queda: un piano "listo" sin buffers sonaría en silencio, que
+es peor que un sonido básico.
+
+**3. ADSR con velocity real.** En el sintetizador la velocity no es un
+multiplicador de volumen: mueve el attack (más fuerte, más rápido), el sustain y
+el brillo armónico (energía en 2.º y 3.er armónico). Medido entre velocity 0.12 y
+0.95, el brillo crece 4.6× mientras el volumen crece 3.2×, y el attack pasa de
+50ms a 11ms. El release siempre es exponencial hacia el silencio, nunca un corte:
+un salto a cero en la envolvente es exactamente lo que produce el click al soltar
+una nota.
+
+**4. API de tiempo absoluto con voces cancelables.** Todo acepta un `when`
+anclado al reloj del `AudioContext` y devuelve un handle con `cancel()`, que sirve
+igual para una nota que ya suena y para una que todavía no arrancó. Sobre eso, el
+transporte de `index.html` programa con 600ms de look-ahead: un productor entrega
+los pasos de a uno con su instante ideal, calculado siempre desde el paso
+anterior y nunca desde "ahora", así que la deriva no se acumula. Con el hilo
+principal bloqueado 900ms —más que la ventana de look-ahead— el desvío medido
+sigue siendo 0ms. La cuenta previa y el loop de práctica son un solo tramo
+continuo del mismo transporte, por eso el primer acorde cae exactamente en el
+pulso que la cuenta anunció.
+
+**5. Cacheo offline.** `sw.js` usa cache-first para las muestras y el bundle (no
+cambian nunca) y network-first con fallback a caché para el resto, para que la app
+funcione offline sin que una versión nueva del código quede atascada. `/api/*`
+queda **fuera** de la caché a propósito: servir una respuesta vieja de
+sincronización haría que la app crea que guardó cuando no guardó.
 
 ## Reglas de seguridad
 
