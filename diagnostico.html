@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<title>Diagnóstico de audio · Piano Estudio</title>
+<style>
+:root{--bg:#f5f2ec;--panel:#fffefb;--ink:#29221c;--muted:#736a61;--line:#e4ddd2}
+*{box-sizing:border-box}
+body{margin:0;padding:18px;background:var(--bg);color:var(--ink);
+ font:16px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif}
+h1{font-size:20px;margin:0 0 4px}
+p.lead{margin:0 0 18px;color:var(--muted);font-size:14px}
+.test{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px;margin-bottom:12px}
+.test h2{font-size:15px;margin:0 0 4px}
+.test p{margin:0 0 10px;color:var(--muted);font-size:13px}
+button{font:inherit;font-weight:700;padding:11px 15px;border-radius:9px;border:1px solid var(--line);
+ background:#fff;color:var(--ink);cursor:pointer;-webkit-appearance:none}
+button.play{background:#8a4b32;color:#fff;border-color:#8a4b32}
+button:disabled{opacity:.5}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.verdict{margin-top:10px;font-size:13px;font-weight:700}
+.ok{color:#11703c}.bad{color:#992626}.wait{color:#824700}
+pre{background:#f1eee9;border-radius:9px;padding:12px;font-size:12px;overflow-x:auto;white-space:pre-wrap}
+</style>
+</head>
+<body>
+<h1>Diagnóstico de audio</h1>
+<p class="lead">Cada prueba toca un sonido distinto. Después de cada una, decí si la escuchaste.
+Al final copiá el informe y mandámelo.</p>
+
+<div class="test" id="t1">
+  <h2>1 · Tono simple, contexto creado al tocar el botón</h2>
+  <p>La forma que Safari siempre acepta. Si esto no suena, el problema no es de la app.</p>
+  <div class="row">
+    <button class="play" data-run="1">♪ Tocar tono</button>
+    <button data-yes="1">Lo escuché</button>
+    <button data-no="1">No se escuchó</button>
+  </div>
+  <div class="verdict" data-v="1"></div>
+</div>
+
+<div class="test" id="t2">
+  <h2>2 · Tono simple, contexto creado al abrir la página</h2>
+  <p>Así es como la app crea el audio hoy. Si la 1 suena y esta no, el problema es ese.</p>
+  <div class="row">
+    <button class="play" data-run="2">♪ Tocar tono</button>
+    <button data-yes="2">Lo escuché</button>
+    <button data-no="2">No se escuchó</button>
+  </div>
+  <div class="verdict" data-v="2"></div>
+</div>
+
+<div class="test" id="t3">
+  <h2>3 · Sintetizador del motor</h2>
+  <p>El sonido de respaldo, sin muestras. Un acorde de tres notas.</p>
+  <div class="row">
+    <button class="play" data-run="3">♪ Tocar acorde</button>
+    <button data-yes="3">Lo escuché</button>
+    <button data-no="3">No se escuchó</button>
+  </div>
+  <div class="verdict" data-v="3"></div>
+</div>
+
+<div class="test" id="t4">
+  <h2>4 · Piano muestreado</h2>
+  <p>Descarga las muestras (~20MB) y toca el mismo acorde con el piano real.</p>
+  <div class="row">
+    <button class="play" data-run="4">♪ Cargar y tocar</button>
+    <button data-yes="4">Lo escuché</button>
+    <button data-no="4">No se escuchó</button>
+  </div>
+  <div class="verdict" data-v="4"></div>
+</div>
+
+<div class="test">
+  <h2>Informe</h2>
+  <p>Copiá esto y mandámelo.</p>
+  <pre id="report">…</pre>
+  <button id="copy">Copiar informe</button>
+</div>
+
+<script src="assets/audio-engine.js"></script>
+<script>
+const heard={},info={};
+const engine=window.PianoEngine;
+
+// Contexto creado al cargar la página, a propósito: es la condición que
+// reproduce lo que hace la app hoy.
+let bootCtx=null,bootCtxError=null;
+try{bootCtx=new(window.AudioContext||window.webkitAudioContext)()}
+catch(error){bootCtxError=String(error)}
+info.estadoAlCargar=bootCtx?bootCtx.state:"no se pudo crear: "+bootCtxError;
+
+function tone(ctx,freq){
+ const osc=ctx.createOscillator(),gain=ctx.createGain(),now=ctx.currentTime;
+ osc.frequency.value=freq;
+ gain.gain.setValueAtTime(.0001,now);
+ gain.gain.exponentialRampToValueAtTime(.3,now+.02);
+ gain.gain.exponentialRampToValueAtTime(.0001,now+1);
+ osc.connect(gain);gain.connect(ctx.destination);
+ osc.start(now);osc.stop(now+1.05);
+}
+function say(n,text,cls){
+ const el=document.querySelector(`[data-v="${n}"]`);
+ el.textContent=text;el.className="verdict "+(cls||"");
+}
+
+const runners={
+ async 1(){
+   const ctx=new(window.AudioContext||window.webkitAudioContext)();
+   info.test1_estadoAntes=ctx.state;
+   await ctx.resume().catch(()=>{});
+   info.test1_estadoDespues=ctx.state;
+   info.test1_sampleRate=ctx.sampleRate;
+   tone(ctx,440);
+   say(1,`Contexto: ${ctx.state} · ${ctx.sampleRate}Hz. ¿Se escuchó?`,"wait");
+ },
+ async 2(){
+   if(!bootCtx){say(2,"No se pudo crear el contexto al cargar: "+bootCtxError,"bad");return}
+   info.test2_estadoAntes=bootCtx.state;
+   await bootCtx.resume().catch(()=>{});
+   info.test2_estadoDespues=bootCtx.state;
+   tone(bootCtx,660);
+   say(2,`Contexto: ${bootCtx.state}. ¿Se escuchó?`,"wait");
+ },
+ async 3(){
+   engine.ensureContext();
+   const ok=await engine.unlockFromGesture();
+   info.test3_contextoCorriendo=ok;
+   info.test3_usaMuestras=engine.usingSamples;
+   engine.playChordNow(["C3","E4","G4"],{velocity:.9,duration:1.5});
+   say(3,`Audio ${ok?"corriendo":"bloqueado"} · motor: ${engine.usingSamples?"muestras":"sintetizador"}. ¿Se escuchó?`,"wait");
+ },
+ async 4(){
+   engine.ensureContext();
+   await engine.unlockFromGesture();
+   say(4,"Cargando muestras…","wait");
+   const ok=await engine.load({force:true});
+   info.test4_cargaOk=ok;
+   info.test4_fase=engine.status.phase;
+   info.test4_formato=engine.status.format;
+   info.test4_muestras=engine.status.loaded+"/"+engine.status.total;
+   if(!ok){say(4,`La carga falló (${engine.status.phase}). Suena el sintetizador.`,"bad");}
+   engine.playChordNow(["C3","E4","G4"],{velocity:.9,duration:2});
+   if(ok)say(4,`Formato ${engine.status.format} · ${engine.status.loaded}/${engine.status.total} muestras. ¿Se escuchó?`,"wait");
+ }
+};
+
+document.querySelectorAll("[data-run]").forEach(b=>{
+ b.onclick=()=>{const n=b.dataset.run;runners[n]().catch(e=>say(n,"Error: "+e,"bad")).then(report)};
+});
+document.querySelectorAll("[data-yes]").forEach(b=>{
+ b.onclick=()=>{heard[b.dataset.yes]=true;say(b.dataset.yes,"✓ Se escuchó","ok");report()};
+});
+document.querySelectorAll("[data-no]").forEach(b=>{
+ b.onclick=()=>{heard[b.dataset.no]=false;say(b.dataset.no,"✗ No se escuchó","bad");report()};
+});
+
+function report(){
+ const lines=["=== Diagnóstico de audio · Piano Estudio ==="];
+ lines.push("navegador: "+navigator.userAgent);
+ lines.push("");
+ [1,2,3,4].forEach(n=>{
+   lines.push(`prueba ${n}: ${heard[n]===true?"SE ESCUCHÓ":heard[n]===false?"NO se escuchó":"sin responder"}`);
+ });
+ lines.push("");
+ Object.keys(info).forEach(k=>lines.push(k+": "+info[k]));
+ document.getElementById("report").textContent=lines.join("\n");
+}
+report();
+document.getElementById("copy").onclick=()=>{
+ const text=document.getElementById("report").textContent;
+ navigator.clipboard.writeText(text).then(
+   ()=>{document.getElementById("copy").textContent="Copiado"},
+   ()=>{document.getElementById("copy").textContent="Copiá el texto a mano"}
+ );
+};
+</script>
+</body>
+</html>

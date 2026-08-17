@@ -24,6 +24,30 @@
   const VENDOR_URL = "assets/vendor/smplr.mjs";
   const SAMPLE_BASE = "assets/piano-samples";
 
+  /*
+   * Scheduler de paso directo.
+   *
+   * smplr trae su propio scheduler con 200ms de look-ahead: lo que cae más allá
+   * va a una cola que drena un setInterval de 50ms. Eso choca de frente con la
+   * decisión 4 — nuestro transporte programa con 600ms de anticipación, así que
+   * TODAS las notas del piano terminaban despachadas por un timer del hilo
+   * principal, que es justo la deriva que queremos evitar. Y si el hilo se
+   * traba, llegan tarde.
+   *
+   * Acá siempre pasamos tiempos absolutos, y programar en el futuro es
+   * exactamente lo que Web Audio hace bien con source.start(when). Así que
+   * despachamos de inmediato y dejamos que el reloj de audio ponga la nota en su
+   * lugar. Cancelar sigue funcionando: stopById(id, time) con un time anterior
+   * al arranque hace que la nota no suene nunca.
+   */
+  const DIRECT_SCHEDULER = {
+    schedule(event, callback) {
+      callback(event);
+      return () => {};
+    },
+    stop() {}
+  };
+
   // Formatos disponibles en assets/piano-samples/, en orden de preferencia: ogg
   // pesa menos, m4a es el que reproduce Safari. Cada navegador descarga uno solo.
   const FORMATS = ["ogg", "m4a"];
@@ -251,8 +275,10 @@
           formats: [format],
           storage: SAMPLE_STORAGE,
           destination: masterBus,
+          scheduler: DIRECT_SCHEDULER,
           decayTime: 0.5,
-          onLoadProgress: (loaded, total) => setStatus("loading", { loaded, total })
+          // smplr entrega un objeto {loaded,total}, no dos argumentos.
+          onLoadProgress: progress => setStatus("loading", { loaded: progress.loaded, total: progress.total })
         });
         return instrument.ready.then(() => instrument);
       })
