@@ -151,6 +151,7 @@
 
   let context = null;
   let masterBus = null;
+  let masterCompressor = null;
   let reverbSend = null;
 
   function ensureContext() {
@@ -158,7 +159,16 @@
       context = new (global.AudioContext || global.webkitAudioContext)();
       masterBus = context.createGain();
       masterBus.gain.value = 1;
-      masterBus.connect(context.destination);
+
+      masterCompressor = context.createDynamicsCompressor();
+      masterCompressor.threshold.value = -15;
+      masterCompressor.knee.value = 6;
+      masterCompressor.ratio.value = 2.5;
+      masterCompressor.attack.value = 0.003;
+      masterCompressor.release.value = 0.3;
+
+      masterBus.connect(masterCompressor);
+      masterCompressor.connect(context.destination);
     }
     return context;
   }
@@ -175,9 +185,16 @@
     }
     const convolver = ctx.createConvolver();
     convolver.buffer = impulse;
+
+    const reverbEQ = ctx.createBiquadFilter();
+    reverbEQ.type = "highpass";
+    reverbEQ.frequency.value = 200;
+    reverbEQ.Q.value = 1.0;
+
     const wet = ctx.createGain();
     wet.gain.value = 0.12;
-    convolver.connect(wet);
+    convolver.connect(reverbEQ);
+    reverbEQ.connect(wet);
     wet.connect(ctx.destination);
     reverbSend = convolver;
     return reverbSend;
