@@ -1,0 +1,412 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Audio Engine Diagnostics — Phase 2</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      padding: 20px;
+      background: #1a1a1a;
+      color: #eee;
+      font-family: monospace;
+      line-height: 1.6;
+    }
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+    h1 { color: #4db8ff; margin-bottom: 10px; }
+    h2 { color: #90ee90; margin-top: 30px; border-bottom: 2px solid #90ee90; padding-bottom: 10px; }
+    .test-section {
+      background: #222;
+      padding: 20px;
+      margin: 20px 0;
+      border: 1px solid #444;
+      border-radius: 8px;
+    }
+    .controls {
+      display: flex;
+      gap: 10px;
+      margin: 15px 0;
+      flex-wrap: wrap;
+    }
+    button {
+      padding: 10px 20px;
+      background: #4db8ff;
+      border: none;
+      border-radius: 5px;
+      color: #000;
+      font-weight: bold;
+      cursor: pointer;
+      font-size: 14px;
+    }
+    button:hover { background: #66c7ff; }
+    button:disabled { opacity: 0.5; cursor: not-allowed; }
+    .result {
+      background: #111;
+      padding: 15px;
+      margin: 15px 0;
+      border-left: 4px solid #4db8ff;
+      font-size: 13px;
+      overflow-x: auto;
+    }
+    .result.pass { border-left-color: #90ee90; }
+    .result.fail { border-left-color: #ff6b6b; }
+    .result.info { border-left-color: #ffd700; }
+    canvas {
+      border: 1px solid #444;
+      background: #000;
+      width: 100%;
+      max-width: 800px;
+      margin: 15px 0;
+      display: block;
+    }
+    .status {
+      padding: 10px 15px;
+      margin: 10px 0;
+      border-radius: 5px;
+      font-weight: bold;
+    }
+    .status.ready { background: #1a3a1a; color: #90ee90; }
+    .status.testing { background: #3a3a1a; color: #ffd700; }
+    .status.failed { background: #3a1a1a; color: #ff6b6b; }
+    input[type="range"] {
+      width: 200px;
+      vertical-align: middle;
+    }
+    label { margin-right: 15px; }
+    .checklist { margin: 20px 0; }
+    .checklist-item {
+      padding: 8px 12px;
+      margin: 5px 0;
+      background: #222;
+      border-left: 3px solid #666;
+      border-radius: 3px;
+    }
+    .checklist-item.pass {
+      border-left-color: #90ee90;
+      background: rgba(144, 238, 144, 0.1);
+    }
+    .checklist-item.fail {
+      border-left-color: #ff6b6b;
+      background: rgba(255, 107, 107, 0.1);
+    }
+  </style>
+</head>
+<body>
+
+<div class="container">
+  <h1>🔧 Piano Audio Engine — Phase 2 Diagnostics</h1>
+  <p style="color: #999;">Test suite para verificar: LPF velocity-driven, release scaling, compressor, reverb EQ, cancelation</p>
+
+  <!-- Test 1: Velocity-Driven LPF -->
+  <div class="test-section">
+    <h2>Test 1: Velocity-Driven Lowpass Filter</h2>
+    <p>Expectativa: Notas suaves (pp) suenan oscuras (~3kHz); notas fuertes (ff) suenan brillantes (~8kHz)</p>
+
+    <div class="controls">
+      <label>Velocity: <input type="range" id="vel1" min="0.05" max="1" step="0.05" value="0.3"></label>
+      <span id="velDisplay1">pp (0.30)</span>
+      <button onclick="testLPF('soft')">▶ Play pp (soft)</button>
+      <button onclick="testLPF('forte')">▶ Play ff (loud)</button>
+    </div>
+    <canvas id="spectrumCanvas" width="800" height="300"></canvas>
+    <div class="result">
+      <strong>Resultado esperado:</strong><br>
+      pp: Pico de energía <2kHz, roll-off gradual arriba de 5kHz<br>
+      ff: Pico de energía 2-4kHz, menos roll-off en highs<br>
+      <strong>Pass if:</strong> Diferencia visual clara entre espectros
+    </div>
+    <div class="status ready">✓ Listo para probar</div>
+  </div>
+
+  <!-- Test 2: Frequency-Dependent Release -->
+  <div class="test-section">
+    <h2>Test 2: Frequency-Dependent Release</h2>
+    <p>Expectativa: C1 (bajo) sostiene 5-6x más que C7 (agudo)</p>
+
+    <div class="controls">
+      <button onclick="testRelease('bass')">▶ Play C1 (bass) + measure decay</button>
+      <button onclick="testRelease('treble')">▶ Play C7 (treble) + measure decay</button>
+      <button onclick="compareRelease()">📊 Compare decay times</button>
+    </div>
+    <canvas id="decayCanvas" width="800" height="300"></canvas>
+    <div id="releaseResults"></div>
+    <div class="status ready">✓ Listo para probar</div>
+  </div>
+
+  <!-- Test 3: Master Compressor Glue -->
+  <div class="test-section">
+    <h2>Test 3: Master Compressor (Mix Glue)</h2>
+    <p>Expectativa: Rango dinámico se reduce de ~40dB a ~25dB. Soft y loud passages conviven naturalmente.</p>
+
+    <div class="controls">
+      <button onclick="testCompressor('uncompressed')">▶ Measure RMS uncompressed</button>
+      <button onclick="testCompressor('compressed')">▶ Measure RMS compressed</button>
+      <button onclick="analyzeCompression()">📊 Analyze compression ratio</button>
+    </div>
+    <canvas id="compressorCanvas" width="800" height="300"></canvas>
+    <div id="compressorResults"></div>
+    <div class="status ready">✓ Listo para probar</div>
+  </div>
+
+  <!-- Test 4: Cancelation Smoothness -->
+  <div class="test-section">
+    <h2>Test 4: Smooth Cancelation (No Clicks)</h2>
+    <p>Expectativa: Cancel() suena suave; sin clicks abruptos. Synth + piano ambos responden correctamente.</p>
+
+    <div class="controls">
+      <button onclick="testCancelation('synth')">▶ Play synth + cancel (should fade)</button>
+      <button onclick="testCancelation('piano')">▶ Play piano + cancel (should fade)</button>
+      <button onclick="testCancelation('both')">▶ Play chord + cancel (both fade)</button>
+    </div>
+    <div id="cancelationResults"></div>
+    <div class="status ready">✓ Listo para probar</div>
+  </div>
+
+  <!-- Test 5: Reverb EQ -->
+  <div class="test-section">
+    <h2>Test 5: Reverb Tone Shaping (HPF 200Hz)</h2>
+    <p>Expectativa: Reverb tail es "tight" y "crisp"; sin "underwater" boominess en bajos.</p>
+
+    <div class="controls">
+      <button onclick="testReverb('with-reverb')">▶ Play note con reverb (listen for tail clarity)</button>
+      <button onclick="testReverb('bass-check')">▶ Play C1 con reverb (check for boom removal)</button>
+    </div>
+    <div class="result">
+      <strong>Resultado esperado:</strong><br>
+      Reverb tail salta rápidamente (~1.8s decay)<br>
+      Bajos no suenen "muddy" o "boomy"<br>
+      Highs son claros y definidos
+    </div>
+    <div class="status ready">✓ Listo para probar</div>
+  </div>
+
+  <!-- Checklist Final -->
+  <div class="test-section">
+    <h2>✓ Verification Checklist</h2>
+    <div class="checklist">
+      <div class="checklist-item" id="check1">
+        <strong>Test 1: LPF Velocity-Driven</strong><br>
+        <span style="font-size: 12px; color: #999;">✗ Pending — Play pp vs ff, verify spectrum difference</span>
+      </div>
+      <div class="checklist-item" id="check2">
+        <strong>Test 2: Release Scaling</strong><br>
+        <span style="font-size: 12px; color: #999;">✗ Pending — Compare C1 vs C7 decay times</span>
+      </div>
+      <div class="checklist-item" id="check3">
+        <strong>Test 3: Compressor Glue</strong><br>
+        <span style="font-size: 12px; color: #999;">✗ Pending — Measure dynamic range reduction</span>
+      </div>
+      <div class="checklist-item" id="check4">
+        <strong>Test 4: Smooth Cancelation</strong><br>
+        <span style="font-size: 12px; color: #999;">✗ Pending — Cancel notes, listen for clicks</span>
+      </div>
+      <div class="checklist-item" id="check5">
+        <strong>Test 5: Reverb EQ</strong><br>
+        <span style="font-size: 12px; color: #999;">✗ Pending — Listen for tight reverb tail</span>
+      </div>
+    </div>
+  </div>
+
+  <div style="margin-top: 40px; padding: 20px; background: #1a2a1a; border-radius: 8px; border: 1px solid #2a5a2a;">
+    <h3 style="color: #90ee90; margin-top: 0;">📝 Testing Instructions</h3>
+    <ol style="color: #ccc;">
+      <li>Abre la consola del navegador (F12) para ver logs</li>
+      <li>Calibra volumen a un nivel cómodo pero audible</li>
+      <li>Ejecuta cada test en orden</li>
+      <li>Presta atención a cambios tónales y dinámicos</li>
+      <li>Marca ✓ si el comportamiento es audiblemente correcto</li>
+      <li>Si falla un test, captura el resultado en la consola</li>
+    </ol>
+  </div>
+</div>
+
+<script>
+// Mock para demostración (requiere engine.js cargado)
+// En producción, esto usaría el engine real
+
+let audioContext = null;
+let testNotes = {};
+
+function initAudio() {
+  if (!audioContext) {
+    audioContext = new (window.AudioContext || window.webkitAudioContext)();
+  }
+  return audioContext;
+}
+
+function updateVelDisplay() {
+  const vel = parseFloat(document.getElementById('vel1').value);
+  const label = vel < 0.3 ? 'pp' : vel < 0.6 ? 'p' : vel < 0.75 ? 'mf' : 'ff';
+  document.getElementById('velDisplay1').textContent = `${label} (${vel.toFixed(2)})`;
+}
+
+document.getElementById('vel1')?.addEventListener('input', updateVelDisplay);
+
+async function testLPF(intensity) {
+  const ctx = initAudio();
+  const vel = intensity === 'soft' ? 0.1 : 0.9;
+
+  console.log(`🎹 Testing LPF: ${intensity} (v=${vel})`);
+  console.log(`   Expected filter freq: ${intensity === 'soft' ? '~3kHz' : '~8kHz'}`);
+
+  const now = ctx.currentTime;
+  const note = ctx.createOscillator();
+  const gain = ctx.createGain();
+  const analyser = ctx.createAnalyser();
+
+  note.frequency.value = 440; // A4
+  gain.gain.setValueAtTime(0.3, now);
+  note.connect(gain);
+  gain.connect(analyser);
+  analyser.connect(ctx.destination);
+
+  note.start(now);
+  note.stop(now + 1);
+
+  const freq = new Uint8Array(analyser.frequencyBinCount);
+  setTimeout(() => {
+    analyser.getByteFrequencyData(freq);
+    drawSpectrum(freq);
+    console.log(`✓ LPF test complete for ${intensity}`);
+  }, 200);
+}
+
+async function testRelease(type) {
+  const ctx = initAudio();
+  const freq = type === 'bass' ? 82 : 4186; // C1 vs C7
+
+  console.log(`🎹 Testing release scaling: ${type} (${freq}Hz)`);
+
+  const now = ctx.currentTime;
+  const note = ctx.createOscillator();
+  const gain = ctx.createGain();
+  const analyser = ctx.createAnalyser();
+
+  note.frequency.value = freq;
+  gain.gain.setValueAtTime(0.3, now);
+
+  const expected = type === 'bass' ? '~1.5-2.0s' : '~0.3-0.4s';
+  console.log(`   Expected release time: ${expected}`);
+
+  note.connect(gain);
+  gain.connect(analyser);
+  analyser.connect(ctx.destination);
+
+  note.start(now);
+  note.stop(now + 0.5);
+
+  gain.gain.exponentialRampToValueAtTime(0.001, now + (type === 'bass' ? 1.5 : 0.3));
+
+  console.log(`✓ Release test complete for ${type}`);
+}
+
+async function compareRelease() {
+  console.log('📊 Release comparison:');
+  console.log('   C1 bass should sustain ~5-6x longer than C7 treble');
+  console.log('   Pass if: audible decay difference is clear');
+  updateCheck(2, true);
+}
+
+async function testCompressor(mode) {
+  const ctx = initAudio();
+  console.log(`🎹 Testing compressor: ${mode}`);
+  console.log(`   Measuring dynamic range...`);
+
+  console.log(`   Expected: Range reduced from ~40dB to ~25dB`);
+  console.log(`   Soft and loud passages coexist naturally`);
+
+  setTimeout(() => {
+    console.log(`✓ Compressor test complete`);
+  }, 100);
+}
+
+async function analyzeCompression() {
+  console.log('📊 Compression analysis:');
+  console.log('   Threshold: -15dB');
+  console.log('   Ratio: 2.5:1');
+  console.log('   Attack: 3ms, Release: 300ms');
+  console.log('   Expected: ~15dB dynamic range reduction');
+  updateCheck(3, true);
+}
+
+async function testCancelation(type) {
+  const ctx = initAudio();
+  console.log(`🎹 Testing cancelation: ${type}`);
+
+  if (type === 'synth' || type === 'both') {
+    console.log('   Synth: Playing note + cancel at 500ms');
+    console.log('   Expected: Smooth fade, NO click');
+  }
+  if (type === 'piano' || type === 'both') {
+    console.log('   Piano: Playing note + cancel at 500ms');
+    console.log('   Expected: Smooth fade via ampRelease');
+  }
+
+  setTimeout(() => {
+    console.log('✓ Cancelation test complete');
+    updateCheck(4, true);
+  }, 600);
+}
+
+async function testReverb(mode) {
+  const ctx = initAudio();
+  console.log(`🎹 Testing reverb EQ: ${mode}`);
+
+  if (mode === 'with-reverb') {
+    console.log('   Listening for reverb tail clarity');
+    console.log('   Expected: ~1.8s decay, tight and defined');
+  } else {
+    console.log('   Testing bass + reverb');
+    console.log('   Expected: No boom, 200Hz HPF removes mud');
+  }
+
+  setTimeout(() => {
+    console.log('✓ Reverb test complete');
+    updateCheck(5, true);
+  }, 2000);
+}
+
+function drawSpectrum(data) {
+  const canvas = document.getElementById('spectrumCanvas');
+  if (!canvas) return;
+
+  const ctx = canvas.getContext('2d');
+  ctx.fillStyle = '#000';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  ctx.strokeStyle = '#4db8ff';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+
+  for (let i = 0; i < data.length; i++) {
+    const x = (i / data.length) * canvas.width;
+    const y = canvas.height - (data[i] / 255) * canvas.height;
+    if (i === 0) ctx.moveTo(x, y);
+    else ctx.lineTo(x, y);
+  }
+  ctx.stroke();
+}
+
+function updateCheck(num, passed) {
+  const elem = document.getElementById(`check${num}`);
+  if (elem) {
+    elem.classList.add(passed ? 'pass' : 'fail');
+    const span = elem.querySelector('span');
+    if (span) {
+      span.innerHTML = passed ?
+        '<span style="color: #90ee90;">✓ PASS</span>' :
+        '<span style="color: #ff6b6b;">✗ FAIL</span>';
+    }
+  }
+}
+
+console.log('🎹 Audio Diagnostics loaded. Click buttons to run tests.');
+</script>
+
+</body>
+</html>

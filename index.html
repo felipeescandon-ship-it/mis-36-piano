@@ -435,6 +435,14 @@ button.song-line-end{padding:3px 8px}
 .sync-save-status::before,.editor-cloud-status::before{content:"";width:8px;height:8px;border-radius:50%;background:currentColor;flex:0 0 auto}
 .sync-save-status.warning,.editor-cloud-status.warning{color:#824700}
 .sync-save-status.error,.editor-cloud-status.error{color:#992626}
+.sync-lyric-editor{display:grid;gap:8px;flex:1 1 100%}
+.sync-lyric-textarea{width:100%;min-height:60px;padding:9px 11px;border:1px solid var(--line);border-radius:9px;background:#faf9f7;color:var(--ink);font-size:14px;font-family:inherit;resize:vertical}
+.sync-lyric-textarea:focus{outline:none;border-color:#b88a76;box-shadow:0 0 0 3px rgba(151,77,48,.09)}
+.sync-anchor-label{font-size:13px;font-weight:800;color:#5f574f;margin-bottom:4px}
+.sync-anchor-words{display:flex;gap:6px;flex-wrap:wrap}
+.sync-anchor-word{padding:6px 10px;border:1px solid #dcae60;border-radius:8px;background:#fff7e5;color:#824700;font-size:13px;cursor:pointer;transition:all .2s ease}
+.sync-anchor-word.selected{background:var(--blue);color:#fff;border-color:var(--blue)}
+.sync-anchor-word:hover:not(.selected){background:#ffedd4;border-color:#d48a18}
 .sync-move[aria-pressed="true"]{background:var(--neutral);color:#fff}
 #syncMove:not(:disabled):not([aria-pressed="true"]){background:#fff;color:var(--ink);border:1px solid var(--line);box-shadow:none}
 .editor-history.has-undo #editorUndo{background:var(--neutralSoft);color:var(--neutral);box-shadow:inset 0 0 0 2px var(--neutralLine)}
@@ -1145,6 +1153,16 @@ body.screen-practicar #practiceGuide:not([hidden]){margin-bottom:16px}
     <span>Acorde seleccionado</span>
     <select id="syncChord" disabled aria-label="Cambiar acorde"></select>
   </label>
+  <div class="sync-lyric-editor sync-editor-control" id="syncLyricEditor" hidden>
+    <label>
+      <span style="font-size:13px;font-weight:800;color:#5f574f">Letra de la línea</span>
+      <textarea id="syncLyricTextarea" class="sync-lyric-textarea" disabled aria-label="Letra de la línea"></textarea>
+    </label>
+    <div>
+      <div class="sync-anchor-label">Palabra anclada al acorde:</div>
+      <div class="sync-anchor-words" id="syncAnchorWords"></div>
+    </div>
+  </div>
   <label class="sync-duration sync-editor-control">
     <span>Posición de la mano</span>
     <select id="syncInversion" disabled aria-label="Posición de la mano derecha"></select>
@@ -1425,6 +1443,9 @@ const syncMove=document.getElementById("syncMove");
 const syncChord=document.getElementById("syncChord");
 const syncInversion=document.getElementById("syncInversion");
 const syncBeats=document.getElementById("syncBeats");
+const syncLyricEditor=document.getElementById("syncLyricEditor");
+const syncLyricTextarea=document.getElementById("syncLyricTextarea");
+const syncAnchorWords=document.getElementById("syncAnchorWords");
 const syncDelete=document.getElementById("syncDelete");
 const bpmOut=document.getElementById("bpmOut");
 const bpm=document.getElementById("bpm");
@@ -3608,15 +3629,17 @@ function updateSyncEditor(){
    syncBeats.disabled=true;
    syncDelete.disabled=true;
    syncMove.disabled=true;
+   syncLyricEditor.hidden=true;
    return;
  }
  if(!songEditMode||!selected){
-   syncInstruction.textContent="Selecciona un acorde para moverlo o usa “Añadir” para crear uno nuevo.";
+   syncInstruction.textContent=”Selecciona un acorde para moverlo o usa “Añadir” para crear uno nuevo.”;
    syncChord.disabled=true;
    syncInversion.disabled=true;
    syncBeats.disabled=true;
    syncDelete.disabled=true;
    syncMove.disabled=true;
+   syncLyricEditor.hidden=true;
    return;
  }
  syncInstruction.textContent=movingSyncEvent
@@ -3629,6 +3652,24 @@ function updateSyncEditor(){
  syncInversion.disabled=false;
  syncBeats.disabled=false;
  syncBeats.value=String(selected.event.beats);
+ syncLyricEditor.hidden=false;
+ syncLyricTextarea.value=selected.event.lyric;
+ const words=lyricWords(selected.event.lyric);
+ syncAnchorWords.replaceChildren(...words.map((word,idx)=>{
+   const btn=document.createElement("button");
+   btn.type="button";
+   btn.className="sync-anchor-word"+(idx===selected.event.anchor?" selected":"");
+   btn.textContent=word;
+   btn.onclick=()=>{
+     if(idx===selected.event.anchor)return;
+     recordEditorChange();
+     selected.event.anchor=idx;
+     saveSongSync();
+     updateSyncEditor();
+     renderFullSong();
+   };
+   return btn;
+ }));
  syncDelete.disabled=false;
 }
 function selectSyncEvent(section,step){
@@ -4617,6 +4658,7 @@ function stopTransport(){
  transport.onFinish=null;
 }
 function scheduleStepAudio(step){
+ if(step.cancelled)return;
  if(step.kind==="click"){engine.clickAt(step.when,step.accent);return}
  const event=sections[step.position.section]?.events[step.position.step];
  if(!event)return;
@@ -4624,6 +4666,17 @@ function scheduleStepAudio(step){
 }
 function pumpTransport(){
  const now=engine.now;
+ // Detectar stall: si nextAt está >100ms en el pasado, saltear acordes vencidos.
+ // Main thread bloqueado >600ms → pump se saltea → nextAt cae >100ms atrás.
+ while(!transport.exhausted&&transport.nextAt<now-0.1){
+   const step=transport.nextStep(transport.nextAt);
+   if(!step){
+     transport.exhausted=true;
+     transport.endsAt=transport.nextAt;
+     break;
+   }
+   transport.nextAt=step.when+step.length;
+ }
  while(!transport.exhausted&&transport.nextAt<=now+TRANSPORT_LOOKAHEAD){
    const step=transport.nextStep(transport.nextAt);
    if(!step){
@@ -4637,7 +4690,7 @@ function pumpTransport(){
  }
  while(transport.pending.length&&transport.pending[0].when<=now){
    const step=transport.pending.shift();
-   if(step.onUi)step.onUi();
+   if(!step.cancelled&&step.onUi)step.onUi();
  }
  if(transport.exhausted&&!transport.pending.length&&now>=transport.endsAt){
    const finish=transport.onFinish;
@@ -4662,9 +4715,8 @@ function queueStepProducer(fromIndex){
   const current=index++;
   const item=playQueue[current];
   const event=sections[item.section]?.events[item.step];
-  if(!event)return null;
-  const beats=event.beats||4;
-  return {when:at,length:beatSeconds()*beats,kind:"chord",position:item,onUi:()=>showQueueItem(current)};
+  const beats=(event?.beats)||4;
+  return {when:at,length:beatSeconds()*beats,kind:"chord",position:item,cancelled:!event,onUi:()=>showQueueItem(current)};
  };
 }
 function practiceStepProducer(pulses){
@@ -4679,13 +4731,14 @@ function practiceStepProducer(pulses){
   if(rep>=transitionPracticeTotal)return null;
   const item=playQueue[slot];
   const event=sections[item.section]?.events[item.step];
-  if(!event)return null;
-  const beats=event.beats||4;
+  const beats=(event?.beats)||4;
   const currentRep=rep,currentSlot=slot;
   slot++;
   if(slot>=playQueue.length){slot=0;rep++}
-  return {when:at,length:beatSeconds()*beats,kind:"chord",position:item,onUi:()=>{
+  return {when:at,length:beatSeconds()*beats,kind:"chord",position:item,cancelled:!event,onUi:()=>{
     // Repeticiones ya cerradas: es lo que se registra si se detiene a mitad.
+    // No registrar si el evento fue borrado (cancelled).
+    if(!event)return;
     transitionPracticeCompleted=currentRep;
     showQueueItem(currentSlot);
     practiceStatus.textContent=`Repetición ${currentRep+1} de ${transitionPracticeTotal} · ${currentSlot===0?"acorde de salida":"acorde de llegada"}`;
@@ -4901,7 +4954,7 @@ document.addEventListener("visibilitychange",()=>{
 playMode.onchange=()=>{
  customPanel.style.display=playMode.value==="custom"?"block":"none";
  updateSessionSummary();
- if(timer)stopAuto();
+ if(transportRunning())stopAuto();
 };
 
 selectAllSections.onclick=()=>{
@@ -4988,6 +5041,20 @@ syncInversion.onchange=()=>{
  render();
  renderFullSong();
  playChord(selected.event.chord,selected.event.inversion,selected.event.beats);
+};
+syncLyricTextarea.onchange=()=>{
+ const selected=selectedSyncData();
+ if(!selected)return;
+ const newLyric=syncLyricTextarea.value.trim();
+ if(newLyric===selected.event.lyric)return;
+ recordEditorChange();
+ selected.event.lyric=newLyric;
+ const section=sections[selectedSyncEvent.section];
+ if(section)section.lines[selected.event.line]=newLyric;
+ saveSongSync();
+ setLocalSaveStatus("Dispositivo: guardado · puedes deshacer","ready");
+ updateSyncEditor();
+ renderFullSong();
 };
 syncDelete.onclick=()=>{
  const selected=selectedSyncData();
@@ -5321,6 +5388,10 @@ if("serviceWorker" in navigator){
    navigator.serviceWorker.register("sw.js").catch(error=>{
      console.warn("Service worker no registrado; la app funciona igual, sin offline.",error);
    });
+   // Solicitar persistencia para evitar que el navegador borre localStorage.
+   if(navigator.storage?.persist){
+     navigator.storage.persist().catch(()=>{});
+   }
  });
 }
 </script>

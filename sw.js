@@ -62,27 +62,40 @@ self.addEventListener("fetch", event => {
   if (url.pathname.startsWith("/api/")) return;
 
   if (IMMUTABLE_PATHS.test(url.pathname)) {
-    event.respondWith(cacheFirst(request));
+    event.respondWith(cacheFirst(request, event));
     return;
   }
 
-  event.respondWith(networkFirst(request));
+  event.respondWith(networkFirst(request, event));
 });
 
-async function cacheFirst(request) {
+async function cacheFirst(request, event) {
   const cache = await caches.open(SAMPLE_CACHE);
   const cached = await cache.match(request);
   if (cached) return cached;
   const response = await fetch(request);
-  if (response && response.ok) cache.put(request, response.clone());
+  if (response && response.ok && response.type !== "error" && !response.redirected) {
+    event.waitUntil(
+      cache.put(request, response.clone()).catch(() => {
+        /* QuotaExceededError: se ignora, la caché se llenó */
+      })
+    );
+  }
   return response;
 }
 
-async function networkFirst(request) {
+async function networkFirst(request, event) {
   const cache = await caches.open(APP_CACHE);
   try {
     const response = await fetch(request);
-    if (response && response.ok) cache.put(request, response.clone());
+    const cacheControl = response.headers.get("Cache-Control") || "";
+    if (response && response.ok && response.type !== "error" && !response.redirected && !cacheControl.includes("no-store")) {
+      event.waitUntil(
+        cache.put(request, response.clone()).catch(() => {
+          /* QuotaExceededError: se ignora, la caché se llenó */
+        })
+      );
+    }
     return response;
   } catch (error) {
     const cached = await cache.match(request);
