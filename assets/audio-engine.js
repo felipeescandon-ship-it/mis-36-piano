@@ -337,7 +337,7 @@
     const attack = 0.006 + (1 - v) * 0.05;
     const decay = 0.09 + (1 - v) * 0.12;
     const peak = 0.1 + v * 0.26;
-    const sustain = peak * (0.3 + v * 0.34);
+    const sustain = peak * (0.15 + Math.pow(v, 1.2) * 0.55);
     const brightness = Math.pow(v, 1.7);
 
     const voiceGain = ctx.createGain();
@@ -347,11 +347,22 @@
 
     const holdUntil = when + Math.max(attack + decay + 0.02, duration);
     voiceGain.gain.setValueAtTime(Math.max(0.0001, sustain), holdUntil);
+
+    const referenceFreq = 330;
+    const releaseScale = Math.sqrt(referenceFreq / frequency);
+    const scaledRelease = releaseTime * Math.min(2.0, Math.max(0.08, releaseScale));
+
     // Release exponencial hacia el silencio, nunca lineal ni un corte seco:
     // un salto a 0 en la envolvente es exactamente lo que produce el click.
-    voiceGain.gain.exponentialRampToValueAtTime(0.0001, holdUntil + releaseTime);
+    voiceGain.gain.exponentialRampToValueAtTime(0.0001, holdUntil + scaledRelease);
 
-    voiceGain.connect(masterBus);
+    const filter = ctx.createBiquadFilter();
+    filter.type = "lowpass";
+    filter.frequency.value = 3000 + v * 5000;
+    filter.Q.value = 0.8;
+
+    voiceGain.connect(filter);
+    filter.connect(masterBus);
     voiceGain.connect(ensureReverb());
 
     const partials = [
@@ -368,11 +379,11 @@
       oscillator.connect(gain);
       gain.connect(voiceGain);
       oscillator.start(when);
-      oscillator.stop(holdUntil + releaseTime + 0.05);
+      oscillator.stop(holdUntil + scaledRelease + 0.05);
       return oscillator;
     });
 
-    return { gain: voiceGain, oscillators, endsAt: holdUntil + releaseTime };
+    return { gain: voiceGain, oscillators, endsAt: holdUntil + scaledRelease };
   }
 
   // --- Voces activas y cancelación ---------------------------------------
