@@ -466,7 +466,6 @@
             note: toMidi(note),
             velocity: Math.round(noteVelocity * 127),
             time: at + index * spread,
-            duration: isBass ? duration * 1.08 : duration,
             ampRelease: releaseTime
           })
         );
@@ -496,7 +495,7 @@
     const endsAt = voices.reduce((max, voice) => Math.max(max, voice.endsAt), at);
     const handle = makeHandle(at, (cancelAt, cancelRelease) => {
       voices.forEach(voice => {
-        fadeOutGain(voice.gain, cancelAt, cancelRelease);
+        fadeOutGain(voice.gain.gain, cancelAt, cancelRelease);
         voice.oscillators.forEach(oscillator => {
           try {
             oscillator.stop(cancelAt + cancelRelease + 0.03);
