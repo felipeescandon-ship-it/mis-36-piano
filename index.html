@@ -2433,6 +2433,16 @@ function applyFullDocument(targetSections,saved){
      section={name:savedSection.name,lines:savedSection.lines.map(String),events:[]};
      targetSections[si]=section;
    }
+   // La letra guardada también manda sobre una sección que ya existe, no sólo
+   // sobre una importada. Antes sólo se aplicaban los eventos, así que en una
+   // canción con semilla —"Mis 36", sin ir más lejos— editar la letra la
+   // guardaba en localStorage y la perdía en la siguiente carga: volvía a ganar
+   // la del código, y de paso el `lyric` de cada evento se rehidrataba desde la
+   // semilla más abajo. Va antes de filtrar los eventos porque el filtro valida
+   // `line` contra la cantidad de líneas.
+   if(Array.isArray(savedSection?.lines)&&savedSection.lines.length){
+     section.lines=savedSection.lines.map(String);
+   }
    if(!Array.isArray(savedSection?.events))return;
    section.events=savedSection.events.filter(value=>(
      value&&typeof value.uid==="string"&&value.uid.length<=100&&
@@ -3630,6 +3640,7 @@ function updateSyncEditor(){
    syncDelete.disabled=true;
    syncMove.disabled=true;
    syncLyricEditor.hidden=true;
+   syncLyricTextarea.disabled=true;
    return;
  }
  if(!songEditMode||!selected){
@@ -3640,6 +3651,7 @@ function updateSyncEditor(){
    syncDelete.disabled=true;
    syncMove.disabled=true;
    syncLyricEditor.hidden=true;
+   syncLyricTextarea.disabled=true;
    return;
  }
  syncInstruction.textContent=movingSyncEvent
@@ -3653,6 +3665,11 @@ function updateSyncEditor(){
  syncBeats.disabled=false;
  syncBeats.value=String(selected.event.beats);
  syncLyricEditor.hidden=false;
+ // El textarea nace deshabilitado en el HTML, igual que el resto de los
+ // controles del panel: hay que habilitarlo acá al seleccionar un acorde. Sin
+ // esta línea el editor se veía completo y con la letra cargada, pero no
+ // aceptaba una sola tecla.
+ syncLyricTextarea.disabled=false;
  syncLyricTextarea.value=selected.event.lyric;
  const words=lyricWords(selected.event.lyric);
  syncAnchorWords.replaceChildren(...words.map((word,idx)=>{
