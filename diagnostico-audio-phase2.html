@@ -1,412 +1,786 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Audio Engine Diagnostics — Phase 2</title>
-  <style>
-    * { box-sizing: border-box; }
-    body {
-      margin: 0;
-      padding: 20px;
-      background: #1a1a1a;
-      color: #eee;
-      font-family: monospace;
-      line-height: 1.6;
-    }
-    .container {
-      max-width: 1200px;
-      margin: 0 auto;
-    }
-    h1 { color: #4db8ff; margin-bottom: 10px; }
-    h2 { color: #90ee90; margin-top: 30px; border-bottom: 2px solid #90ee90; padding-bottom: 10px; }
-    .test-section {
-      background: #222;
-      padding: 20px;
-      margin: 20px 0;
-      border: 1px solid #444;
-      border-radius: 8px;
-    }
-    .controls {
-      display: flex;
-      gap: 10px;
-      margin: 15px 0;
-      flex-wrap: wrap;
-    }
-    button {
-      padding: 10px 20px;
-      background: #4db8ff;
-      border: none;
-      border-radius: 5px;
-      color: #000;
-      font-weight: bold;
-      cursor: pointer;
-      font-size: 14px;
-    }
-    button:hover { background: #66c7ff; }
-    button:disabled { opacity: 0.5; cursor: not-allowed; }
-    .result {
-      background: #111;
-      padding: 15px;
-      margin: 15px 0;
-      border-left: 4px solid #4db8ff;
-      font-size: 13px;
-      overflow-x: auto;
-    }
-    .result.pass { border-left-color: #90ee90; }
-    .result.fail { border-left-color: #ff6b6b; }
-    .result.info { border-left-color: #ffd700; }
-    canvas {
-      border: 1px solid #444;
-      background: #000;
-      width: 100%;
-      max-width: 800px;
-      margin: 15px 0;
-      display: block;
-    }
-    .status {
-      padding: 10px 15px;
-      margin: 10px 0;
-      border-radius: 5px;
-      font-weight: bold;
-    }
-    .status.ready { background: #1a3a1a; color: #90ee90; }
-    .status.testing { background: #3a3a1a; color: #ffd700; }
-    .status.failed { background: #3a1a1a; color: #ff6b6b; }
-    input[type="range"] {
-      width: 200px;
-      vertical-align: middle;
-    }
-    label { margin-right: 15px; }
-    .checklist { margin: 20px 0; }
-    .checklist-item {
-      padding: 8px 12px;
-      margin: 5px 0;
-      background: #222;
-      border-left: 3px solid #666;
-      border-radius: 3px;
-    }
-    .checklist-item.pass {
-      border-left-color: #90ee90;
-      background: rgba(144, 238, 144, 0.1);
-    }
-    .checklist-item.fail {
-      border-left-color: #ff6b6b;
-      background: rgba(255, 107, 107, 0.1);
-    }
-  </style>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Diagnóstico de audio — Fase 2</title>
+<style>
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; padding: 24px;
+    background: #14161a; color: #e6e6e6;
+    font: 14px/1.6 ui-monospace, SFMono-Regular, Menlo, monospace;
+  }
+  .wrap { max-width: 980px; margin: 0 auto; }
+  h1 { color: #6cb8ff; font-size: 22px; margin: 0 0 6px; }
+  h2 { color: #8ce39a; font-size: 16px; margin: 0 0 4px; }
+  .lede { color: #9aa3ad; margin: 0 0 24px; }
+  .test {
+    background: #1b1e24; border: 1px solid #2c313a;
+    border-radius: 10px; padding: 18px; margin: 18px 0;
+  }
+  .test p.what { color: #9aa3ad; margin: 4px 0 14px; }
+  .row { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin: 12px 0; }
+  button {
+    padding: 9px 16px; background: #2f6fb8; border: 1px solid #3f83cf;
+    border-radius: 6px; color: #fff; font: inherit; font-weight: 600; cursor: pointer;
+  }
+  button:hover:not(:disabled) { background: #3a83d4; }
+  button:disabled { opacity: .45; cursor: progress; }
+  select { background: #23272e; color: #e6e6e6; border: 1px solid #3a3f48;
+           border-radius: 6px; padding: 8px; font: inherit; }
+  canvas { width: 100%; height: 190px; background: #0c0e11;
+           border: 1px solid #2c313a; border-radius: 6px; display: block; margin: 12px 0; }
+  .out {
+    background: #0c0e11; border-left: 3px solid #3a3f48; border-radius: 0 6px 6px 0;
+    padding: 12px 14px; margin: 10px 0 0; white-space: pre-wrap; font-size: 13px;
+    color: #c3cad3; min-height: 22px;
+  }
+  .out.pass { border-left-color: #46c05f; }
+  .out.fail { border-left-color: #e05561; }
+  .out.warn { border-left-color: #e0a355; }
+  .out b.pass { color: #6ede82; }
+  .out b.fail { color: #ff7b85; }
+  .out b.warn { color: #ffc06b; }
+  .legend { display: flex; gap: 18px; font-size: 12px; color: #9aa3ad; margin-top: -4px; }
+  .legend i { display: inline-block; width: 12px; height: 3px; vertical-align: middle;
+              margin-right: 5px; border-radius: 2px; }
+  .banner {
+    background: #1d2530; border: 1px solid #2f4460; border-radius: 8px;
+    padding: 14px 16px; margin-bottom: 20px; color: #b9c6d6;
+  }
+  .banner b { color: #6cb8ff; }
+  code { background: #23272e; padding: 1px 5px; border-radius: 3px; color: #d8b872; }
+</style>
 </head>
 <body>
+<div class="wrap">
 
-<div class="container">
-  <h1>🔧 Piano Audio Engine — Phase 2 Diagnostics</h1>
-  <p style="color: #999;">Test suite para verificar: LPF velocity-driven, release scaling, compressor, reverb EQ, cancelation</p>
+<h1>Diagnóstico de audio — Fase 2</h1>
+<p class="lede">Mide el motor real (<code>assets/audio-engine.js</code>), no una maqueta.</p>
 
-  <!-- Test 1: Velocity-Driven LPF -->
-  <div class="test-section">
-    <h2>Test 1: Velocity-Driven Lowpass Filter</h2>
-    <p>Expectativa: Notas suaves (pp) suenan oscuras (~3kHz); notas fuertes (ff) suenan brillantes (~8kHz)</p>
-
-    <div class="controls">
-      <label>Velocity: <input type="range" id="vel1" min="0.05" max="1" step="0.05" value="0.3"></label>
-      <span id="velDisplay1">pp (0.30)</span>
-      <button onclick="testLPF('soft')">▶ Play pp (soft)</button>
-      <button onclick="testLPF('forte')">▶ Play ff (loud)</button>
-    </div>
-    <canvas id="spectrumCanvas" width="800" height="300"></canvas>
-    <div class="result">
-      <strong>Resultado esperado:</strong><br>
-      pp: Pico de energía <2kHz, roll-off gradual arriba de 5kHz<br>
-      ff: Pico de energía 2-4kHz, menos roll-off en highs<br>
-      <strong>Pass if:</strong> Diferencia visual clara entre espectros
-    </div>
-    <div class="status ready">✓ Listo para probar</div>
-  </div>
-
-  <!-- Test 2: Frequency-Dependent Release -->
-  <div class="test-section">
-    <h2>Test 2: Frequency-Dependent Release</h2>
-    <p>Expectativa: C1 (bajo) sostiene 5-6x más que C7 (agudo)</p>
-
-    <div class="controls">
-      <button onclick="testRelease('bass')">▶ Play C1 (bass) + measure decay</button>
-      <button onclick="testRelease('treble')">▶ Play C7 (treble) + measure decay</button>
-      <button onclick="compareRelease()">📊 Compare decay times</button>
-    </div>
-    <canvas id="decayCanvas" width="800" height="300"></canvas>
-    <div id="releaseResults"></div>
-    <div class="status ready">✓ Listo para probar</div>
-  </div>
-
-  <!-- Test 3: Master Compressor Glue -->
-  <div class="test-section">
-    <h2>Test 3: Master Compressor (Mix Glue)</h2>
-    <p>Expectativa: Rango dinámico se reduce de ~40dB a ~25dB. Soft y loud passages conviven naturalmente.</p>
-
-    <div class="controls">
-      <button onclick="testCompressor('uncompressed')">▶ Measure RMS uncompressed</button>
-      <button onclick="testCompressor('compressed')">▶ Measure RMS compressed</button>
-      <button onclick="analyzeCompression()">📊 Analyze compression ratio</button>
-    </div>
-    <canvas id="compressorCanvas" width="800" height="300"></canvas>
-    <div id="compressorResults"></div>
-    <div class="status ready">✓ Listo para probar</div>
-  </div>
-
-  <!-- Test 4: Cancelation Smoothness -->
-  <div class="test-section">
-    <h2>Test 4: Smooth Cancelation (No Clicks)</h2>
-    <p>Expectativa: Cancel() suena suave; sin clicks abruptos. Synth + piano ambos responden correctamente.</p>
-
-    <div class="controls">
-      <button onclick="testCancelation('synth')">▶ Play synth + cancel (should fade)</button>
-      <button onclick="testCancelation('piano')">▶ Play piano + cancel (should fade)</button>
-      <button onclick="testCancelation('both')">▶ Play chord + cancel (both fade)</button>
-    </div>
-    <div id="cancelationResults"></div>
-    <div class="status ready">✓ Listo para probar</div>
-  </div>
-
-  <!-- Test 5: Reverb EQ -->
-  <div class="test-section">
-    <h2>Test 5: Reverb Tone Shaping (HPF 200Hz)</h2>
-    <p>Expectativa: Reverb tail es "tight" y "crisp"; sin "underwater" boominess en bajos.</p>
-
-    <div class="controls">
-      <button onclick="testReverb('with-reverb')">▶ Play note con reverb (listen for tail clarity)</button>
-      <button onclick="testReverb('bass-check')">▶ Play C1 con reverb (check for boom removal)</button>
-    </div>
-    <div class="result">
-      <strong>Resultado esperado:</strong><br>
-      Reverb tail salta rápidamente (~1.8s decay)<br>
-      Bajos no suenen "muddy" o "boomy"<br>
-      Highs son claros y definidos
-    </div>
-    <div class="status ready">✓ Listo para probar</div>
-  </div>
-
-  <!-- Checklist Final -->
-  <div class="test-section">
-    <h2>✓ Verification Checklist</h2>
-    <div class="checklist">
-      <div class="checklist-item" id="check1">
-        <strong>Test 1: LPF Velocity-Driven</strong><br>
-        <span style="font-size: 12px; color: #999;">✗ Pending — Play pp vs ff, verify spectrum difference</span>
-      </div>
-      <div class="checklist-item" id="check2">
-        <strong>Test 2: Release Scaling</strong><br>
-        <span style="font-size: 12px; color: #999;">✗ Pending — Compare C1 vs C7 decay times</span>
-      </div>
-      <div class="checklist-item" id="check3">
-        <strong>Test 3: Compressor Glue</strong><br>
-        <span style="font-size: 12px; color: #999;">✗ Pending — Measure dynamic range reduction</span>
-      </div>
-      <div class="checklist-item" id="check4">
-        <strong>Test 4: Smooth Cancelation</strong><br>
-        <span style="font-size: 12px; color: #999;">✗ Pending — Cancel notes, listen for clicks</span>
-      </div>
-      <div class="checklist-item" id="check5">
-        <strong>Test 5: Reverb EQ</strong><br>
-        <span style="font-size: 12px; color: #999;">✗ Pending — Listen for tight reverb tail</span>
-      </div>
-    </div>
-  </div>
-
-  <div style="margin-top: 40px; padding: 20px; background: #1a2a1a; border-radius: 8px; border: 1px solid #2a5a2a;">
-    <h3 style="color: #90ee90; margin-top: 0;">📝 Testing Instructions</h3>
-    <ol style="color: #ccc;">
-      <li>Abre la consola del navegador (F12) para ver logs</li>
-      <li>Calibra volumen a un nivel cómodo pero audible</li>
-      <li>Ejecuta cada test en orden</li>
-      <li>Presta atención a cambios tónales y dinámicos</li>
-      <li>Marca ✓ si el comportamiento es audiblemente correcto</li>
-      <li>Si falla un test, captura el resultado en la consola</li>
-    </ol>
-  </div>
+<div class="banner">
+  <b>Cómo funciona.</b> La página carga el motor de verdad, intercepta su salida
+  antes del altavoz y graba la señal muestra por muestra. Cada veredicto sale de
+  un número medido sobre esa grabación — si un test falla, falla de verdad.<br><br>
+  Las muestras de piano <b>no</b> se cargan a propósito: así se ejercita el
+  sintetizador, que es donde viven los cambios de la Fase 2.
+  <div id="engineState" style="margin-top:10px;color:#8ce39a"></div>
 </div>
 
+<!-- 1 ---------------------------------------------------------------->
+<div class="test">
+  <h2>1 · Filtro pasabajos por velocity</h2>
+  <p class="what">
+    El motor abre un pasabajos de 3 kHz (pianissimo) a 8 kHz (fortissimo).
+    Se toca la misma nota suave y fuerte, y se compara el centroide espectral:
+    el "centro de gravedad" del timbre en Hz.
+  </p>
+  <div class="row">
+    <label>Nota:
+      <select id="lpfNote">
+        <option value="69">A4 · 440 Hz</option>
+        <option value="84">C6 · 1047 Hz</option>
+        <option value="96" selected>C7 · 2093 Hz</option>
+      </select>
+    </label>
+    <button data-run="lpf">Medir pp contra ff</button>
+  </div>
+  <canvas id="lpfCanvas"></canvas>
+  <div class="legend"><span><i style="background:#5aa9e6"></i>pianissimo (v=0.10)</span>
+                      <span><i style="background:#ffb454"></i>fortissimo (v=0.95)</span></div>
+  <div class="out" id="lpfOut">Sin medir.</div>
+</div>
+
+<!-- 2 ---------------------------------------------------------------->
+<div class="test">
+  <h2>2 · Release en función de la frecuencia</h2>
+  <p class="what">
+    En un piano real el grave sigue sonando mucho después de que el agudo se apagó.
+    Se mide el tiempo que tarda cada nota en caer 40 dB desde su pico.
+  </p>
+  <div class="row"><button data-run="rel">Medir C2 contra C7</button></div>
+  <canvas id="relCanvas"></canvas>
+  <div class="legend"><span><i style="background:#5aa9e6"></i>C2 · 65 Hz</span>
+                      <span><i style="background:#ffb454"></i>C7 · 2093 Hz</span></div>
+  <div class="out" id="relOut">Sin medir.</div>
+</div>
+
+<!-- 3 ---------------------------------------------------------------->
+<div class="test">
+  <h2>3 · Compresor del bus principal</h2>
+  <p class="what">
+    Se recorre la velocity de 0.05 a 1.0 y se le pregunta al compresor, en cada
+    nota, cuántos dB de ganancia está recortando en ese momento. Tiene que quedarse
+    en cero con las notas suaves y recortar sólo cuando el golpe pasa el umbral.
+  </p>
+  <div class="row"><button data-run="comp">Medir el recorte real</button></div>
+  <canvas id="compCanvas"></canvas>
+  <div class="legend"><span><i style="background:#8ce39a"></i>recorte de ganancia real</span>
+                      <span><i style="background:#5b6672"></i>0 dB · sin recortar</span></div>
+  <div class="out" id="compOut">Sin medir.</div>
+</div>
+
+<!-- 4 ---------------------------------------------------------------->
+<div class="test">
+  <h2>4 · Corte de nota sin clic</h2>
+  <p class="what">
+    Era el bug de fondo: cortar una nota a mitad producía un clic. Se toca una nota,
+    se la cancela a los 400 ms y se busca en la onda un salto brusco entre muestras
+    contiguas — que es exactamente lo que el oído percibe como clic.
+  </p>
+  <div class="row"><button data-run="cancel">Tocar y cortar</button></div>
+  <canvas id="cancelCanvas"></canvas>
+  <div class="legend"><span><i style="background:#5aa9e6"></i>onda</span>
+                      <span><i style="background:#e05561"></i>instante del corte</span></div>
+  <div class="out" id="cancelOut">Sin medir.</div>
+</div>
+
+<!-- 5 ---------------------------------------------------------------->
+<div class="test">
+  <h2>5 · Ecualización de la reverb</h2>
+  <p class="what">
+    La reverb lleva un pasaaltos a 200 Hz para que la cola no retumbe. Se toca un
+    grave, se deja que la nota se apague y se analiza sólo lo que queda sonando:
+    la cola. Si el filtro trabaja, casi no debería haber energía por debajo de 200 Hz.
+  </p>
+  <div class="row"><button data-run="verb">Analizar la cola</button></div>
+  <canvas id="verbCanvas"></canvas>
+  <div class="legend"><span><i style="background:#c58af9"></i>cola de reverb (filtrada)</span>
+                      <span><i style="background:#4a5563"></i>nota directa (sin filtrar)</span>
+                      <span><i style="background:#e05561"></i>corte a 200 Hz</span></div>
+  <div class="out" id="verbOut">Sin medir.</div>
+</div>
+
+<div class="test" style="background:#151d17;border-color:#2a4030">
+  <h2>Resumen</h2>
+  <div class="out" id="summary">Ningún test ejecutado todavía.</div>
+</div>
+
+</div>
+
+<script src="assets/audio-engine.js"></script>
 <script>
-// Mock para demostración (requiere engine.js cargado)
-// En producción, esto usaría el engine real
+"use strict";
 
-let audioContext = null;
-let testNotes = {};
+/* ------------------------------------------------------------------ *
+ * Toma de señal.
+ *
+ * El motor termina en ctx.destination y no expone su bus interno, así que
+ * interceptamos AudioNode.connect: cuando algo se conecta al altavoz, lo
+ * conectamos también a un nodo propio. La señal al altavoz no cambia; sólo
+ * gana un testigo en paralelo. Hay que instalarlo antes de que el motor cree
+ * su contexto, por eso corre al cargar el script.
+ * ------------------------------------------------------------------ */
+const rawConnect = AudioNode.prototype.connect;
+let tap = null;
 
-function initAudio() {
-  if (!audioContext) {
-    audioContext = new (window.AudioContext || window.webkitAudioContext)();
+/* El compresor del bus lleva una propiedad `reduction`: cuántos dB de ganancia
+ * está recortando en este instante. Es la medida definitiva de si trabaja o no,
+ * pero el motor no lo expone. Interceptamos su creación para quedarnos con la
+ * referencia — el motor no se entera y no hay que tocarlo. */
+let busCompressor = null;
+const rawMakeComp = AudioContext.prototype.createDynamicsCompressor;
+AudioContext.prototype.createDynamicsCompressor = function (...a) {
+  const node = rawMakeComp.apply(this, a);
+  if (!busCompressor) busCompressor = node;
+  return node;
+};
+
+AudioNode.prototype.connect = function (dest, ...rest) {
+  if (dest instanceof AudioDestinationNode) {
+    if (!tap || tap.context !== dest.context) {
+      tap = dest.context.createGain();
+      tap.gain.value = 1;
+    }
+    try { rawConnect.call(this, tap); } catch (e) { /* ya conectado */ }
   }
-  return audioContext;
+  return rawConnect.call(this, dest, ...rest);
+};
+
+/* Graba la señal del testigo sin huecos. ScriptProcessor está deprecado, pero
+ * es el único camino a muestras contiguas sin un archivo de worklet aparte, y
+ * para una página de diagnóstico eso alcanza. */
+function record(ctx) {
+  const proc = ctx.createScriptProcessor(4096, 1, 1);
+  const chunks = [];
+  proc.onaudioprocess = e => chunks.push(new Float32Array(e.inputBuffer.getChannelData(0)));
+
+  // El procesador sólo corre si tiene salida; la silenciamos para no duplicar
+  // el audio. rawConnect evita que el propio testigo se retroalimente.
+  const mute = ctx.createGain();
+  mute.gain.value = 0;
+  tap.connect(proc);
+  rawConnect.call(proc, mute);
+  rawConnect.call(mute, ctx.destination);
+
+  return function stop() {
+    proc.onaudioprocess = null;
+    try { tap.disconnect(proc); proc.disconnect(); mute.disconnect(); } catch (e) {}
+    const total = chunks.reduce((n, c) => n + c.length, 0);
+    const out = new Float32Array(total);
+    let at = 0;
+    for (const c of chunks) { out.set(c, at); at += c.length; }
+    return out;
+  };
 }
 
-function updateVelDisplay() {
-  const vel = parseFloat(document.getElementById('vel1').value);
-  const label = vel < 0.3 ? 'pp' : vel < 0.6 ? 'p' : vel < 0.75 ? 'mf' : 'ff';
-  document.getElementById('velDisplay1').textContent = `${label} (${vel.toFixed(2)})`;
-}
+const wait = ms => new Promise(r => setTimeout(r, ms));
 
-document.getElementById('vel1')?.addEventListener('input', updateVelDisplay);
+/* ------------------------------------------------------------------ *
+ * Análisis
+ * ------------------------------------------------------------------ */
 
-async function testLPF(intensity) {
-  const ctx = initAudio();
-  const vel = intensity === 'soft' ? 0.1 : 0.9;
-
-  console.log(`🎹 Testing LPF: ${intensity} (v=${vel})`);
-  console.log(`   Expected filter freq: ${intensity === 'soft' ? '~3kHz' : '~8kHz'}`);
-
-  const now = ctx.currentTime;
-  const note = ctx.createOscillator();
-  const gain = ctx.createGain();
-  const analyser = ctx.createAnalyser();
-
-  note.frequency.value = 440; // A4
-  gain.gain.setValueAtTime(0.3, now);
-  note.connect(gain);
-  gain.connect(analyser);
-  analyser.connect(ctx.destination);
-
-  note.start(now);
-  note.stop(now + 1);
-
-  const freq = new Uint8Array(analyser.frequencyBinCount);
-  setTimeout(() => {
-    analyser.getByteFrequencyData(freq);
-    drawSpectrum(freq);
-    console.log(`✓ LPF test complete for ${intensity}`);
-  }, 200);
-}
-
-async function testRelease(type) {
-  const ctx = initAudio();
-  const freq = type === 'bass' ? 82 : 4186; // C1 vs C7
-
-  console.log(`🎹 Testing release scaling: ${type} (${freq}Hz)`);
-
-  const now = ctx.currentTime;
-  const note = ctx.createOscillator();
-  const gain = ctx.createGain();
-  const analyser = ctx.createAnalyser();
-
-  note.frequency.value = freq;
-  gain.gain.setValueAtTime(0.3, now);
-
-  const expected = type === 'bass' ? '~1.5-2.0s' : '~0.3-0.4s';
-  console.log(`   Expected release time: ${expected}`);
-
-  note.connect(gain);
-  gain.connect(analyser);
-  analyser.connect(ctx.destination);
-
-  note.start(now);
-  note.stop(now + 0.5);
-
-  gain.gain.exponentialRampToValueAtTime(0.001, now + (type === 'bass' ? 1.5 : 0.3));
-
-  console.log(`✓ Release test complete for ${type}`);
-}
-
-async function compareRelease() {
-  console.log('📊 Release comparison:');
-  console.log('   C1 bass should sustain ~5-6x longer than C7 treble');
-  console.log('   Pass if: audible decay difference is clear');
-  updateCheck(2, true);
-}
-
-async function testCompressor(mode) {
-  const ctx = initAudio();
-  console.log(`🎹 Testing compressor: ${mode}`);
-  console.log(`   Measuring dynamic range...`);
-
-  console.log(`   Expected: Range reduced from ~40dB to ~25dB`);
-  console.log(`   Soft and loud passages coexist naturally`);
-
-  setTimeout(() => {
-    console.log(`✓ Compressor test complete`);
-  }, 100);
-}
-
-async function analyzeCompression() {
-  console.log('📊 Compression analysis:');
-  console.log('   Threshold: -15dB');
-  console.log('   Ratio: 2.5:1');
-  console.log('   Attack: 3ms, Release: 300ms');
-  console.log('   Expected: ~15dB dynamic range reduction');
-  updateCheck(3, true);
-}
-
-async function testCancelation(type) {
-  const ctx = initAudio();
-  console.log(`🎹 Testing cancelation: ${type}`);
-
-  if (type === 'synth' || type === 'both') {
-    console.log('   Synth: Playing note + cancel at 500ms');
-    console.log('   Expected: Smooth fade, NO click');
+/* FFT radix-2 in-place sobre partes real/imaginaria. */
+function fft(re, im) {
+  const n = re.length;
+  for (let i = 1, j = 0; i < n; i++) {
+    let bit = n >> 1;
+    for (; j & bit; bit >>= 1) j ^= bit;
+    j ^= bit;
+    if (i < j) { [re[i], re[j]] = [re[j], re[i]]; [im[i], im[j]] = [im[j], im[i]]; }
   }
-  if (type === 'piano' || type === 'both') {
-    console.log('   Piano: Playing note + cancel at 500ms');
-    console.log('   Expected: Smooth fade via ampRelease');
-  }
-
-  setTimeout(() => {
-    console.log('✓ Cancelation test complete');
-    updateCheck(4, true);
-  }, 600);
-}
-
-async function testReverb(mode) {
-  const ctx = initAudio();
-  console.log(`🎹 Testing reverb EQ: ${mode}`);
-
-  if (mode === 'with-reverb') {
-    console.log('   Listening for reverb tail clarity');
-    console.log('   Expected: ~1.8s decay, tight and defined');
-  } else {
-    console.log('   Testing bass + reverb');
-    console.log('   Expected: No boom, 200Hz HPF removes mud');
-  }
-
-  setTimeout(() => {
-    console.log('✓ Reverb test complete');
-    updateCheck(5, true);
-  }, 2000);
-}
-
-function drawSpectrum(data) {
-  const canvas = document.getElementById('spectrumCanvas');
-  if (!canvas) return;
-
-  const ctx = canvas.getContext('2d');
-  ctx.fillStyle = '#000';
-  ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-  ctx.strokeStyle = '#4db8ff';
-  ctx.lineWidth = 2;
-  ctx.beginPath();
-
-  for (let i = 0; i < data.length; i++) {
-    const x = (i / data.length) * canvas.width;
-    const y = canvas.height - (data[i] / 255) * canvas.height;
-    if (i === 0) ctx.moveTo(x, y);
-    else ctx.lineTo(x, y);
-  }
-  ctx.stroke();
-}
-
-function updateCheck(num, passed) {
-  const elem = document.getElementById(`check${num}`);
-  if (elem) {
-    elem.classList.add(passed ? 'pass' : 'fail');
-    const span = elem.querySelector('span');
-    if (span) {
-      span.innerHTML = passed ?
-        '<span style="color: #90ee90;">✓ PASS</span>' :
-        '<span style="color: #ff6b6b;">✗ FAIL</span>';
+  for (let len = 2; len <= n; len <<= 1) {
+    const ang = -2 * Math.PI / len;
+    const wr = Math.cos(ang), wi = Math.sin(ang);
+    for (let i = 0; i < n; i += len) {
+      let cr = 1, ci = 0;
+      for (let k = 0; k < len / 2; k++) {
+        const ur = re[i + k],           ui = im[i + k];
+        const vr = re[i + k + len / 2] * cr - im[i + k + len / 2] * ci;
+        const vi = re[i + k + len / 2] * ci + im[i + k + len / 2] * cr;
+        re[i + k] = ur + vr;            im[i + k] = ui + vi;
+        re[i + k + len / 2] = ur - vr;  im[i + k + len / 2] = ui - vi;
+        const nr = cr * wr - ci * wi;   ci = cr * wi + ci * wr; cr = nr;
+      }
     }
   }
 }
 
-console.log('🎹 Audio Diagnostics loaded. Click buttons to run tests.');
-</script>
+/* Espectro de magnitud de un tramo, con ventana de Hann. */
+function spectrum(buf, from, size) {
+  const re = new Float32Array(size), im = new Float32Array(size);
+  for (let i = 0; i < size; i++) {
+    const s = buf[from + i] || 0;
+    re[i] = s * (0.5 - 0.5 * Math.cos(2 * Math.PI * i / size));
+  }
+  fft(re, im);
+  const mag = new Float32Array(size / 2);
+  for (let i = 0; i < size / 2; i++) mag[i] = Math.hypot(re[i], im[i]);
+  return mag;
+}
 
+/* Primer instante en que la señal despega. Todas las ventanas de análisis se
+ * miden desde acá y no desde que arrancó la grabación: entre una cosa y la
+ * otra hay una demora variable que, si no se corrige, hace que cada corrida
+ * mire una fase distinta de la nota y dé un número distinto. */
+function findOnset(buf) {
+  const thr = peakOf(buf) * 0.05;
+  let i = 0;
+  while (i < buf.length && Math.abs(buf[i]) < thr) i++;
+  return i;
+}
+
+/* Promedio de varias ventanas consecutivas: una sola FFT sobre una nota que
+ * está decayendo depende demasiado de dónde cayó justo el corte. */
+function avgSpectrum(buf, from, size, count) {
+  const acc = new Float32Array(size / 2);
+  let used = 0;
+  for (let k = 0; k < count; k++) {
+    const at = from + k * (size / 2);
+    if (at + size > buf.length) break;
+    const mag = spectrum(buf, at, size);
+    for (let i = 0; i < acc.length; i++) acc[i] += mag[i];
+    used++;
+  }
+  if (used) for (let i = 0; i < acc.length; i++) acc[i] /= used;
+  return acc;
+}
+
+/* Centroide espectral: dónde está el centro de gravedad del timbre, en Hz.
+ * Es la medida estándar de "brillo" percibido. */
+function centroid(mag, sampleRate) {
+  const binHz = sampleRate / (mag.length * 2);
+  let num = 0, den = 0;
+  for (let i = 1; i < mag.length; i++) { num += i * binHz * mag[i]; den += mag[i]; }
+  return den > 0 ? num / den : 0;
+}
+
+/* Envolvente RMS en ventanas de ~5 ms. */
+function envelope(buf, sampleRate) {
+  const win = Math.round(sampleRate * 0.005);
+  const out = [];
+  for (let i = 0; i + win <= buf.length; i += win) {
+    let sum = 0;
+    for (let k = 0; k < win; k++) sum += buf[i + k] * buf[i + k];
+    out.push(Math.sqrt(sum / win));
+  }
+  return { data: out, stepMs: 1000 * win / sampleRate };
+}
+
+/* Tiempo desde el pico hasta caer `drop` dB. */
+function decayTime(env, drop) {
+  let peak = 0, peakAt = 0;
+  env.data.forEach((v, i) => { if (v > peak) { peak = v; peakAt = i; } });
+  if (peak <= 0) return null;
+  const target = peak * Math.pow(10, -drop / 20);
+  for (let i = peakAt; i < env.data.length; i++) {
+    if (env.data[i] <= target) return (i - peakAt) * env.stepMs / 1000;
+  }
+  return null; // no llegó a caer dentro de la grabación
+}
+
+const peakOf = buf => { let p = 0; for (const s of buf) { const a = Math.abs(s); if (a > p) p = a; } return p; };
+const dB = x => 20 * Math.log10(Math.max(x, 1e-9));
+
+/* ------------------------------------------------------------------ *
+ * Dibujo
+ * ------------------------------------------------------------------ */
+function prep(id) {
+  const c = document.getElementById(id);
+  const dpr = window.devicePixelRatio || 1;
+  c.width = c.clientWidth * dpr;
+  c.height = c.clientHeight * dpr;
+  const g = c.getContext("2d");
+  g.scale(dpr, dpr);
+  g.fillStyle = "#0c0e11";
+  g.fillRect(0, 0, c.clientWidth, c.clientHeight);
+  return { g, w: c.clientWidth, h: c.clientHeight };
+}
+
+function axis(g, w, h, labels) {
+  g.strokeStyle = "#22262d"; g.lineWidth = 1;
+  for (let i = 1; i < 4; i++) {
+    const y = h * i / 4;
+    g.beginPath(); g.moveTo(0, y); g.lineTo(w, y); g.stroke();
+  }
+  g.fillStyle = "#5b6672"; g.font = "10px ui-monospace, monospace";
+  labels.forEach(([x, text]) => g.fillText(text, x * w, h - 4));
+}
+
+/* Curva sobre eje x logarítmico en frecuencia.
+ *
+ * Va rellena: el sintetizador es aditivo de tres parciales, así que su espectro
+ * son tres picos finitos sobre un fondo vacío. Como línea suelta casi no se ven;
+ * rellenados, la diferencia de contenido armónico salta a la vista, que es
+ * justamente lo que hay que comparar. `fill` traslúcido para que se superpongan. */
+function drawSpectrum(g, w, h, mag, sampleRate, color, maxRef, fill) {
+  const binHz = sampleRate / (mag.length * 2);
+  const fMin = 40, fMax = Math.min(12000, sampleRate / 2);
+  const lo = Math.log10(fMin), hi = Math.log10(fMax);
+  const y0 = h - 1;
+  g.beginPath();
+  g.moveTo(0, y0);
+  for (let i = 1; i < mag.length; i++) {
+    const f = i * binHz;
+    if (f < fMin || f > fMax) continue;
+    const x = (Math.log10(f) - lo) / (hi - lo) * w;
+    const y = h - Math.max(0, (dB(mag[i] / maxRef) + 72) / 72) * h;
+    g.lineTo(x, y);
+  }
+  if (fill) {
+    g.lineTo(w, y0);
+    g.closePath();
+    g.fillStyle = fill;
+    g.fill();
+  }
+  g.strokeStyle = color; g.lineWidth = 1.6; g.stroke();
+}
+
+function freqX(f, w, sampleRate) {
+  const lo = Math.log10(40), hi = Math.log10(Math.min(12000, sampleRate / 2));
+  return (Math.log10(f) - lo) / (hi - lo) * w;
+}
+
+/* ------------------------------------------------------------------ *
+ * Motor
+ * ------------------------------------------------------------------ */
+const E = window.PianoEngine;
+
+/* El contexto arranca suspendido hasta que hay un gesto del usuario, y resume()
+ * es asincrónico. Si se empieza a grabar antes de que esté corriendo, los
+ * primeros bloques salen con basura y desalinean toda la medición: es lo que
+ * hacía que la primera corrida diera distinto que el resto. Se espera a que
+ * arranque de verdad y se le da un respiro al grafo. */
+let warmedUp = false;
+async function engineReady() {
+  const ctx = E.ensureContext();
+  E.unlockFromGesture();
+  await E.resume();
+  for (let i = 0; i < 50 && ctx.state !== "running"; i++) await wait(20);
+  if (!warmedUp) { await wait(300); warmedUp = true; }
+  E.dampAt(ctx.currentTime, 0.02);   // silencia colas del test anterior
+  await wait(120);
+  return ctx;
+}
+
+document.getElementById("engineState").textContent =
+  E ? "Motor cargado · sintetizador activo (sin muestras)"
+    : "ERROR: no se pudo cargar assets/audio-engine.js";
+
+const results = {};
+function say(id, cls, html) {
+  const el = document.getElementById(id);
+  el.className = "out " + cls;
+  el.innerHTML = html;
+}
+function verdict(key, ok, note) {
+  results[key] = ok ? "pass" : "fail";
+  const s = document.getElementById("summary");
+  const names = { lpf: "1 · Pasabajos", rel: "2 · Release", comp: "3 · Compresor",
+                  cancel: "4 · Corte", verb: "5 · Reverb" };
+  s.innerHTML = Object.keys(names).map(k =>
+    results[k]
+      ? `<b class="${results[k]}">${results[k] === "pass" ? "OK  " : "FALLA"}</b>  ${names[k]}`
+      : `<span style="color:#5b6672">·      ${names[k]} — sin medir</span>`
+  ).join("\n");
+  return note;
+}
+
+/* ------------------------------------------------------------------ *
+ * Tests
+ * ------------------------------------------------------------------ */
+const FFT_SIZE = 8192;
+
+async function runLpf() {
+  const ctx = await engineReady();
+  const note = +document.getElementById("lpfNote").value;
+  const takes = {};
+
+  for (const [tag, v] of [["pp", 0.10], ["ff", 0.95]]) {
+    const stop = record(ctx);
+    E.playMidiNow(note, { velocity: v, duration: 1.0, release: 0.2 });
+    await wait(1300);
+    takes[tag] = stop();
+    await wait(150);
+  }
+
+  const sr = ctx.sampleRate;
+  /* Se analiza a 300 ms del ataque: en pianissimo el ataque y el decay juntos
+   * duran ~250 ms, así que recién ahí las dos notas están las dos en sostenido
+   * y se comparan en igualdad de condiciones. */
+  const offset = Math.round(sr * 0.30);
+  const magPP = avgSpectrum(takes.pp, findOnset(takes.pp) + offset, FFT_SIZE, 4);
+  const magFF = avgSpectrum(takes.ff, findOnset(takes.ff) + offset, FFT_SIZE, 4);
+
+  /* El sintetizador es aditivo de tres parciales: su espectro son tres rayas
+   * sobre un fondo vacío, y dibujado como curva quedan hilos de pocos píxeles.
+   * Se mide el nivel de cada armónico y se comparan como barras — es el mismo
+   * dato, leíble. Cada nota se referencia a su propia fundamental: lo que
+   * importa acá es el balance armónico (el timbre), no el volumen. */
+  const noteHzBase = 440 * Math.pow(2, (note - 69) / 12);
+  const binHz = sr / FFT_SIZE;
+  const levelAt = (mag, f) => {           // pico en un entorno del armónico
+    const c = Math.round(f / binHz);
+    let m = 0;
+    for (let i = Math.max(1, c - 3); i <= Math.min(mag.length - 1, c + 3); i++) m = Math.max(m, mag[i]);
+    return m;
+  };
+  const harmonics = [1, 2, 3, 4];
+  const barsPP = harmonics.map(n => dB(levelAt(magPP, noteHzBase * n) / levelAt(magPP, noteHzBase)));
+  const barsFF = harmonics.map(n => dB(levelAt(magFF, noteHzBase * n) / levelAt(magFF, noteHzBase)));
+
+  const { g, w, h } = prep("lpfCanvas");
+  const dbFloor = -66, dbTop = 6;
+  const barY = d => h - 22 - (Math.max(dbFloor, d) - dbFloor) / (dbTop - dbFloor) * (h - 44);
+  g.strokeStyle = "#22262d";
+  [0, -20, -40, -60].forEach(d => {
+    const y = barY(d);
+    g.beginPath(); g.moveTo(34, y); g.lineTo(w - 8, y); g.stroke();
+    g.fillStyle = "#5b6672"; g.font = "10px ui-monospace, monospace";
+    g.fillText(d + " dB", 2, y + 3);
+  });
+  const slot = (w - 46) / harmonics.length;
+  harmonics.forEach((n, i) => {
+    const x0 = 38 + i * slot;
+    [[barsPP[i], "#5aa9e6", 0], [barsFF[i], "#ffb454", 1]].forEach(([d, color, k]) => {
+      const y = barY(d);
+      g.fillStyle = color;
+      g.fillRect(x0 + 6 + k * (slot / 2 - 6), y, slot / 2 - 12, (h - 22) - y);
+    });
+    g.fillStyle = "#9aa3ad"; g.font = "11px ui-monospace, monospace";
+    const label = n === 1 ? "fundamental" : n + ".º armónico";
+    g.fillText(label, x0 + slot / 2 - g.measureText(label).width / 2, h - 7);
+  });
+
+  const cPP = centroid(magPP, sr), cFF = centroid(magFF, sr);
+  const ratio = cFF / Math.max(cPP, 1);
+  const ok = ratio >= 1.15;
+
+  const noteHz = 440 * Math.pow(2, (note - 69) / 12);
+  const top = noteHz * 3;                  // el 3.º armónico es el parcial más alto
+  const cut = 3000 + 0.10 * 5000;          // pasabajos en pianissimo
+  const marginal = top < cut;
+
+  say("lpfOut", ok ? (marginal ? "warn" : "pass") : "fail",
+    `Centroide pianissimo : <b>${cPP.toFixed(0)} Hz</b>\n` +
+    `Centroide fortissimo : <b>${cFF.toFixed(0)} Hz</b>\n` +
+    `Diferencia           : <b>×${ratio.toFixed(2)}</b>  (se exige ×1.15 o más)\n\n` +
+    `<b class="${ok ? "pass" : "fail"}">${ok ? "PASA" : "FALLA"}</b> — el timbre ${ok ? "sí" : "no"} cambia con la velocity.` +
+    (marginal
+      ? `\n\n<b class="warn">Ojo con esta nota.</b> Su armónico más agudo llega a ${top.toFixed(0)} Hz,\n` +
+        `y el pasabajos más cerrado está en ${cut.toFixed(0)} Hz. O sea: el filtro no toca nada acá.\n` +
+        `Lo que oís es el brillo armónico (v^1.7), no el filtro. Para ver trabajar al filtro,\n` +
+        `probá con C7 — recién ahí los parciales suben por encima del corte.`
+      : `\nEl armónico más agudo (${top.toFixed(0)} Hz) sí cruza el corte de ${cut.toFixed(0)} Hz,\n` +
+        `así que acá el filtro está haciendo su parte junto con el brillo armónico.`));
+  verdict("lpf", ok);
+}
+
+async function runRel() {
+  const ctx = await engineReady();
+  const takes = {};
+
+  for (const [tag, midi] of [["c2", 36], ["c7", 96]]) {
+    const stop = record(ctx);
+    E.playMidiNow(midi, { velocity: 0.8, duration: 0.3, release: 0.5 });
+    await wait(2600);
+    takes[tag] = stop();
+    await wait(150);
+  }
+
+  const sr = ctx.sampleRate;
+  const envC2 = envelope(takes.c2, sr), envC7 = envelope(takes.c7, sr);
+  const tC2 = decayTime(envC2, 40), tC7 = decayTime(envC7, 40);
+
+  const { g, w, h } = prep("relCanvas");
+  axis(g, w, h, [[0.02, "0 s"], [0.48, "1.2 s"], [0.9, "2.4 s"]]);
+  const span = 2.4;
+  [[envC2, "#5aa9e6"], [envC7, "#ffb454"]].forEach(([env, color]) => {
+    const peak = Math.max(...env.data) || 1;
+    g.strokeStyle = color; g.lineWidth = 1.8; g.beginPath();
+    env.data.forEach((v, i) => {
+      const x = (i * env.stepMs / 1000) / span * w;
+      const y = h - Math.max(0, (dB(v / peak) + 60) / 60) * h;
+      i ? g.lineTo(x, y) : g.moveTo(x, y);
+    });
+    g.stroke();
+  });
+
+  const fmt = t => t == null ? "más de 2.4 s" : t.toFixed(2) + " s";
+  const ok = tC2 != null && tC7 != null ? tC2 > tC7 * 1.5 : tC7 != null;
+  const ratio = (tC2 != null && tC7 != null) ? (tC2 / tC7).toFixed(1) : "no acotable";
+
+  say("relOut", ok ? "pass" : "fail",
+    `C2  ·   65 Hz  cae 40 dB en : <b>${fmt(tC2)}</b>\n` +
+    `C7  · 2093 Hz  cae 40 dB en : <b>${fmt(tC7)}</b>\n` +
+    `El grave dura                : <b>×${ratio}</b> lo que dura el agudo\n\n` +
+    `<b class="${ok ? "pass" : "fail"}">${ok ? "PASA" : "FALLA"}</b> — el grave ${ok ? "sostiene claramente más" : "no sostiene más"} que el agudo.\n` +
+    `El motor escala el release por raíz de (330 / frecuencia), tope ×2.`);
+  verdict("rel", ok);
+}
+
+async function runComp() {
+  const ctx = await engineReady();
+  if (!busCompressor) {
+    say("compOut", "fail", "No se encontró el compresor del bus principal.");
+    return verdict("comp", false);
+  }
+
+  const vs = [0.05, 0.2, 0.4, 0.6, 0.8, 1.0];
+  const cut = [];   // reducción de ganancia real, en dB
+  const out = [];   // nivel de salida, en dB
+
+  for (const v of vs) {
+    const stop = record(ctx);
+    E.playMidiNow(60, { velocity: v, duration: 0.5, release: 0.15 });
+
+    // `reduction` es instantáneo: hay que muestrearlo mientras la nota suena
+    // y quedarse con el momento de mayor recorte.
+    let worst = 0;
+    const until = performance.now() + 700;
+    while (performance.now() < until) {
+      worst = Math.min(worst, busCompressor.reduction);
+      await wait(16);
+    }
+    await wait(200);
+    out.push(dB(peakOf(stop())));
+    cut.push(worst);
+    await wait(120);
+  }
+
+  const { g, w, h } = prep("compCanvas");
+  axis(g, w, h, [[0.02, "v=0.05"], [0.45, "v=0.5"], [0.85, "v=1.0"]]);
+  const lo = Math.min(...cut) - 0.5, hi = 0.5;
+  g.strokeStyle = "#8ce39a"; g.lineWidth = 2; g.beginPath();
+  cut.forEach((d, i) => {
+    const x = i / (vs.length - 1) * (w - 20) + 10;
+    const y = h - (d - lo) / (hi - lo) * (h - 24) - 12;
+    i ? g.lineTo(x, y) : g.moveTo(x, y);
+  });
+  g.stroke();
+  const zeroY = h - (0 - lo) / (hi - lo) * (h - 24) - 12;
+  g.strokeStyle = "#5b6672"; g.setLineDash([5, 4]);
+  g.beginPath(); g.moveTo(0, zeroY); g.lineTo(w, zeroY); g.stroke(); g.setLineDash([]);
+
+  const soft = cut[0], loud = cut[cut.length - 1];
+  const ok = loud < -0.5 && loud < soft - 0.3;
+
+  say("compOut", ok ? "pass" : "fail",
+    vs.map((v, i) =>
+      `v=${v.toFixed(2)}  recorte <b>${cut[i].toFixed(2)} dB</b>   salida ${out[i].toFixed(1)} dB`
+    ).join("\n") +
+    `\n\n<b class="${ok ? "pass" : "fail"}">${ok ? "PASA" : "FALLA"}</b> — el compresor ${ok ? "actúa y sólo sobre lo fuerte" : "no está recortando"}.\n` +
+    `Esto no es un modelo: es la propiedad <code>reduction</code> del propio nodo,\n` +
+    `o sea los dB que está bajando en cada instante.\n` +
+    `Las notas suaves quedan en 0 dB (intactas, como debe ser) y el recorte\n` +
+    `aparece recién al pasar el umbral de −15 dB. Umbral −15, ratio 2.5:1.\n\n` +
+    `<b class="warn">Detalle a tener en cuenta.</b> La reverb no pasa por el compresor:\n` +
+    `en el motor va directo al destino (<code>wet.connect(ctx.destination)</code>).\n` +
+    `Con 12% de envío casi no se nota, pero la cola no queda "pegada" al resto.`);
+  verdict("comp", ok);
+}
+
+async function runCancel() {
+  const ctx = await engineReady();
+  const stop = record(ctx);
+
+  const handle = E.playMidiNow(60, { velocity: 0.85, duration: 3.0, release: 0.12 });
+  await wait(400);
+  handle.cancel(ctx.currentTime, 0.08);
+  await wait(700);
+
+  const buf = stop();
+  const sr = ctx.sampleRate;
+
+  /* La grabación no arranca exactamente cuando arranca la nota, así que ubicar
+   * las ventanas por reloj da resultados que bailan de una corrida a otra.
+   * Se busca el ataque en la señal y todo se mide relativo a él. */
+  let onset = 0;
+  const thr = peakOf(buf) * 0.05;
+  while (onset < buf.length && Math.abs(buf[onset]) < thr) onset++;
+  const cancelSample = onset + Math.round(sr * 0.4);
+
+  /* Un clic es una discontinuidad: la onda pega un salto entre dos muestras
+   * contiguas. Pero el salto absoluto encoge junto con el volumen, y durante
+   * el fundido el volumen justamente cae — comparar saltos crudos haría pasar
+   * cualquier cosa. Se normaliza cada salto por la amplitud local: para una
+   * onda continua eso da una constante (depende sólo de su frecuencia), y un
+   * corte seco la dispara. Así la medida no depende de qué tan fuerte suena. */
+  const slopePerUnit = (from, to) => {
+    let mx = 0, amp = 0;
+    for (let i = Math.max(1, from); i < Math.min(to, buf.length); i++) {
+      const d = Math.abs(buf[i] - buf[i - 1]);
+      if (d > mx) mx = d;
+      const a = Math.abs(buf[i]);
+      if (a > amp) amp = a;
+    }
+    return amp > 1e-6 ? mx / amp : 0;
+  };
+  const steady = slopePerUnit(onset + Math.round(sr * 0.15), onset + Math.round(sr * 0.35));
+  const atCut = slopePerUnit(cancelSample - Math.round(sr * 0.005),
+                             cancelSample + Math.round(sr * 0.03));
+  const spike = atCut / Math.max(steady, 1e-9);
+  const ok = spike < 2.0;
+
+  const { g, w, h } = prep("cancelCanvas");
+  axis(g, w, h, [[0.02, "0 ms"], [0.36, "400 ms · corte"], [0.85, "1.0 s"]]);
+  const span = Math.round(sr * 1.05);
+  g.strokeStyle = "#5aa9e6"; g.lineWidth = 1; g.beginPath();
+  const step = Math.max(1, Math.floor(span / w / 2));
+  for (let i = 0, x = 0; i < span && i < buf.length; i += step, x++) {
+    let mx = 0;
+    for (let k = 0; k < step; k++) mx = Math.max(mx, Math.abs(buf[i + k] || 0));
+    const px = i / span * w;
+    g.moveTo(px, h / 2 - mx * h * 0.45);
+    g.lineTo(px, h / 2 + mx * h * 0.45);
+  }
+  g.stroke();
+  const cx = (cancelSample / span) * w;
+  g.strokeStyle = "#e05561"; g.lineWidth = 1.5;
+  g.beginPath(); g.moveTo(cx, 0); g.lineTo(cx, h); g.stroke();
+
+  say("cancelOut", ok ? "pass" : "fail",
+    `Salto por unidad de amplitud, nota sonando : <b>${steady.toFixed(4)}</b>\n` +
+    `Salto por unidad de amplitud, en el corte  : <b>${atCut.toFixed(4)}</b>\n` +
+    `Relación                                   : <b>×${spike.toFixed(2)}</b>  (se exige menos de ×2)\n\n` +
+    `<b class="${ok ? "pass" : "fail"}">${ok ? "PASA" : "FALLA"}</b> — el corte ${ok ? "no introduce discontinuidad: es un fundido, no un clic" : "produce un salto brusco, o sea un clic audible"}.\n` +
+    `En el gráfico la onda tiene que apagarse suave después de la línea roja,\n` +
+    `nunca cortarse en seco.`);
+  verdict("cancel", ok);
+}
+
+async function runVerb() {
+  const ctx = await engineReady();
+  const stop = record(ctx);
+  const t0 = ctx.currentTime;
+
+  E.playMidiNow(41, { velocity: 0.9, duration: 0.25, release: 0.1 });   // F2 · 87 Hz
+  await wait(2200);
+  const buf = stop();
+  const sr = ctx.sampleRate;
+
+  /* No alcanza con mirar cuántos graves tiene la cola: la nota de origen ya es
+   * grave de por sí (F2 tiene dos de sus tres parciales debajo de 200 Hz), así
+   * que la cola va a tener graves aunque el filtro funcione perfecto.
+   *
+   * Lo que sí prueba al filtro es la comparación: cuánto grave tiene la nota
+   * directa (que no pasa por el pasaaltos) contra cuánto le queda a la cola
+   * (que sí pasa). La diferencia entre ambos balances es, exactamente, lo que
+   * el filtro sacó. */
+  const onset = findOnset(buf);
+  const magNote = avgSpectrum(buf, onset + Math.round(sr * 0.05), FFT_SIZE, 2);  // nota directa
+  // La cola es ruido convolucionado: cada ventana sale distinta, así que se
+  // promedian varias para que la medición no dependa de dónde cayó el corte.
+  const magTail = avgSpectrum(buf, onset + Math.round(sr * 0.80), FFT_SIZE, 8);  // sólo reverb
+
+  const binHz = sr / (FFT_SIZE / 2 * 2);
+  const band = (mag, a, b) => {
+    let s = 0;
+    for (let i = Math.max(1, Math.floor(a / binHz)); i < Math.min(mag.length, b / binHz); i++) s += mag[i] * mag[i];
+    return Math.sqrt(s);
+  };
+  const balance = mag => dB(band(mag, 40, 200) / Math.max(band(mag, 200, 2000), 1e-9));
+  const bNote = balance(magNote), bTail = balance(magTail);
+  const rejection = bTail - bNote;
+  const ok = rejection < -4;
+
+  const { g, w, h } = prep("verbCanvas");
+  axis(g, w, h, [[0.02, "40 Hz"], [0.42, "500 Hz"], [0.72, "3 kHz"], [0.9, "10 kHz"]]);
+  drawSpectrum(g, w, h, magNote, sr, "#4a5563", Math.max(...magNote), "rgba(74,85,99,.35)");
+  drawSpectrum(g, w, h, magTail, sr, "#c58af9", Math.max(...magTail), "rgba(197,138,249,.22)");
+  const cutX = freqX(200, w, sr);
+  g.strokeStyle = "#e05561"; g.lineWidth = 1.5; g.setLineDash([4, 4]);
+  g.beginPath(); g.moveTo(cutX, 0); g.lineTo(cutX, h); g.stroke(); g.setLineDash([]);
+
+  const tailDecay = decayTime(envelope(buf.slice(Math.round(sr * 0.6)), sr), 30);
+
+  say("verbOut", ok ? "pass" : "fail",
+    `Balance grave/agudo de la nota directa : <b>${bNote.toFixed(1)} dB</b>  (sin filtrar)\n` +
+    `Balance grave/agudo de la cola         : <b>${bTail.toFixed(1)} dB</b>  (pasa por el filtro)\n` +
+    `Graves que sacó el pasaaltos           : <b>${rejection.toFixed(1)} dB</b>  (se exige −4 dB o menos)\n` +
+    `La cola cae 30 dB en                   : <b>${tailDecay == null ? "más de 1.6 s" : tailDecay.toFixed(2) + " s"}</b>\n` +
+    `                                         (sin el filtro esto daría ~0 dB o positivo)\n\n` +
+    `<b class="${ok ? "pass" : "fail"}">${ok ? "PASA" : "FALLA"}</b> — el pasaaltos ${ok ? "limpia los graves de la cola" : "no está frenando los graves"}.\n` +
+    `Se tocó un F2 de 87 Hz, la peor prueba posible: su fundamental y su segundo\n` +
+    `armónico caen los dos debajo del corte. En el gráfico, la curva violeta (cola)\n` +
+    `tiene que hundirse a la izquierda de la línea roja mucho más que la gris (nota).`);
+  verdict("verb", ok);
+}
+
+/* ------------------------------------------------------------------ */
+const RUNNERS = { lpf: runLpf, rel: runRel, comp: runComp, cancel: runCancel, verb: runVerb };
+const OUTS = { lpf: "lpfOut", rel: "relOut", comp: "compOut", cancel: "cancelOut", verb: "verbOut" };
+
+document.querySelectorAll("button[data-run]").forEach(btn => {
+  btn.addEventListener("click", async () => {
+    const key = btn.dataset.run;
+    const all = document.querySelectorAll("button[data-run]");
+    all.forEach(b => b.disabled = true);
+    const label = btn.textContent;
+    btn.textContent = "Midiendo…";
+    say(OUTS[key], "", "Sonando y grabando. Subí el volumen para escuchar lo que se mide.");
+    try {
+      await RUNNERS[key]();
+    } catch (err) {
+      say(OUTS[key], "fail", "Error durante la medición:\n" + (err && err.message ? err.message : err));
+      console.error(err);
+    } finally {
+      btn.textContent = label;
+      all.forEach(b => b.disabled = false);
+    }
+  });
+});
+</script>
 </body>
 </html>
