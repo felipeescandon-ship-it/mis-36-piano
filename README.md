@@ -10,6 +10,23 @@ sigue siendo la canción semilla del catálogo.
 - API: `api/song-sync.js` (contenido de cada canción), `api/catalog-sync.js`
   (índice del cancionero), `api/practice-sync.js` (memoria de práctica)
 
+## Antes de commitear
+
+```
+node scripts/check-sintaxis.mjs
+```
+
+Verifica que el JavaScript de la app parsee — los `<script>` embebidos de cada
+página y los `.js` propios. Un error de sintaxis no rompe una línea: rompe el
+archivo entero, así que `index.html` deja de arrancar y sólo queda el
+encabezado con un recuadro vacío debajo. Ya pasó una vez y llegó a producción.
+
+El repo trae un hook que lo corre solo. Se activa una vez por clon:
+
+```
+git config core.hooksPath .githooks
+```
+
 ## Pantallas
 
 La app tiene tres pantallas principales, accesibles desde la barra superior

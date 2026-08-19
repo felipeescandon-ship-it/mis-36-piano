@@ -1,0 +1,11 @@
+#!/bin/sh
+# Un error de sintaxis rompe el archivo entero, no la línea: si index.html no
+# parsea, la app no arranca — encabezado, título, y debajo un recuadro vacío.
+# Ya pasó una vez y llegó a producción. Es barato de chequear acá y caro de
+# descubrir allá.
+node scripts/check-sintaxis.mjs || {
+  echo ""
+  echo "Commit cancelado: hay JavaScript que no parsea."
+  echo "Para saltearlo a propósito: git commit --no-verify"
+  exit 1
+}
