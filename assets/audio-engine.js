@@ -195,7 +195,9 @@
     wet.gain.value = 0.12;
     convolver.connect(reverbEQ);
     reverbEQ.connect(wet);
-    wet.connect(ctx.destination);
+    // Por el compresor, no directo al destino: si la cola lo esquiva, en los
+    // acordes fuertes el motor se comprime y la reverb no, y queda despegada.
+    wet.connect(masterCompressor);
     reverbSend = convolver;
     return reverbSend;
   }
@@ -382,23 +384,64 @@
     filter.connect(masterBus);
     voiceGain.connect(ensureReverb());
 
-    const partials = [
-      { type: "sine", ratio: 1, gain: 0.62 },
-      { type: "triangle", ratio: 2, gain: 0.2 * brightness + 0.05 },
-      { type: "triangle", ratio: 3, gain: 0.12 * brightness + 0.02 }
-    ];
-    const oscillators = partials.map(partial => {
+    /*
+     * Serie armónica con inarmonicidad.
+     *
+     * Antes eran tres parciales en múltiplos exactos (1×, 2×, 3×). El problema
+     * no era la cantidad sino la exactitud: en una cuerda real la rigidez
+     * estira los parciales hacia arriba, y cuanto más agudo el parcial, más se
+     * corre. Esa desviación es la firma del piano — es la razón por la que los
+     * pianos se afinan "estirados" — y sin ella el oído lee órgano por más
+     * filtro que se le ponga encima.
+     *
+     *   fₙ = n · f₀ · √(1 + B·n²)
+     *
+     * B crece con el registro: las cuerdas agudas son cortas y rígidas, las
+     * graves largas y flexibles.
+     */
+    const inharmonicity = 0.0004 * Math.sqrt(frequency / 262);
+
+    /*
+     * Cuántos parciales y con qué pesos.
+     *
+     * Los graves necesitan muchos para tener cuerpo; los agudos tienen pocos
+     * dentro del rango audible, así que se limitan por frecuencia. El tope de 8
+     * es por CPU: un acorde de seis notas queda en ~48 osciladores, que Web
+     * Audio mueve sin esfuerzo.
+     *
+     * El peso de cada parcial cae como n^-rolloff, y la velocity mueve ese
+     * exponente en vez de escalar dos armónicos sueltos: tocar fuerte no sube
+     * el volumen de un armónico, aplana toda la caída y aparecen los de arriba.
+     * Es lo que hace que un forte suene distinto y no sólo más alto.
+     */
+    const count = clamp(Math.floor(11000 / frequency), 3, 8);
+    const rolloff = 2.0 - brightness * 0.8;
+
+    const weights = [];
+    let weightSum = 0;
+    for (let n = 1; n <= count; n++) {
+      const w = Math.pow(n, -rolloff);
+      weights.push(w);
+      weightSum += w;
+    }
+
+    const oscillators = [];
+    for (let n = 1; n <= count; n++) {
+      const partialFreq = frequency * n * Math.sqrt(1 + inharmonicity * n * n);
+      if (partialFreq >= ctx.sampleRate / 2) break;
       const oscillator = ctx.createOscillator();
       const gain = ctx.createGain();
-      oscillator.type = partial.type;
-      oscillator.frequency.value = frequency * partial.ratio;
-      gain.gain.value = partial.gain;
+      oscillator.type = "sine";
+      oscillator.frequency.value = partialFreq;
+      // Normalizado contra la suma: el nivel de la voz lo fija la envolvente,
+      // no la cantidad de parciales, así que agregar armónicos no sube el volumen.
+      gain.gain.value = weights[n - 1] / weightSum;
       oscillator.connect(gain);
       gain.connect(voiceGain);
       oscillator.start(when);
       oscillator.stop(holdUntil + scaledRelease + 0.05);
-      return oscillator;
-    });
+      oscillators.push(oscillator);
+    }
 
     return { gain: voiceGain, oscillators, endsAt: holdUntil + scaledRelease };
   }

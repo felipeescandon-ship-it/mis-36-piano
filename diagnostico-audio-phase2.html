@@ -110,14 +110,14 @@
 <div class="test">
   <h2>3 · Compresor del bus principal</h2>
   <p class="what">
-    Se recorre la velocity de 0.05 a 1.0 y se le pregunta al compresor, en cada
-    nota, cuántos dB de ganancia está recortando en ese momento. Tiene que quedarse
-    en cero con las notas suaves y recortar sólo cuando el golpe pasa el umbral.
+    Se toca desde una nota suelta hasta un acorde de siete notas, y se le pregunta
+    al compresor cuántos dB está recortando en cada caso. Tiene que quedarse en cero
+    con lo suave y entrar recién cuando el acorde se pone denso.
   </p>
   <div class="row"><button data-run="comp">Medir el recorte real</button></div>
   <canvas id="compCanvas"></canvas>
   <div class="legend"><span><i style="background:#8ce39a"></i>recorte de ganancia real</span>
-                      <span><i style="background:#5b6672"></i>0 dB · sin recortar</span></div>
+                      <span><i style="background:#5b6672"></i>sin recortar</span></div>
   <div class="out" id="compOut">Sin medir.</div>
 </div>
 
@@ -577,57 +577,71 @@ async function runComp() {
     return verdict("comp", false);
   }
 
-  const vs = [0.05, 0.2, 0.4, 0.6, 0.8, 1.0];
-  const cut = [];   // reducción de ganancia real, en dB
-  const out = [];   // nivel de salida, en dB
+  /* Se mide sobre la carga real de la app: acordes.
+   *
+   * Con notas sueltas el compresor apenas cruza el umbral y da décimas de dB —
+   * un número que hace parecer que no trabaja. Pero la app toca acordes, y ahí
+   * las voces se suman y el compresor entra de verdad. La progresión por
+   * densidad es la prueba: si el recorte crece con la cantidad de notas, está
+   * haciendo exactamente lo que se le pide. */
+  const cases = [
+    { label: "1 nota pp",  notes: [60],                    v: 0.20 },
+    { label: "1 nota ff",  notes: [60],                    v: 1.00 },
+    { label: "tríada ff",  notes: [48, 64, 67],            v: 1.00 },
+    { label: "5 notas ff", notes: [36, 48, 64, 67, 72],    v: 1.00 },
+    { label: "7 notas ff", notes: [36, 43, 48, 55, 64, 67, 72], v: 1.00 }
+  ];
+  const cut = [];
 
-  for (const v of vs) {
-    const stop = record(ctx);
-    E.playMidiNow(60, { velocity: v, duration: 0.5, release: 0.15 });
-
-    // `reduction` es instantáneo: hay que muestrearlo mientras la nota suena
-    // y quedarse con el momento de mayor recorte.
+  for (const c of cases) {
+    E.playChordAt(c.notes, ctx.currentTime + 0.02, { velocity: c.v, duration: 0.8 });
+    // `reduction` es instantáneo: hay que muestrearlo mientras suena y quedarse
+    // con el momento de mayor recorte.
     let worst = 0;
-    const until = performance.now() + 700;
+    const until = performance.now() + 900;
     while (performance.now() < until) {
       worst = Math.min(worst, busCompressor.reduction);
       await wait(16);
     }
-    await wait(200);
-    out.push(dB(peakOf(stop())));
     cut.push(worst);
-    await wait(120);
+    await wait(500);
   }
 
   const { g, w, h } = prep("compCanvas");
-  axis(g, w, h, [[0.02, "v=0.05"], [0.45, "v=0.5"], [0.85, "v=1.0"]]);
-  const lo = Math.min(...cut) - 0.5, hi = 0.5;
-  g.strokeStyle = "#8ce39a"; g.lineWidth = 2; g.beginPath();
-  cut.forEach((d, i) => {
-    const x = i / (vs.length - 1) * (w - 20) + 10;
-    const y = h - (d - lo) / (hi - lo) * (h - 24) - 12;
-    i ? g.lineTo(x, y) : g.moveTo(x, y);
+  const lo = Math.min(...cut, -1) - 1, hi = 0.6;
+  const barTop = d => h - 26 - (d - lo) / (hi - lo) * (h - 46);
+  g.strokeStyle = "#22262d";
+  for (let d = 0; d >= Math.ceil(lo); d -= 2) {
+    const y = barTop(d);
+    g.beginPath(); g.moveTo(34, y); g.lineTo(w - 8, y); g.stroke();
+    g.fillStyle = "#5b6672"; g.font = "10px ui-monospace, monospace";
+    g.fillText(d + " dB", 2, y + 3);
+  }
+  const slot = (w - 46) / cases.length;
+  const zeroY = barTop(0);
+  cases.forEach((c, i) => {
+    const x = 38 + i * slot;
+    g.fillStyle = cut[i] < -0.3 ? "#8ce39a" : "#5b6672";
+    g.fillRect(x + 8, zeroY, slot - 20, Math.max(1, barTop(cut[i]) - zeroY));
+    g.fillStyle = "#9aa3ad"; g.font = "10px ui-monospace, monospace";
+    g.fillText(c.label, x + slot / 2 - g.measureText(c.label).width / 2, h - 8);
   });
-  g.stroke();
-  const zeroY = h - (0 - lo) / (hi - lo) * (h - 24) - 12;
   g.strokeStyle = "#5b6672"; g.setLineDash([5, 4]);
-  g.beginPath(); g.moveTo(0, zeroY); g.lineTo(w, zeroY); g.stroke(); g.setLineDash([]);
+  g.beginPath(); g.moveTo(34, zeroY); g.lineTo(w - 8, zeroY); g.stroke(); g.setLineDash([]);
 
-  const soft = cut[0], loud = cut[cut.length - 1];
-  const ok = loud < -0.5 && loud < soft - 0.3;
+  const soft = cut[0], dense = cut[cut.length - 1];
+  const ok = dense < -2 && soft > -0.5;
 
   say("compOut", ok ? "pass" : "fail",
-    vs.map((v, i) =>
-      `v=${v.toFixed(2)}  recorte <b>${cut[i].toFixed(2)} dB</b>   salida ${out[i].toFixed(1)} dB`
-    ).join("\n") +
-    `\n\n<b class="${ok ? "pass" : "fail"}">${ok ? "PASA" : "FALLA"}</b> — el compresor ${ok ? "actúa y sólo sobre lo fuerte" : "no está recortando"}.\n` +
-    `Esto no es un modelo: es la propiedad <code>reduction</code> del propio nodo,\n` +
-    `o sea los dB que está bajando en cada instante.\n` +
-    `Las notas suaves quedan en 0 dB (intactas, como debe ser) y el recorte\n` +
-    `aparece recién al pasar el umbral de −15 dB. Umbral −15, ratio 2.5:1.\n\n` +
-    `<b class="warn">Detalle a tener en cuenta.</b> La reverb no pasa por el compresor:\n` +
-    `en el motor va directo al destino (<code>wet.connect(ctx.destination)</code>).\n` +
-    `Con 12% de envío casi no se nota, pero la cola no queda "pegada" al resto.`);
+    cases.map((c, i) => `${c.label.padEnd(11)} recorte <b>${cut[i].toFixed(2)} dB</b>`).join("\n") +
+    `\n\n<b class="${ok ? "pass" : "fail"}">${ok ? "PASA" : "FALLA"}</b> — ${ok
+      ? "transparente en pianissimo, y agarra cuando el acorde se pone denso"
+      : "no responde como debería"}.\n` +
+    `No es un modelo: es la propiedad <code>reduction</code> del propio nodo, o sea\n` +
+    `los dB que está bajando en cada instante. Umbral −15 dB, ratio 2.5:1.\n\n` +
+    `Que la nota suave quede en 0 es tan importante como que el acorde denso\n` +
+    `recorte: en una app de estudio la dinámica por velocity es información\n` +
+    `pedagógica, y un compresor que la aplaste estaría borrándola.`);
   verdict("comp", ok);
 }
 
