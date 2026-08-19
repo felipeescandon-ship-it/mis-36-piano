@@ -27,6 +27,23 @@ El repo trae un hook que lo corre solo. Se activa una vez por clon:
 git config core.hooksPath .githooks
 ```
 
+Ese chequeo no basta: verifica que el código parsee, no que funcione. Un
+textarea que nace `disabled` y nadie habilita, o una rama que descarta una
+letra editada al recargar, parsean perfecto y no suenan mal — hacen falta
+abrirlos en un navegador para verlos. Eso es lo que hace:
+
+```
+npm i -D playwright && npx playwright install chromium   # una vez
+node scripts/smoke-test.mjs
+```
+
+Recorre la app entera en un Chromium real — reproducción, el editor de
+acordes y letra, Practicar, importar una canción, Biblioteca — y falla si algo
+tira una excepción o queda en un estado que no debería (un control que no se
+habilita, una edición que no persiste). No es exhaustivo: cubre lo que ya se
+rompió una vez más las áreas más nuevas. Cuando aparezca un bug que esto no
+vea, el lugar para arreglarlo es agregarle un paso ahí, no descartar el script.
+
 ## Pantallas
 
 La app tiene tres pantallas principales, accesibles desde la barra superior
