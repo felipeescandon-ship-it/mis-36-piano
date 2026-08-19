@@ -97,7 +97,8 @@
   <h2>2 · Release en función de la frecuencia</h2>
   <p class="what">
     En un piano real el grave sigue sonando mucho después de que el agudo se apagó.
-    Se mide el tiempo que tarda cada nota en caer 40 dB desde su pico.
+    Se mide cuánto tarda cada nota en caer de −10 a −30 dB: un tramo interno de la
+    caída, que aísla la pendiente del release.
   </p>
   <div class="row"><button data-run="rel">Medir C2 contra C7</button></div>
   <canvas id="relCanvas"></canvas>
@@ -318,6 +319,28 @@ function envelope(buf, sampleRate) {
   return { data: out, stepMs: 1000 * win / sampleRate };
 }
 
+/* Tiempo que tarda la señal en caer de `fromDb` a `toDb` (ambos respecto del
+ * pico), o sea la pendiente del release aislada.
+ *
+ * Medir "del pico hasta −40 dB" mezcla tres cosas: el ataque y la duración de
+ * la nota — que son iguales para todas y diluyen la diferencia que se quiere
+ * ver — y la cola de reverb, que es ruido y domina justo cuando la nota ya
+ * está muy abajo. Tomando un tramo interno del release quedan afuera las tres:
+ * lo que se compara es sólo la velocidad de caída, que es lo único que el
+ * motor escala por frecuencia. */
+function decaySpan(env, fromDb, toDb) {
+  let peak = 0, peakAt = 0;
+  env.data.forEach((v, i) => { if (v > peak) { peak = v; peakAt = i; } });
+  if (peak <= 0) return null;
+  const cross = db => {
+    const target = peak * Math.pow(10, db / 20);
+    for (let i = peakAt; i < env.data.length; i++) if (env.data[i] <= target) return i;
+    return null;
+  };
+  const a = cross(fromDb), b = cross(toDb);
+  return a == null || b == null ? null : (b - a) * env.stepMs / 1000;
+}
+
 /* Tiempo desde el pico hasta caer `drop` dB. */
 function decayTime(env, drop) {
   let peak = 0, peakAt = 0;
@@ -409,8 +432,12 @@ async function engineReady() {
   await E.resume();
   for (let i = 0; i < 50 && ctx.state !== "running"; i++) await wait(20);
   if (!warmedUp) { await wait(300); warmedUp = true; }
-  E.dampAt(ctx.currentTime, 0.02);   // silencia colas del test anterior
-  await wait(120);
+  /* Y se espera a que se vacíe la reverb. dampAt corta las voces activas, pero
+   * el convolver sigue soltando su cola 1.8 s más; si el test siguiente empieza
+   * encima de ella, mide la cola ajena junto con su propia nota. Es lo que hacía
+   * fallar el test 2 una de cada tres veces sólo cuando corría después del 1. */
+  E.dampAt(ctx.currentTime, 0.02);
+  await wait(1300);
   return ctx;
 }
 
@@ -529,23 +556,53 @@ async function runLpf() {
 
 async function runRel() {
   const ctx = await engineReady();
-  const takes = {};
+  const sr = ctx.sampleRate;
 
+  /* La nota se deja corta a propósito. La duración se suma igual a las dos y
+   * no depende de la frecuencia, así que alargarla acerca los dos tiempos y
+   * disimula justo lo que este test quiere ver: con 0.3 s la relación caía a
+   * ~1.8 y quedaba dentro del ruido de la medición del agudo. */
+  const NOTE = { velocity: 0.8, duration: 0.15, release: 0.5 };
+
+  /* Y se toma la mediana de tres tomas. El agudo se apaga rápido y su cruce de
+   * −40 dB cae cerca de la cola de reverb, que es ruido: una sola toma puede
+   * irse 25%. La mediana descarta la toma rara sin que una mala arrastre el
+   * promedio. */
+  const median = xs => {
+    const ok = xs.filter(x => x != null).sort((a, b) => a - b);
+    return ok.length ? ok[Math.floor(ok.length / 2)] : null;
+  };
+
+  const takes = {};
+  const times = {};
   for (const [tag, midi] of [["c2", 36], ["c7", 96]]) {
-    const stop = record(ctx);
-    E.playMidiNow(midi, { velocity: 0.8, duration: 0.3, release: 0.5 });
-    await wait(2600);
-    takes[tag] = stop();
-    await wait(150);
+    /* Silencio antes de cada nota, no sólo al principio del test. El grave se
+     * mide primero y deja una cola de reverb larga y pesada en bajos; si el
+     * agudo empieza encima de ella, esa cola retrasa su cruce de −40 dB y lo
+     * hace parecer más sostenido de lo que es. Se notaba en que la primera
+     * toma de C7 daba 0.32 s y las siguientes 0.25 s. */
+    E.dampAt(ctx.currentTime, 0.02);
+    await wait(1600);
+
+    const runs = [];
+    for (let k = 0; k < 3; k++) {
+      const stop = record(ctx);
+      E.playMidiNow(midi, NOTE);
+      await wait(1800);
+      const buf = stop();
+      if (k === 0) takes[tag] = buf;          // la primera es la que se dibuja
+      runs.push(decaySpan(envelope(buf, sr), -10, -30));
+      await wait(250);
+    }
+    times[tag] = median(runs);
   }
 
-  const sr = ctx.sampleRate;
   const envC2 = envelope(takes.c2, sr), envC7 = envelope(takes.c7, sr);
-  const tC2 = decayTime(envC2, 40), tC7 = decayTime(envC7, 40);
+  const tC2 = times.c2, tC7 = times.c7;
 
   const { g, w, h } = prep("relCanvas");
-  axis(g, w, h, [[0.02, "0 s"], [0.48, "1.2 s"], [0.9, "2.4 s"]]);
-  const span = 2.4;
+  axis(g, w, h, [[0.02, "0 s"], [0.48, "0.9 s"], [0.9, "1.8 s"]]);
+  const span = 1.8;
   [[envC2, "#5aa9e6"], [envC7, "#ffb454"]].forEach(([env, color]) => {
     const peak = Math.max(...env.data) || 1;
     g.strokeStyle = color; g.lineWidth = 1.8; g.beginPath();
@@ -557,16 +614,20 @@ async function runRel() {
     g.stroke();
   });
 
-  const fmt = t => t == null ? "más de 2.4 s" : t.toFixed(2) + " s";
-  const ok = tC2 != null && tC7 != null ? tC2 > tC7 * 1.5 : tC7 != null;
+  const fmt = t => t == null ? "no acotable" : t.toFixed(3) + " s";
+  const ok = tC2 != null && tC7 != null && tC2 > tC7 * 2.5;
   const ratio = (tC2 != null && tC7 != null) ? (tC2 / tC7).toFixed(1) : "no acotable";
 
   say("relOut", ok ? "pass" : "fail",
-    `C2  ·   65 Hz  cae 40 dB en : <b>${fmt(tC2)}</b>\n` +
-    `C7  · 2093 Hz  cae 40 dB en : <b>${fmt(tC7)}</b>\n` +
-    `El grave dura                : <b>×${ratio}</b> lo que dura el agudo\n\n` +
+    `C2  ·   65 Hz  cae de −10 a −30 dB en : <b>${fmt(tC2)}</b>\n` +
+    `C7  · 2093 Hz  cae de −10 a −30 dB en : <b>${fmt(tC7)}</b>\n` +
+    `El grave se apaga                      : <b>×${ratio}</b> más lento  (se exige ×2.5)\n` +
+    `                                         (mediana de 3 tomas)\n\n` +
     `<b class="${ok ? "pass" : "fail"}">${ok ? "PASA" : "FALLA"}</b> — el grave ${ok ? "sostiene claramente más" : "no sostiene más"} que el agudo.\n` +
-    `El motor escala el release por raíz de (330 / frecuencia), tope ×2.`);
+    `El motor escala el release por raíz de (330 / frecuencia), con tope ×2: en C2\n` +
+    `llega al tope y en C7 baja a ×0.4, o sea 5 veces más release abajo que arriba.\n` +
+    `Se mide un tramo interno de la caída, no de punta a punta: así quedan afuera\n` +
+    `el ataque y la duración —iguales para las dos notas— y la cola de reverb.`);
   verdict("rel", ok);
 }
 
