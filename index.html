@@ -4487,7 +4487,7 @@ function setAudioStatus(textValue,state=""){
 // indicador nunca se desincroniza de lo que realmente está sonando.
 engine.onStatus(status=>{
  pianoLoadFailed=status.phase==="failed";
- if(status.phase==="ready")setAudioStatus("Piano: listo","ready");
+ if(status.phase==="ready")setAudioStatus(status.refining?"Piano: listo · mejorando…":"Piano: listo","ready");
  else if(status.phase==="loading"){
    const pct=status.total?Math.round(status.loaded/status.total*100):0;
    setAudioStatus(pct?`Piano: cargando… ${pct}%`:"Piano: cargando…","loading");

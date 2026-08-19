@@ -231,7 +231,7 @@
 
   // --- Estado de carga del piano muestreado -------------------------------
 
-  const status = { phase: "idle", loaded: 0, total: 0, usingSamples: false, format: null };
+  const status = { phase: "idle", loaded: 0, total: 0, usingSamples: false, format: null, refining: false };
   let sampleFormat = null;
   const statusListeners = new Set();
   let piano = null;
@@ -266,6 +266,80 @@
     return /(^|-)(2g|slow-2g)$/.test(connection.effectiveType || "");
   }
 
+  /*
+   * Carga en dos etapas.
+   *
+   * Las 226 muestras son 20MB: en una conexión móvil son ~30 segundos con el
+   * sintetizador al aire, que es la ventana que este esquema achica.
+   *
+   * La etapa 1 baja un subconjunto de notas —una de cada cuatro— pero de TODAS
+   * las capas de velocity. smplr reparte lo que tenga sobre el teclado entero
+   * (spreadKeyRanges), así que ninguna nota queda muda: la que no tiene muestra
+   * propia sale de la vecina, transportada. El precio es ese transporte, de
+   * hasta 6 semitonos en el peor hueco, y sólo hasta que llega la etapa 2.
+   *
+   * Se probó también recortar por capa en vez de por nota —una capa entera, con
+   * todas sus notas— y se descartó por dos motivos:
+   *
+   *   - Mata la dinámica. smplr elige el grupo cuyo rango de velocity contiene
+   *     la pedida, así que con una sola capa hay que acotar la velocity para que
+   *     encuentre algo, y el rango dinámico se derrumba de 48 dB a 1.5 dB.
+   *     En una app de estudio la dinámica por velocity es información, no adorno.
+   *   - Ni siquiera sale más barato: 63 muestras contra 52.
+   *
+   * Y si no se acota la velocity con una sola capa cargada, smplr no encuentra
+   * grupo y la nota sale MUDA. Es el fallo que tuvo la primera versión de esto:
+   * el teclado entero en silencio hasta que llegaba la etapa 2. De ahí que el
+   * diagnóstico barra las 88 notas y no una muestra.
+   *
+   * La etapa 2 baja el juego completo y lo cambia en caliente. Las muestras de
+   * la etapa 1 son un subconjunto de las de la 2 y se piden con force-cache, así
+   * que no se descargan dos veces: medido, la sesión entera baja 226 archivos
+   * distintos, no 226 más los de la etapa 1.
+   *
+   * Medido a 4 Mbps con 150ms de latencia: el piano entra a los 9 s en vez de
+   * a los 39 s.
+   */
+  const QUICK_NOTES = [];
+  for (let midi = 0; midi <= 127; midi += 4) QUICK_NOTES.push(midi);
+
+  function makePiano(smplr, ctx, format, notesToLoad, onProgress) {
+    return new smplr.SplendidGrandPiano(ctx, {
+      baseUrl: SAMPLE_BASE,
+      // Un solo formato, ya verificado: así smplr no vuelve a elegir por su
+      // cuenta y no puede terminar pidiendo uno que no se decodifica.
+      formats: [format],
+      storage: SAMPLE_STORAGE,
+      destination: masterBus,
+      scheduler: DIRECT_SCHEDULER,
+      decayTime: 0.5,
+      notesToLoad: notesToLoad || undefined,
+      // smplr entrega un objeto {loaded,total}, no dos argumentos.
+      onLoadProgress: onProgress
+    });
+  }
+
+  /*
+   * Etapa 2, en segundo plano. Si falla, no se toca nada: el piano rápido ya
+   * está sonando y degradar a sintetizador por no haber podido mejorar sería
+   * peor que quedarse como está.
+   */
+  function refinePiano(smplr, ctx, format) {
+    let full = null;
+    try {
+      full = makePiano(smplr, ctx, format, null, null);
+    } catch (error) {
+      return;
+    }
+    full.ready.then(() => {
+      piano = full;
+      setStatus("ready", { refining: false });
+    }, error => {
+      console.warn("El juego completo de muestras no cargó; sigue el piano reducido.", error);
+      setStatus("ready", { refining: false });
+    });
+  }
+
   function load(options) {
     const force = !!(options && options.force);
     if (status.phase === "ready") return Promise.resolve(true);
@@ -287,21 +361,12 @@
           throw new Error("Ningún formato de muestra se pudo decodificar en este navegador");
         }
         sampleFormat = format;
-        const instrument = new smplr.SplendidGrandPiano(ctx, {
-          baseUrl: SAMPLE_BASE,
-          // Un solo formato, ya verificado: así smplr no vuelve a elegir por su
-          // cuenta y no puede terminar pidiendo uno que no se decodifica.
-          formats: [format],
-          storage: SAMPLE_STORAGE,
-          destination: masterBus,
-          scheduler: DIRECT_SCHEDULER,
-          decayTime: 0.5,
-          // smplr entrega un objeto {loaded,total}, no dos argumentos.
-          onLoadProgress: progress => setStatus("loading", { loaded: progress.loaded, total: progress.total })
-        });
-        return instrument.ready.then(() => instrument);
+        const quick = makePiano(smplr, ctx, format,
+          { notes: QUICK_NOTES, velocityRange: [0, 127] },
+          progress => setStatus("loading", { loaded: progress.loaded, total: progress.total }));
+        return quick.ready.then(() => ({ smplr, format, instrument: quick }));
       })
-      .then(instrument => {
+      .then(({ smplr, format, instrument }) => {
         if (!fetchStats.ok) {
           throw new Error(`Ninguna muestra se pudo cargar (${fetchStats.failed} fallos)`);
         }
@@ -317,7 +382,12 @@
         // mal: el nodo de reverb ya aplica su propio wet de 0.12, así que el
         // envío quedaba en 0.12 × 0.12 = 0.0144 y el piano sonaba casi seco por
         // accidente. Ahora es seco por decisión.
-        setStatus("ready");
+        //
+        // A partir de acá ya suena el piano real, con el juego reducido de la
+        // etapa 1. `refining` avisa que todavía está mejorando, para que la UI
+        // no diga "listo" a secas mientras sigue bajando muestras.
+        setStatus("ready", { refining: true });
+        refinePiano(smplr, ctx, format);
         return true;
       })
       .catch(error => {
